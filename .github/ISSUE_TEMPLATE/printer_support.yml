@@ -1,0 +1,19 @@
+name: Printer or slicer support
+description: Request support for a printer, nozzle or slicer
+labels: [printer-support]
+body:
+  - type: input
+    id: printer
+    attributes:
+      label: Printer and nozzles
+    validations: {required: true}
+  - type: input
+    id: slicer
+    attributes:
+      label: Slicer and version
+    validations: {required: true}
+  - type: textarea
+    id: profiles
+    attributes:
+      label: Where the profiles live
+      description: Installation folder (e.g. ~/Library/Application Support/<slicer>/system) and official repository URL if any

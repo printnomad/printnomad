@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # 3.12 = Python embebido en OrcaSlicer; la última, para detectar roturas pronto.
+        python: ["3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: orca-plugin/tests/js/package-lock.json
+      - run: pip install -e core pytest ruff
+      - run: npm ci
+        working-directory: orca-plugin/tests/js
+      - run: ruff check .
+      - run: pytest
+      - run: python orca-plugin/tools/build.py

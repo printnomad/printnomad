@@ -1,0 +1,41 @@
+# Architecture
+
+## Goal
+
+From any model repository, open a project in the slicer of **your** printer with the designer's settings preserved. BetterBridge targets OrcaSlicer and the slicers derived from it (Flash Studio, Snapmaker Orca, Elegoo Slicer, Creality Print, Bambu Studio…).
+
+## Components
+
+```
+Browser (MakerWorld, Printables…)
+ └─ extension/  "Open with [slicer · printer]" button
+     ├─ default: converts in the browser (core via Pyodide) and downloads the result
+     └─ experimental: asks helper/ (Native Messaging) to convert and open the slicer
+
+OrcaSlicer (and forks with plugin support)
+ └─ orca-plugin/  converts the project that is open
+
+core/  one conversion engine (Python, standard library only) used by all of the above and the CLI
+```
+
+## Key decisions
+
+| Decision | Reason |
+|---|---|
+| AGPL-3.0-or-later | Same license as OrcaSlicer/PrusaSlicer; compatible with running inside OrcaSlicer and with its profiles. |
+| Monorepo | Changes to the conversion format touch several components; one PR, shared fixtures. |
+| Single core in Python, stdlib only | One implementation for CLI, OrcaSlicer plugin (embedded Python 3.12), helper and browser (Pyodide). |
+| Convert for a specific target printer | Bed size, start/end G-code, extruder count, limits and cooling are printer-specific; switching printers inside the slicer loses the designer's settings. |
+| Profiles from the installed slicer first | Bundled or repository copies get stale: Flashforge's public repository lags behind Flash Studio, which is why other converters produce "old vs new" values. |
+| Cooling always from the target | Printers have different fans (Creator 5 Pro: P101/P2/P3; Bambu: P1/P2/P3). |
+| Designer speeds kept even above filament flow | The slicer caps them at slice time from the selected filament's max volumetric speed (verified in G-code), so a faster filament still benefits. |
+| The extension cannot open a slicer by itself | Slicer URL schemes (`orcaslicer://open?file=…`) download `file=` and load it only on HTTP 2xx (OrcaSlicer `Http.cpp`); browsers cannot serve local HTTP or launch apps. Opening directly requires the optional helper. |
+
+## Conversion pipeline (core)
+
+1. **Read** the 3MF in memory, keeping raw entries so unchanged files are rewritten byte-for-byte.
+2. **Resolve target profiles** (machine, process by closest layer height, filament by type and name) with `inherits` chains.
+3. **Assemble settings**: target machine → target process with the designer's changes on top → target filaments; per-variant values collapsed; cooling and Bambu-only keys handled.
+4. **Map filaments** to extruders per plate.
+5. **Edit `model_settings.config`** (plates, per-object overrides kept and reported) and recenter items if the bed differs.
+6. **Write** a new 3MF and verify geometry; produce the report.

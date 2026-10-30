@@ -1,0 +1,26 @@
+name: Bug report
+description: A conversion is wrong or something fails
+labels: [bug]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [core / CLI, OrcaSlicer plugin, browser extension, helper]
+    validations: {required: true}
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: BetterBridge component version, source slicer and target slicer with versions, OS
+    validations: {required: true}
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened and what you expected
+    validations: {required: true}
+  - type: textarea
+    id: report
+    attributes:
+      label: Conversion report
+      description: Attach the `.report.json` (it contains no geometry). Do not attach models you do not own.
