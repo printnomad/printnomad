@@ -84,5 +84,9 @@ def convert_file(
         else:
             report.output = str(dest)
             report.errors.extend(write_3mf.verify(project, dest, result.files))
-    return {"ok": report.ok, "output": report.output or None, "needs_map": report.needs_map,
+    output = report.output or None
+    # Paths in the embedder's virtual file system mean nothing to the user: names only.
+    report.source = Path(src).name
+    report.output = Path(output).name if output else ""
+    return {"ok": report.ok, "output": output, "needs_map": report.needs_map,
             "report": report.to_dict(), "text": report.to_text()}

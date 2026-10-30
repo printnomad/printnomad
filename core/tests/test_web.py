@@ -36,6 +36,7 @@ def test_convert_file_writes_output_and_plain_report(profiles_root, tmp_path):
     json.dumps(res)  # plain JSON for the JavaScript side
     assert res["report"]["profiles"] == "Example/Slicer@1.0"
     assert "Profiles: Example/Slicer@1.0" in res["text"]
+    assert res["report"]["source"] == "boat.3mf" and res["report"]["output"] == "boat_CREATOR5_PRO.3mf"
 
 
 def test_convert_file_reports_input_errors(profiles_root, tmp_path):
