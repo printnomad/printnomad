@@ -196,7 +196,7 @@ def convert(
         elif rules.is_printer_process_key(k):
             # The target profile does not set it: the slicer's default applies.
             report.dropped.append(FieldChange(k, out.pop(k), None, process_reason(k)))
-    _collapse_variants(src, out, set(machine_cfg), target, put)
+    collapsed = _collapse_variants(src, out, set(machine_cfg), target, put)
     for c in report.kept_author:
         msg = rules.check_value(c.key, out.get(c.key, c.original), limits)
         if msg:
@@ -339,6 +339,18 @@ def convert(
                           | {k for ks in kept_filament.values() for k in ks if rules.is_cooling_key(k)})
     if kept_cooling:
         report.warnings.append(t("convert.warn.designer_cooling", keys=", ".join(kept_cooling)))
+    # Values the source project only has because its Bambu presets set them: the
+    # designer did not choose them (they are not in different_settings_to_system) and
+    # the target profile does not define them. Removing them lets the target slicer
+    # apply its own defaults, as when the printer is picked from scratch; otherwise
+    # re-selecting the printer lists them as "modified" (Transfer/Discard dialog).
+    # Projects without that list (PrusaSlicer) keep everything: nothing to tell apart.
+    if any(diffs):
+        designer = set().union(*diffs)
+        keep = (set(reasons) - collapsed) | kept_keys | designer | rules.PROJECT_KEYS
+        for k in sorted(set(out) - keep):
+            report.source_defaults.append(k)
+            out.pop(k)
     kept_printer = sorted(c.key for c in report.kept_author if c.key in out and rules.is_printer_process_key(c.key))
     if kept_printer:
         report.warnings.append(t("convert.warn.designer_printer_settings", keys=", ".join(kept_printer)))
@@ -387,21 +399,24 @@ def convert(
     return result
 
 
-def _collapse_variants(src: dict, out: dict, machine_keys: set[str], target, put) -> None:
+def _collapse_variants(src: dict, out: dict, machine_keys: set[str], target, put) -> set[str]:
     """Bambu Studio 2.x guarda velocidades por variante de extrusor
     (`print_extruder_variant`, p. ej. [Standard, High Flow]). El destino tiene una
     sola variante: se toma el valor de la variante estándar."""
     variants = src.get("print_extruder_variant")
     if not isinstance(variants, list) or len(variants) < 2:
-        return
+        return set()
     idx = variants.index(target.extruder_variant) if target.extruder_variant in variants else 0
+    collapsed = set()
     for k, v in list(out.items()):
         if (k in machine_keys or not k.endswith(rules.VARIANT_KEY_SUFFIXES)
                 or k.startswith("filament_") or not isinstance(v, list) or len(v) != len(variants)):
             continue
         put(k, v[idx], t("reason.variant_value", variant=variants[idx]))
+        collapsed.add(k)
     put("print_extruder_variant", [target.extruder_variant], t("reason.target_variant"))
     put("print_extruder_id", ["1"], t("reason.target_variant"))
+    return collapsed
 
 
 def _num(value) -> float | None:

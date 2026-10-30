@@ -63,7 +63,10 @@ def test_value_fixes_for_orca(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"raft_first_layer_expansion": "-1",
                                     "ensure_vertical_shell_thickness": "enabled",
-                                    "retraction_distances_when_cut": ["0"]},
+                                    "retraction_distances_when_cut": ["0"],
+                                    "different_settings_to_system": [
+                                        "raft_first_layer_expansion;ensure_vertical_shell_thickness",
+                                        "retraction_distances_when_cut", ""]},
                           part_overrides={"2": {"ensure_vertical_shell_thickness": "enabled"}})
     _, result, s = run(lib, path)
     assert "raft_first_layer_expansion" not in s
@@ -236,7 +239,9 @@ def test_bambu2_per_variant_values_collapsed(lib, tmp_path):
     })
     _, result, s = run(lib, path)
     assert s["sparse_infill_speed"] == "300"   # ajuste del autor, variante estándar
-    assert s["inner_wall_speed"] == "250"
+    # No lo cambió el diseñador ni lo define el perfil destino: valor de fábrica del
+    # perfil Bambu, se quita para que el laminador aplique el suyo.
+    assert "inner_wall_speed" not in s and "inner_wall_speed" in result.report.source_defaults
     assert s["print_extruder_variant"] == ["Direct Drive Standard"]
     assert s["print_extruder_id"] == ["1"]
 
@@ -246,14 +251,15 @@ def test_cooling_always_from_target(lib, tmp_path):
         "fan_direction": "left",                      # Bambu, sin equivalente C5P
         "close_additional_fan_first_x_layers": ["1"],
         "ironing_fan_speed": ["-1"],
-        "cooling_tube_length": "5",                   # no es ventilación: se queda
+        "cooling_tube_length": "5",                   # no es ventilación: no se quita como enfriamiento
         "different_settings_to_system": ["sparse_infill_speed;ironing_fan_speed", "", ""],
     })
     _, result, s = run(lib, path)
     for k in ("fan_direction", "close_additional_fan_first_x_layers", "ironing_fan_speed"):
         assert k not in s
         assert any(d.key == k and "enfriamiento" in d.reason for d in result.report.dropped)
-    assert s["cooling_tube_length"] == "5"
+    assert "cooling_tube_length" in result.report.source_defaults  # valor de fábrica de Bambu
+    assert not any(d.key == "cooling_tube_length" for d in result.report.dropped)
     assert not any(c.key == "ironing_fan_speed" for c in result.report.kept_author)
 
 
@@ -367,3 +373,17 @@ def test_printer_dependent_process_settings_come_from_the_target(lib, tmp_path):
     assert s["xy_hole_compensation"] == "0.05"
     warning = next(w for w in result.report.warnings if "ajustes de impresora del modelo" in w)
     assert "enable_prime_tower" in warning
+
+
+def test_source_preset_defaults_removed_designer_and_project_values_kept(lib, tmp_path):
+    """Lo que solo trae el perfil Bambu de origen se quita; lo del diseñador y del proyecto, no."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "skeleton_infill_density": "15%",          # valor de fábrica de Bambu
+        "ironing_inset": "0.21",                   # cambiado por el diseñador
+        "wipe_tower_x": ["15"],                    # posición: dato del proyecto
+        "different_settings_to_system": ["ironing_inset", "", ""],
+    })
+    _, result, s = run(lib, path)
+    assert "skeleton_infill_density" not in s and "skeleton_infill_density" in result.report.source_defaults
+    assert s["ironing_inset"] == "0.21" and s["wipe_tower_x"] == ["15"]
+    assert "Valores por defecto del perfil de origen quitados" in result.report.to_text()

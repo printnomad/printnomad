@@ -70,6 +70,18 @@ PRINTER_PROCESS_KEY = re.compile(
     r"enable_arc_fitting|filename_format)$")
 
 
+# Project data, not preset values: kept from the source even when no profile sets them
+# and the designer did not "change" them (positions, purge table, print order, which
+# filament prints each feature, colours).
+PROJECT_KEYS = frozenset({
+    "wipe_tower_x", "wipe_tower_y", "flush_volumes_matrix", "flush_volumes_vector", "flush_multiplier",
+    "first_layer_print_sequence", "other_layers_print_sequence", "other_layers_print_sequence_nums",
+    "filament_colour", "default_filament_colour", "curr_bed_type",
+    "wall_filament", "sparse_infill_filament", "solid_infill_filament",
+    "support_filament", "support_interface_filament", "version", "name", "from",
+})
+
+
 def is_printer_process_key(key: str) -> bool:
     return bool(PRINTER_PROCESS_KEY.match(key))
 

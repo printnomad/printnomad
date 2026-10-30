@@ -53,6 +53,8 @@ class Report:
     changed: list[FieldChange] = field(default_factory=list)
     kept_author: list[FieldChange] = field(default_factory=list)
     dropped: list[FieldChange] = field(default_factory=list)
+    # Source preset defaults removed so the target slicer's own defaults apply.
+    source_defaults: list[str] = field(default_factory=list)
     object_overrides: list[ObjectOverride] = field(default_factory=list)
     filaments: list[FilamentMapping] = field(default_factory=list)
     positions: list[FieldChange] = field(default_factory=list)
@@ -105,6 +107,10 @@ class Report:
         if self.dropped:
             lines.append(t("report.dropped", count=len(self.dropped)))
             lines += [f"  {c.key}: {_short(c.original)} [{c.reason}]" for c in self.dropped]
+        if self.source_defaults:
+            lines.append(t("report.source_defaults", count=len(self.source_defaults)))
+            if verbose:
+                lines.append("  " + ", ".join(self.source_defaults))
         if self.object_overrides:
             lines.append(t("report.object_overrides", count=len(self.object_overrides)))
             for o in self.object_overrides:
