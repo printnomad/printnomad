@@ -24,10 +24,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: orca-plugin/tests/js/package-lock.json
+          cache-dependency-path: orca-plugin/ui/package-lock.json
       - run: pip install -e core pytest ruff
       - run: npm ci
-        working-directory: orca-plugin/tests/js
+        working-directory: orca-plugin/ui
       - run: ruff check .
       - run: pytest
       - run: python orca-plugin/tools/build.py

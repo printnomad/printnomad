@@ -24,6 +24,14 @@ SOURCE_PRUSA = "prusa"
 SOURCE_FLASHFORGE = "flashforge"
 SOURCE_UNKNOWN = "unknown"
 
+# Nombre de la aplicación de origen para mostrar (nombres propios: no se traducen).
+SOURCE_DISPLAY_NAMES = {
+    SOURCE_BAMBU: "Bambu Studio",
+    SOURCE_ORCA: "OrcaSlicer",
+    SOURCE_PRUSA: "PrusaSlicer",
+    SOURCE_FLASHFORGE: "Flashforge",
+}
+
 
 @dataclass
 class Entry:

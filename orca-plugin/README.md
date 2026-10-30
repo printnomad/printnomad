@@ -8,7 +8,7 @@ Converts the project open in OrcaSlicer (2.5+, plugin API in beta) to another pr
 .venv/bin/python orca-plugin/tools/build.py --install
 ```
 
-This builds `orca-plugin/dist/betterbridge_orca-<version>-py3-none-any.whl` (the plugin plus a copy of `core/`) and copies it to `~/Library/Application Support/OrcaSlicer/orca_plugins/betterbridge/`, clearing OrcaSlicer's extracted copy (OrcaSlicer does not refresh it on its own). Restart OrcaSlicer with ⌘Q and enable the plugin in the Plugins dialog.
+This builds the panel (`ui/`, Tailwind CSS, needs Node.js) and `orca-plugin/dist/betterbridge_orca-<version>-py3-none-any.whl` (the plugin, the panel and a copy of `core/`) and copies it to `~/Library/Application Support/OrcaSlicer/orca_plugins/betterbridge/`, clearing OrcaSlicer's extracted copy (OrcaSlicer does not refresh it on its own). Restart OrcaSlicer with ⌘Q and enable the plugin in the Plugins dialog.
 
 ## How it works
 
@@ -21,7 +21,15 @@ Permissions requested from OrcaSlicer: read Flash Studio profiles; read/write `~
 
 Debug log: `~/Library/Application Support/OrcaSlicer/orca_plugins/plugin_data/betterbridge/debug.log`.
 
+## Panel (ui/)
+
+The dock panel is plain HTML + JavaScript styled with Tailwind CSS v4:
+
+- `ui/src/panel.html`, `panel.js`, `panel.css` (theme tokens, light/dark).
+- `npm run build` (in `ui/`) generates only the Tailwind classes in use and inlines CSS and JS into `ui/dist/panel.html`.
+- Text comes from `betterbridge_orca/locales/*.json` (`panel.*` keys); the plugin injects the catalog of OrcaSlicer's language into the page.
+
 ## Development
 
-- `tools/preview_panel.py project.3mf` renders the panel with real data in a browser (no OrcaSlicer needed).
-- `tests/test_plugin.py` drives the plugin with a fake `orca` module; `tests/js/panel_flow.js` runs the panel in jsdom with OrcaSlicer's real JS bridge (OrcaSlicer swallows page JS errors, so this is the only place they show up).
+- `tools/preview_panel.py project.3mf [--lang en]` renders the built panel with real data in a browser (no OrcaSlicer needed).
+- `tests/test_plugin.py` drives the plugin with a fake `orca` module; `ui/tests/panel_flow.cjs` runs the built panel in jsdom with OrcaSlicer's real JS bridge (OrcaSlicer swallows page JS errors, so this is the only place they show up).

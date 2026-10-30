@@ -44,7 +44,7 @@ Restart OrcaSlicer (⌘Q) and enable **BetterBridge** in the Plugins dialog. Ope
 
 ```sh
 python -m venv .venv && .venv/bin/pip install -e core pytest ruff
-(cd orca-plugin/tests/js && npm ci)   # optional: browser-DOM tests of the plugin panel
+(cd orca-plugin/ui && npm ci)          # plugin panel (Tailwind build + DOM tests)
 .venv/bin/ruff check . && .venv/bin/pytest
 ```
 

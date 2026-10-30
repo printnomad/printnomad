@@ -1,8 +1,0 @@
-{
-  "name": "betterbridge-panel-tests",
-  "private": true,
-  "description": "Ejecuta el panel del plugin en un DOM (jsdom) con el shim de OrcaSlicer",
-  "devDependencies": {
-    "jsdom": "24.1.3"
-  }
-}

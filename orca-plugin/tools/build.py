@@ -13,6 +13,7 @@ import argparse
 import base64
 import hashlib
 import shutil
+import subprocess
 import tomllib
 import zipfile
 from pathlib import Path
@@ -22,6 +23,8 @@ REPO_ROOT = PLUGIN_ROOT.parent
 PLUGIN_DIR = PLUGIN_ROOT / "betterbridge_orca"
 CORE_DIR = REPO_ROOT / "core" / "src" / "betterbridge"
 DIST = PLUGIN_ROOT / "dist"
+UI_DIR = PLUGIN_ROOT / "ui"
+PANEL_HTML = UI_DIR / "dist" / "panel.html"
 INSTALL_DIR = Path.home() / "Library/Application Support/OrcaSlicer/orca_plugins/betterbridge"
 
 
@@ -37,6 +40,14 @@ def _package_files(root: Path) -> list[Path]:
     return sorted({f for pattern in PACKAGE_PATTERNS for f in root.rglob(pattern) if "__pycache__" not in f.parts})
 
 
+def build_ui() -> Path:
+    """Compila el panel (Tailwind) con npm; necesita `npm ci` en ui/ la primera vez."""
+    if not (UI_DIR / "node_modules").is_dir():
+        subprocess.run(["npm", "ci"], cwd=UI_DIR, check=True)
+    subprocess.run(["npm", "run", "build"], cwd=UI_DIR, check=True)
+    return PANEL_HTML
+
+
 def build() -> Path:
     version = tomllib.loads((PLUGIN_ROOT / "pyproject.toml").read_text())["project"]["version"]
     files: dict[str, bytes] = {}
@@ -45,6 +56,7 @@ def build() -> Path:
         files[f"betterbridge_orca/{f.relative_to(PLUGIN_DIR).as_posix()}"] = f.read_bytes()
     for f in _package_files(CORE_DIR):
         files[f"betterbridge_orca/core/{f.relative_to(CORE_DIR).as_posix()}"] = f.read_bytes()
+    files["betterbridge_orca/panel.html"] = build_ui().read_bytes()
 
     dist_info = f"betterbridge_orca-{version}.dist-info"
     files[f"{dist_info}/METADATA"] = (

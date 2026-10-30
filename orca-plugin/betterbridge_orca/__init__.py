@@ -22,6 +22,7 @@ from urllib.parse import quote
 
 import orca
 
+from . import page
 from .core import i18n, read_3mf, write_3mf
 from .core.convert import convert
 from .core.i18n import t
@@ -29,7 +30,6 @@ from .core.printer_profiles import creator5pro
 from .core.profiles import DEFAULT_ROOTS, ProfileLibrary, find_root
 from .core.remap_filaments import parse_map
 from .local_server import serve_once
-from .panel_html import PAGE
 
 log = logging.getLogger("betterbridge")
 
@@ -54,11 +54,7 @@ def _setup_log() -> None:
 _setup_log()
 
 CONVERTIBLE = {read_3mf.SOURCE_BAMBU, read_3mf.SOURCE_ORCA, read_3mf.SOURCE_PRUSA}
-SOURCE_NAMES = {
-    read_3mf.SOURCE_BAMBU: "Bambu Studio",
-    read_3mf.SOURCE_ORCA: "OrcaSlicer",
-    read_3mf.SOURCE_PRUSA: "PrusaSlicer",
-}
+SOURCE_NAMES = read_3mf.SOURCE_DISPLAY_NAMES
 # Carpetas habituales de proyectos: se piden una vez al activar el plugin para
 # no preguntar en cada archivo.
 USER_FOLDERS = [str(Path.home() / d) + "/*" for d in ("Downloads", "Documents", "Desktop")]
@@ -218,7 +214,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
                 self._send_preview()
             else:
                 self._panel = orca.host.ui.create_dock_panel(
-                    html=PAGE, title="BetterBridge", width=440, height=640,
+                    html=page.render(), title="BetterBridge", width=440, height=640,
                     on_message=self._on_message, on_close=self._on_close, dock="right")
         except Exception:
             log.exception("no se pudo abrir el panel")

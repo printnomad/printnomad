@@ -7,7 +7,7 @@ Thanks for helping! This guide covers the workflow and the rules that keep the p
 ```sh
 python -m venv .venv
 .venv/bin/pip install -e core pytest ruff
-(cd orca-plugin/tests/js && npm ci)    # optional, enables the plugin panel DOM tests
+(cd orca-plugin/ui && npm ci)          # plugin panel: Tailwind build and DOM tests
 .venv/bin/ruff check . && .venv/bin/pytest
 ```
 
@@ -37,7 +37,7 @@ Everything must pass before you open a pull request. CI runs the same commands.
 - **Verify, don't guess.** Slicer behaviour must be checked against its source code or by slicing with its CLI (`tools/validate_orca.py`). Note the evidence in the PR.
 - **Tests with synthetic data only.** Build fixtures with the helpers in `conftest.py`. Never commit models from MakerWorld or other repositories: they belong to their designers.
 - Small, readable modules; type hints; docstrings for anything non-obvious.
-- Front-end code uses Tailwind CSS compiled at build time so only the classes in use are shipped. Write complete class names (no string concatenation such as `"text-" + color`) so the build can detect them.
+- Front-end code uses Tailwind CSS (v4) compiled at build time so only the classes in use are shipped. Write complete class names (no string concatenation such as `"text-" + color`) so the build can detect them; keep variants in one lookup object (see `orca-plugin/ui/src/panel.js`). Use the semantic colour tokens (`bg-surface`, `text-muted`, `border-line`, `bg-accent`…) defined in `panel.css`, which switch automatically in dark mode.
 
 ## Adding support for a printer or slicer
 
