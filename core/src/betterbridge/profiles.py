@@ -77,6 +77,24 @@ class ProfileLibrary:
             raise ProfileError(t("profiles.error.none_found", root=", ".join(map(str, lib.roots))))
         return lib
 
+    @classmethod
+    def from_bundles(cls, bundles: list[dict]) -> ProfileLibrary:
+        """Library from profile bundles (tools/build_profile_catalog.py), without touching disk.
+
+        Each bundle is {"vendor": name, "files": {"<kind>/<path>.json": data}}. Vendors
+        are indexed in name order, as `from_roots` does with vendor folders, so both
+        give the same library for the same profiles.
+        """
+        lib = cls()
+        for bundle in sorted(bundles, key=lambda b: b["vendor"]):
+            for rel, data in sorted(bundle.get("files", {}).items()):
+                kind = rel.split("/", 1)[0]
+                if kind in KINDS:
+                    lib._add(data, kind, bundle["vendor"], Path(rel).stem)
+        if not lib.raw:
+            raise ProfileError(t("profiles.error.none_found", root=", ".join(b.get("vendor", "?") for b in bundles)))
+        return lib
+
     def _scan(self, folder: Path, kind: str, vendor: str) -> None:
         if not folder.is_dir():
             return
@@ -85,17 +103,20 @@ class ProfileLibrary:
                 data = json.loads(f.read_text(encoding="utf-8"))
             except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 continue
-            if not isinstance(data, dict):
-                continue
-            name = data.get("name") or (f.stem if vendor == USER_VENDOR else None)
-            # Hay archivos guardados en la carpeta equivocada: manda el campo "type".
-            real_kind = data.get("type", kind)
-            if not name or real_kind not in INDEXED_KINDS:
-                continue
-            self.by_vendor.setdefault(vendor, {}).setdefault((real_kind, name), data)
-            if (real_kind, name) not in self.raw:
-                self.raw[(real_kind, name)] = data
-                self.vendors[(real_kind, name)] = vendor
+            self._add(data, kind, vendor, f.stem)
+
+    def _add(self, data, kind: str, vendor: str, stem: str) -> None:
+        if not isinstance(data, dict):
+            return
+        name = data.get("name") or (stem if vendor == USER_VENDOR else None)
+        # Hay archivos guardados en la carpeta equivocada: manda el campo "type".
+        real_kind = data.get("type", kind)
+        if not name or real_kind not in INDEXED_KINDS:
+            return
+        self.by_vendor.setdefault(vendor, {}).setdefault((real_kind, name), data)
+        if (real_kind, name) not in self.raw:
+            self.raw[(real_kind, name)] = data
+            self.vendors[(real_kind, name)] = vendor
 
     def has(self, kind: str, name: str) -> bool:
         return (kind, name) in self.raw
