@@ -62,10 +62,12 @@ def test_bambu_specifics_removed_and_reported(lib, tmp_path):
 def test_value_fixes_for_orca(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"raft_first_layer_expansion": "-1",
-                                    "ensure_vertical_shell_thickness": "enabled"},
+                                    "ensure_vertical_shell_thickness": "enabled",
+                                    "retraction_distances_when_cut": ["0"]},
                           part_overrides={"2": {"ensure_vertical_shell_thickness": "enabled"}})
     _, result, s = run(lib, path)
     assert "raft_first_layer_expansion" not in s
+    assert "retraction_distances_when_cut" not in s   # lista: también se corrige
     assert s["ensure_vertical_shell_thickness"] == "ensure_all"
     o = [o for o in result.report.object_overrides if o.key == "ensure_vertical_shell_thickness"]
     assert o and o[0].final == "ensure_all"

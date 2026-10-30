@@ -70,6 +70,10 @@ VALUE_FIXES = {
     "raft_first_layer_expansion": {"-1": None},  # "auto" en Bambu; Orca exige >= 0
     "ensure_vertical_shell_thickness": {"enabled": "ensure_all", "disabled": "none",
                                         "1": "ensure_all", "0": "none"},
+    # El perfil de Anycubic Kobra S1 Max que trae Flash Studio 1.7.20 lo define a 0 (con
+    # la función desactivada) y el propio laminador lo rechaza: rango 10–18 (comprobado
+    # con su CLI). Se aplica también a listas (un valor por extrusor).
+    "retraction_distances_when_cut": {"0": None},
 }
 
 # Toda clave de G-code se toma del perfil destino; si no lo define, queda vacía.

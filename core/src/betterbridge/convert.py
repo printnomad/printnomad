@@ -313,12 +313,15 @@ def convert(
     for k in sorted(k for k in out if k not in reasons and rules.is_cooling_key(k)):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.cooling_no_value")))
     for k, fixes in rules.VALUE_FIXES.items():
-        if k in out and isinstance(out[k], str) and out[k] in fixes:
-            fixed = fixes[out[k]]
-            if fixed is None:
-                report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.invalid_in_orca")))
-            else:
-                put(k, fixed, t("reason.orca_equivalent"))
+        value = out.get(k)
+        values = value if isinstance(value, list) else [value]
+        if k not in out or not values or not all(isinstance(v, str) and v in fixes for v in values):
+            continue
+        fixed = [fixes[v] for v in values]
+        if any(f is None for f in fixed):
+            report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.invalid_in_orca")))
+        else:
+            put(k, fixed if isinstance(value, list) else fixed[0], t("reason.orca_equivalent"))
     for k, v in out.items():
         if k in machine_cfg and v == machine_cfg[k]:
             continue  # viene del perfil destino (p. ej. una impresora Bambu): es su G-code legítimo
