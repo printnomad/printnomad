@@ -387,3 +387,31 @@ def test_source_preset_defaults_removed_designer_and_project_values_kept(lib, tm
     assert "skeleton_infill_density" not in s and "skeleton_infill_density" in result.report.source_defaults
     assert s["ironing_inset"] == "0.21" and s["wipe_tower_x"] == ["15"]
     assert "Valores por defecto del perfil de origen quitados" in result.report.to_text()
+
+
+def test_designer_changes_compared_with_the_source_preset(lib, tmp_path):
+    """Con los perfiles de origen: valor original en el reporte; 'cambios' iguales al original se ignoran."""
+    source = ProfileLibrary.from_bundles([{"vendor": "BBL", "files": {
+        "process/a1.json": {"type": "process", "name": "0.20mm Standard @BBL A1", "bridge_speed": ["50"],
+                            "wall_loops": "2", "layer_height": "0.2"},
+        "filament/pla.json": {"type": "filament", "name": "Bambu PLA Basic @BBL A1", "nozzle_temperature": ["220"]},
+    }}])
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "bridge_speed": ["10"],                     # cambiado de verdad (50 → 10)
+        "wall_loops": "2",                          # marcado como cambiado, pero igual al original
+        "nozzle_temperature": ["230"],
+        "inherits_group": ["0.20mm Standard @BBL A1", "Bambu PLA Basic @BBL A1", ""],
+        "different_settings_to_system": ["bridge_speed;wall_loops", "nozzle_temperature", ""],
+    })
+    _, result, s = run(lib, path, source_lib=source)
+    rep = result.report
+    assert rep.source_presets == "0.20mm Standard @BBL A1"
+    kept = {c.key: c for c in rep.kept_author}
+    assert kept["bridge_speed"].source_preset == ["50"] and kept["bridge_speed"].original == ["10"]
+    assert kept["nozzle_temperature[filamento 1]"].source_preset == "220"
+    assert "wall_loops" in rep.not_changed and "wall_loops" not in kept
+    assert "wall_loops" not in s["different_settings_to_system"][0].split(";")
+    assert '["50"] → ["10"]' in rep.to_text()
+
+    _, result, _ = run(lib, path)  # sin perfiles de origen: como antes
+    assert "wall_loops" in {c.key for c in result.report.kept_author} and not result.report.not_changed

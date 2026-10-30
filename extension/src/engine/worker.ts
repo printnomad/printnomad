@@ -11,6 +11,7 @@ import type {
   PrinterInfo,
   Request,
   Response,
+  SourceInfo,
 } from "./protocol.ts";
 
 const LIB = "/lib";
@@ -72,6 +73,7 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
         nozzle: args.nozzle ?? null,
         map_text: args.map ?? null,
         options: py.toPy(args.options ?? {}),
+        source_bundles: args.sourceBundles?.length ? pyBundles(py, args.sourceBundles) : null,
         lang: args.lang ?? null,
       }),
     );
@@ -96,6 +98,17 @@ async function listOptions(lang?: string): Promise<OptionInfo[]> {
   return toJs<OptionInfo[]>(py.pyimport("betterbridge.web").list_options(lang ?? null));
 }
 
+async function sourceInfo(name: string, data: ArrayBuffer): Promise<SourceInfo> {
+  const py = await engine();
+  const path = `${WORK}/${crypto.randomUUID()}-${name.replace(/[\\/]/g, "_")}`;
+  py.FS.writeFile(path, new Uint8Array(data));
+  try {
+    return toJs<SourceInfo>(py.pyimport("betterbridge.web").source_info(path));
+  } finally {
+    py.FS.unlink(path);
+  }
+}
+
 async function handle(request: Request): Promise<unknown> {
   switch (request.op) {
     case "convert":
@@ -104,6 +117,8 @@ async function handle(request: Request): Promise<unknown> {
       return listPrinters(request.args);
     case "listOptions":
       return listOptions(request.args.lang);
+    case "sourceInfo":
+      return sourceInfo(request.args.name, request.args.data);
   }
 }
 

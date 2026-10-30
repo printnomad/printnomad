@@ -12,7 +12,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .profiles import ProfileLibrary
+from .profiles import ProfileError, ProfileLibrary
 
 DATA_FILE = Path(__file__).parent / "data" / "slicers.json"
 PLATFORMS = {"darwin": "macos", "win32": "windows"}  # el resto: "linux"
@@ -85,3 +85,22 @@ def registry(data_file: Path = DATA_FILE, platform: str | None = None) -> dict[s
 
 def installed_slicers(data_file: Path = DATA_FILE) -> list[Slicer]:
     return [s for s in registry(data_file).values() if s.installed]
+
+
+def source_slicer(kind: str, data_file: Path = DATA_FILE) -> str | None:
+    """Slicer whose system presets projects of `kind` start from (e.g. "bambu" → "bambustudio")."""
+    data = json.loads(Path(data_file).read_text(encoding="utf-8"))
+    return next((key for key, spec in data.items()
+                 if not key.startswith("_") and kind in spec.get("source_of", ())), None)
+
+
+def source_library(kind: str, data_file: Path = DATA_FILE) -> ProfileLibrary | None:
+    """System presets of the installed source slicer, or None (not installed or unreadable)."""
+    key = source_slicer(kind, data_file)
+    slicer = registry(data_file).get(key) if key else None
+    if slicer is None or not slicer.installed:
+        return None
+    try:
+        return slicer.library(include_user=False)
+    except ProfileError:
+        return None

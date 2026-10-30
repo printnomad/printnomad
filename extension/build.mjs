@@ -65,7 +65,10 @@ if (profilesDir) {
   const slicers = {};
   for (const [slicer, vendors] of Object.entries(config.fallbackProfiles)) {
     const entry = catalog.slicers[slicer];
-    if (!entry) throw new Error(`fallback slicer ${slicer} is not in ${profilesDir}/catalog.json`);
+    if (!entry) {
+      console.warn(`fallback profiles: ${slicer} is not in ${profilesDir}/catalog.json, skipped`);
+      continue;
+    }
     const wanted = new Set(vendors.flatMap((v) => [v, ...(entry.vendors[v]?.depends ?? [])]));
     const kept = Object.fromEntries(Object.entries(entry.vendors).filter(([v]) => wanted.has(v)));
     for (const v of wanted) {

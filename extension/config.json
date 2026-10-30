@@ -1,7 +1,12 @@
 {
-  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission.",
+  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. fallbackProfiles: target printers to offer offline, plus the source profiles of Bambu projects (original values in reports).",
   "catalogUrl": "https://betterbridge.github.io/profiles/catalog.json",
   "fallbackProfiles": {
-    "flashstudio": ["Flashforge"]
+    "flashstudio": [
+      "Flashforge"
+    ],
+    "bambustudio": [
+      "BBL"
+    ]
   }
 }

@@ -3,7 +3,7 @@
 // reachable in tests).
 //
 //   npm run test:e2e                      synthetic project + fake profiles (self-contained)
-//   BB_E2E_FILE=x.3mf BB_E2E_PRINTER="…"  BB_E2E_SKIP_BUILD=1 npm run test:e2e
+//   BB_E2E_FILE=x.3mf BB_E2E_PRINTER="…" [BB_E2E_EXPECT=text] BB_E2E_SKIP_BUILD=1 npm run test:e2e
 //                                         a real project with the dist/ you built
 //
 // The browser comes from CHROME_PATH or a usual install location; without one the test
@@ -105,6 +105,10 @@ try {
   const bytes = readFileSync(item.filename);
   if (bytes.readUInt32LE(0) !== 0x04034b50) throw new Error(`${item.filename} is not a ZIP file`);
   if (!report.includes("Flashforge") && !process.env.BB_E2E_FILE) throw new Error(`unexpected report:\n${report}`);
+  // e.g. BB_E2E_EXPECT=" → " to check the report shows the designer's original values.
+  if (process.env.BB_E2E_EXPECT && !report.includes(process.env.BB_E2E_EXPECT)) {
+    throw new Error(`report lacks ${JSON.stringify(process.env.BB_E2E_EXPECT)}:\n${report}`);
+  }
   console.log(`OK: downloaded ${bytes.length} bytes`);
 } finally {
   await browser.close();

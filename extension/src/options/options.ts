@@ -120,6 +120,17 @@ function renderPrinterChoices() {
   $<HTMLSelectElement>("add-printer-name").replaceChildren(...groups.values());
 }
 
+/** Profiles of the slicer the project was made with, if the catalog has them (optional). */
+async function sourceProfiles(name: string, data: ArrayBuffer): Promise<string[]> {
+  try {
+    const info = await engine.sourceInfo(name, data);
+    if (!info.slicer || !info.printer) return [];
+    return (await store.bundlesFor(info.slicer, info.printer)).bundles;
+  } catch {
+    return []; // only enriches the report: convert without it
+  }
+}
+
 // --- conversion options (advanced mode) -------------------------------------
 let optionInfo: OptionInfo[] | null = null;
 
@@ -236,10 +247,12 @@ async function convertFile(event: SubmitEvent) {
   showStatus("info", t("convert_busy"));
   try {
     const [bundles, platform, data] = await Promise.all([bundlesFor(printer), platformKey(), file.arrayBuffer()]);
+    const sourceBundles = await sourceProfiles(file.name, data);
     const res = await engine.convert({
       name: file.name, data, printer: printer.printer, bundles, slicer: printer.slicer, platform, lang: uiLanguage(),
       // Basic mode: the core's defaults, whatever was chosen earlier in advanced mode.
       options: settings.advanced ? settings.options : {},
+      sourceBundles,
     });
     $("convert-report").textContent = res.text;
     if (res.output) {

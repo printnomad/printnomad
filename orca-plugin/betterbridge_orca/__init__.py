@@ -27,7 +27,7 @@ from .core import i18n, read_3mf, write_3mf
 from .core.convert import convert
 from .core.i18n import t
 from .core.remap_filaments import parse_map
-from .core.slicers import registry
+from .core.slicers import registry, source_library
 from .core.target import Target, load_target
 from .local_server import serve_once
 
@@ -170,6 +170,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         self._panel = None
         self._path: Path | None = None
         self._project = None      # Project3MF cargado (se reutiliza entre vista previa y conversión)
+        self._source_lib = None   # perfiles del laminador de origen, si está instalado
         self._target: Target | None = None
         self._last: dict | None = None  # último mensaje enviado, para reenviarlo en "ready"
         self._cached = None  # (boquilla, ConversionResult) de la última vista previa
@@ -330,11 +331,13 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         target = self._get_target()
         if self._project is None:
             self._project = read_3mf.load(self._path)
+            # Installed source slicer (e.g. Bambu Studio): original value of each designer change.
+            self._source_lib = source_library(read_3mf.detect_source(self._project))
         return self._project, target
 
     def _send_preview(self, nozzle: str | None = None) -> None:
         project, target = self._load()
-        result = convert(project, target, nozzle=nozzle)
+        result = convert(project, target, nozzle=nozzle, source_lib=self._source_lib)
         # Si se convierte sin tocar la tabla, se reutiliza este cálculo.
         self._cached = (result.report.presets.get("nozzle"), result)
         rep = result.report
@@ -386,7 +389,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
             result = cached[1]
             log.info("convertir: se reutiliza la vista previa")
         else:
-            result = convert(project, target, nozzle=nozzle, user_map=user_map)
+            result = convert(project, target, nozzle=nozzle, user_map=user_map, source_lib=self._source_lib)
         report = result.report
         if report.ok:
             log.info("escribiendo %s", dest)

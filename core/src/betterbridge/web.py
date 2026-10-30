@@ -15,8 +15,19 @@ from . import options as conversion_options
 from .convert import convert
 from .profiles import ProfileError, ProfileLibrary
 from .remap_filaments import MapError, parse_map
-from .slicers import registry
+from .slicers import registry, source_slicer
 from .target import Target, find_printer
+
+
+def source_info(src: str) -> dict:
+    """What the project was made with: {"kind", "slicer", "printer"}; slicer/printer may be None.
+
+    The extension uses it to fetch the source slicer's profiles before converting.
+    """
+    project = read_3mf.peek(src)
+    kind = read_3mf.detect_source(project)
+    printer = (project.project_settings or {}).get("printer_settings_id") or None
+    return {"kind": kind, "slicer": source_slicer(kind), "printer": printer}
 
 
 def list_options(lang: str | None = None) -> list[dict]:
@@ -58,6 +69,7 @@ def convert_file(
     nozzle: str | None = None,
     map_text: str | None = None,
     options: dict | None = None,
+    source_bundles: list[dict] | None = None,
     lang: str | None = None,
 ) -> dict:
     """Convert `src` for `printer` and write the result into `out_dir`.
@@ -66,6 +78,8 @@ def convert_file(
     the converted project or None. `options` are the advanced options (see
     options.py; missing ones take their defaults). Errors in the input (unknown
     printer, bad map or option) come back in the report instead of raising.
+    `source_bundles`: profiles of the slicer the project comes from (see source_info),
+    to compare the designer's changes with their original values.
     """
     if lang:
         i18n.set_language(lang)
@@ -82,7 +96,13 @@ def convert_file(
     except (MapError, ProfileError, conversion_options.OptionError) as e:
         return {"ok": False, "output": None, "needs_map": False, "report": None, "text": str(e)}
 
-    result = convert(project, target, nozzle=nozzle, user_map=user_map, **chosen)
+    source_lib = None
+    if source_bundles:
+        try:
+            source_lib = ProfileLibrary.from_bundles(source_bundles)
+        except ProfileError:
+            source_lib = None  # optional: only enriches the report
+    result = convert(project, target, nozzle=nozzle, user_map=user_map, source_lib=source_lib, **chosen)
     report = result.report
     dest = Path(out_dir) / write_3mf.output_path(Path(src), target.output_suffix).name
     if report.ok:

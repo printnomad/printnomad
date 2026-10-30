@@ -13,6 +13,8 @@ export interface ConvertRequest {
   map?: string;
   /** Advanced options (core/src/betterbridge/options.py); missing ones take their defaults. */
   options?: OptionValues;
+  /** Profiles of the slicer the project was made with (see SourceInfo): original values in the report. */
+  sourceBundles?: string[];
   lang?: string;
 }
 
@@ -41,6 +43,14 @@ export interface ConvertResult {
   ms: number;
 }
 
+/** What a project was made with (betterbridge.web.source_info). */
+export interface SourceInfo {
+  kind: string;
+  /** Catalog slicer holding the presets the designer started from, e.g. "bambustudio". */
+  slicer: string | null;
+  printer: string | null;
+}
+
 export interface ListPrintersRequest {
   bundles: string[];
 }
@@ -56,7 +66,8 @@ export interface PrinterInfo {
 export type Request =
   | { id: number; op: "convert"; args: ConvertRequest }
   | { id: number; op: "listPrinters"; args: ListPrintersRequest }
-  | { id: number; op: "listOptions"; args: { lang?: string } };
+  | { id: number; op: "listOptions"; args: { lang?: string } }
+  | { id: number; op: "sourceInfo"; args: { name: string; data: ArrayBuffer } };
 
 export type Response =
   | { id: number; ok: true; result: unknown }

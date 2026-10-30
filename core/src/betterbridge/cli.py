@@ -16,7 +16,7 @@ from .convert import convert
 from .i18n import t
 from .profiles import USER_VENDOR, ProfileError
 from .remap_filaments import MapError, parse_map
-from .slicers import installed_slicers, registry
+from .slicers import installed_slicers, registry, source_library
 from .target import Target, load_target
 
 EXIT_OK, EXIT_ERROR, EXIT_NEEDS_INPUT = 0, 1, 2
@@ -129,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     before = write_3mf.sha256_file(src)
     project = read_3mf.load(src)
     result = convert(project, target, nozzle=args.nozzle, user_map=user_map,
+                     source_lib=source_library(read_3mf.detect_source(project)),
                      keep_designer_filament=not args.no_designer_filament,
                      keep_designer_cooling=args.designer_cooling, map_mode=args.map_mode)
     report = result.report

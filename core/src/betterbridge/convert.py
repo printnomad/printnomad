@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from . import model_edit, rules
 from .i18n import t
-from .profiles import ProfileError
+from .profiles import ProfileError, ProfileLibrary
 from .read_3mf import (
     MODEL_FILE,
     MODEL_SETTINGS,
@@ -93,6 +93,7 @@ def convert(
     keep_designer_cooling: bool = False,
     keep_designer_printer_settings: bool = False,
     map_mode: str = rules.MAP_COMPATIBLE,
+    source_lib: ProfileLibrary | None = None,
 ) -> ConversionResult:
     """Convierte `project` para la impresora `target`.
 
@@ -106,6 +107,9 @@ def convert(
     `keep_designer_printer_settings`: conservar también los ajustes de proceso que dependen
     de la impresora (torre de purga, aceleraciones, calibración; ver rules.PRINTER_PROCESS_KEY).
     `map_mode`: rules.MAP_COMPATIBLE | MAP_EXACT | MAP_BY_SLICER (ver options.py).
+    `source_lib`: perfiles del laminador de origen (p. ej. Bambu Studio). Con ellos el
+    reporte muestra el valor original de cada cambio del diseñador, y los "cambios" que
+    en realidad tienen el valor original se tratan como no cambiados.
     """
     if map_mode not in rules.MAP_MODES:
         raise ValueError(f"map_mode must be one of {rules.MAP_MODES}, not {map_mode!r}")
@@ -166,6 +170,9 @@ def convert(
     # --- Proceso ---------------------------------------------------------
     diffs = _split_diff(src.get("different_settings_to_system"))
     author_process = diffs[0] if diffs else set()
+    source_process = _source_settings(source_lib, src, report)
+    if source_process is not None:
+        _drop_unchanged(author_process, src, source_process, report)
     try:
         layer_height = float(_first(src.get("layer_height"), 0.2))
     except (TypeError, ValueError):
@@ -179,10 +186,12 @@ def convert(
         return result
     for k, v in process_cfg.items():
         if k in rules.KEEP_SOURCE_PROCESS_KEYS and k in src and src[k] != v and k not in author_process:
-            report.kept_author.append(FieldChange(k, src[k], v, t(rules.KEEP_SOURCE_PROCESS_KEYS[k])))
+            report.kept_author.append(FieldChange(k, src[k], v, t(rules.KEEP_SOURCE_PROCESS_KEYS[k]),
+                                                  _preset_value(source_process, k)))
             out[k] = src[k]
         elif k in author_process and k in src and keep_process_key(k):
-            report.kept_author.append(FieldChange(k, src[k], v, t("reason.author_on_process")))
+            report.kept_author.append(FieldChange(k, src[k], v, t("reason.author_on_process"),
+                                                  _preset_value(source_process, k)))
             out[k] = src[k]
         else:
             if k in author_process and k in src and src[k] != v:
@@ -192,7 +201,8 @@ def convert(
         if k not in src or k in reasons:
             continue
         if keep_process_key(k):
-            report.kept_author.append(FieldChange(k, src[k], t("value.no_profile_value"), t("reason.author")))
+            report.kept_author.append(FieldChange(k, src[k], t("value.no_profile_value"), t("reason.author"),
+                                                  _preset_value(source_process, k)))
         elif rules.is_printer_process_key(k):
             # The target profile does not set it: the slicer's default applies.
             report.dropped.append(FieldChange(k, out.pop(k), None, process_reason(k)))
@@ -274,6 +284,9 @@ def convert(
     kept_filament: dict[int, set[str]] = {}  # filamento -> claves del diseñador conservadas
     for i in range(n):
         author_f = diffs[i + 1] if len(diffs) > i + 1 else set()
+        source_filament = _source_filament(source_lib, src, i)
+        if source_filament is not None:
+            _drop_unchanged(author_f, src, source_filament, report, index=i)
         for k in sorted(author_f):
             if fcfgs[i] is None or not isinstance(src.get(k), list) or i >= len(src[k]):
                 continue
@@ -284,7 +297,7 @@ def convert(
                 kept_filament.setdefault(i, set()).add(k)
                 report.kept_author.append(FieldChange(
                     t("report.filament_key", key=k, index=i + 1), src[k][i], target_value,
-                    t("reason.author_filament_kept")))
+                    t("reason.author_filament_kept"), _first(_preset_value(source_filament, k))))
             elif k in fcfgs[i]:
                 report.dropped.append(FieldChange(
                     t("report.filament_key", key=k, index=i + 1), src[k][i],
@@ -397,6 +410,68 @@ def convert(
         if moves:
             result.files[MODEL_FILE] = new_xml
     return result
+
+
+def _source_settings(source_lib: ProfileLibrary | None, src: dict, report: Report) -> dict | None:
+    """Resolved process preset the designer started from, if the source profiles have it.
+
+    Bambu projects name it in `inherits_group[0]` (also for MakerWorld "Shared" user
+    presets) and otherwise in `print_settings_id`.
+    """
+    if source_lib is None:
+        return None
+    name = (src.get("inherits_group") or [""])[0] or src.get("print_settings_id") or ""
+    try:
+        settings = source_lib.settings("process", name)
+    except ProfileError:
+        return None
+    report.source_presets = name
+    return settings
+
+
+def _source_filament(source_lib: ProfileLibrary | None, src: dict, i: int) -> dict | None:
+    if source_lib is None:
+        return None
+    group = src.get("inherits_group") or []
+    ids = src.get("filament_settings_id") or []
+    name = (group[i + 1] if len(group) > i + 1 else "") or (ids[i] if len(ids) > i else "")
+    try:
+        return source_lib.settings("filament", name)
+    except ProfileError:
+        return None
+
+
+def _preset_value(preset: dict | None, key: str):
+    return None if preset is None else preset.get(key)
+
+
+def _same_value(a, b) -> bool:
+    def norm(v):
+        return [str(x) for x in v] if isinstance(v, list) else [str(v)]
+    return norm(a) == norm(b)
+
+
+def _drop_unchanged(author: set[str], src: dict, preset: dict, report: Report, index: int | None = None) -> None:
+    """Remove from `author` the keys whose project value equals the source preset's.
+
+    MakerWorld "Shared" presets often list settings as changed that keep the original
+    value; treating them as the designer's choice would override the target printer
+    for nothing. `index`: filament position, for per-filament lists.
+    """
+    for k in sorted(author):
+        if k not in src or k not in preset:
+            continue
+        value = src[k]
+        if index is not None:
+            if not isinstance(value, list) or index >= len(value):
+                continue
+            value = value[index]
+            same = _same_value(value, _first(preset[k]) if isinstance(preset[k], list) else preset[k])
+        else:
+            same = _same_value(value, preset[k])
+        if same:
+            author.discard(k)
+            report.not_changed.append(k if index is None else t("report.filament_key", key=k, index=index + 1))
 
 
 def _collapse_variants(src: dict, out: dict, machine_keys: set[str], target, put) -> set[str]:
