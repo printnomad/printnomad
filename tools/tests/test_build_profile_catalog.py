@@ -1,0 +1,48 @@
+"""Profile catalog for the browser extension: bundles load like the folders they come from."""
+
+import importlib.util
+import json
+from pathlib import Path
+
+from betterbridge.profiles import ProfileLibrary
+from betterbridge.target import Target
+
+TOOL = Path(__file__).resolve().parents[1] / "build_profile_catalog.py"
+spec = importlib.util.spec_from_file_location("build_profile_catalog", TOOL)
+catalog_tool = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(catalog_tool)
+
+C5P = "Flashforge Creator 5 Pro 0.4 nozzle"
+
+
+def test_catalog_lists_usable_printers_and_bundles(profiles_root, tmp_path):
+    out = tmp_path / "out"
+    entry = catalog_tool.build("flashstudio", profiles_root, "1.0.0", "abc", out)
+    assert entry["repo"] == "FlashForge/Orca-Flashforge" and entry["ref"] == "1.0.0"
+    ff = entry["vendors"]["Flashforge"]
+    names = [p["name"] for p in ff["printers"]]
+    assert C5P in names
+    printer = next(p for p in ff["printers"] if p["name"] == C5P)
+    assert printer["extruders"] == 4 and printer["nozzle"] == "0.4"
+    assert ff["depends"] == ["OrcaFilamentLibrary"]
+    bundle = json.loads((out / ff["bundle"]).read_bytes())
+    assert bundle["vendor"] == "Flashforge" and bundle["ref"] == "1.0.0"
+    assert all(rel.split("/")[0] in ("machine", "process", "filament") for rel in bundle["files"])
+    catalog = json.loads((out / "catalog.json").read_text())
+    assert catalog["schema"] == 1 and "flashstudio" in catalog["slicers"]
+
+
+def test_bundles_give_the_same_library_as_folders(profiles_root, tmp_path):
+    out = tmp_path / "out"
+    entry = catalog_tool.build("flashstudio", profiles_root, "1.0.0", None, out)
+    bundles = [json.loads((out / v["bundle"]).read_bytes()) for v in entry["vendors"].values()]
+    from_bundles = ProfileLibrary.from_bundles(bundles)
+    from_folders = ProfileLibrary.from_roots([profiles_root])
+    for kind in ("machine", "process", "filament"):
+        names = from_bundles.names(kind)
+        assert names and set(names) <= set(from_folders.names(kind))
+    for name in from_bundles.names("filament"):
+        assert from_bundles.resolve("filament", name) == from_folders.resolve("filament", name)
+    a, b = Target(from_bundles, C5P), Target(from_folders, C5P)
+    assert a.settings == b.settings and a.compatible == b.compatible
+    assert a.pick_process(0.2) == b.pick_process(0.2)

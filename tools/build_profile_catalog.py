@@ -1,0 +1,139 @@
+"""Build the static profile catalog the browser extension downloads.
+
+Usage:
+    python tools/build_profile_catalog.py --slicer flashstudio --profiles DIR \
+        --ref 1.7.15 [--commit SHA] --out OUT
+
+`DIR` is the `resources/profiles` folder of the slicer's official repository at
+`--ref` (a sparse checkout is enough). The command writes into `OUT`:
+
+- `<slicer>/<ref>/<Vendor>.json`: one bundle per vendor with every machine,
+  process and filament JSON, minified, keyed by its path inside the vendor folder.
+- `catalog.json`: merged across runs; per slicer the repository, ref, vendors,
+  bundle paths, sha256 and the usable printers (name, model, nozzle, extruders).
+
+Only data from the slicer repositories is redistributed (AGPL-3.0, like this
+project); the source and version travel with every bundle so reports can name them.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "core" / "src"))
+
+from betterbridge.profiles import INDEXED_KINDS, KINDS, LIBRARY_VENDOR, ProfileError, ProfileLibrary  # noqa: E402
+from betterbridge.slicers import registry  # noqa: E402
+from betterbridge.target import Target  # noqa: E402
+
+SCHEMA = 1
+
+
+def vendor_dirs(root: Path) -> list[Path]:
+    return sorted(d for d in root.iterdir() if d.is_dir() and any((d / k).is_dir() for k in KINDS))
+
+
+def vendor_version(root: Path, vendor: str) -> str | None:
+    meta = root / f"{vendor}.json"
+    try:
+        return json.loads(meta.read_text(encoding="utf-8")).get("version")
+    except (OSError, ValueError):
+        return None
+
+
+def bundle_files(vendor_dir: Path) -> dict[str, dict]:
+    """{"machine/x.json": data} for every profile JSON the core would index."""
+    files: dict[str, dict] = {}
+    for kind in KINDS:
+        for f in sorted((vendor_dir / kind).rglob("*.json")):
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, ValueError):
+                continue
+            if isinstance(data, dict) and data.get("type", kind) in INDEXED_KINDS:
+                files[f.relative_to(vendor_dir).as_posix()] = data
+    return files
+
+
+def usable_printers(lib: ProfileLibrary) -> dict[str, list[dict]]:
+    """{vendor: [printer]} for instantiable system machine presets with complete profiles."""
+    out: dict[str, list[dict]] = {}
+    for name in lib.names("machine"):
+        if str(lib.raw[("machine", name)].get("instantiation", "true")).lower() != "true":
+            continue
+        try:
+            target = Target(lib, name)
+        except ProfileError:
+            continue
+        if not target.is_usable():
+            continue
+        out.setdefault(lib.vendors[("machine", name)], []).append({
+            "name": name,
+            "model": target.printer_model,
+            "nozzle": target.nozzle,
+            "extruders": target.extruders,
+        })
+    return out
+
+
+def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path) -> dict:
+    known = registry()
+    if slicer not in known:
+        raise SystemExit(f"unknown slicer {slicer!r}; known: {', '.join(known)}")
+    repo = known[slicer].profile_repo.get("github")
+    lib = ProfileLibrary.from_roots([profiles])
+    printers = usable_printers(lib)
+    has_library = (profiles / LIBRARY_VENDOR).is_dir()
+
+    vendors: dict[str, dict] = {}
+    for vendor_dir in vendor_dirs(profiles):
+        vendor = vendor_dir.name
+        if vendor != LIBRARY_VENDOR and not printers.get(vendor):
+            continue  # nothing a user can pick: skip the download
+        payload = {"schema": SCHEMA, "slicer": slicer, "repo": repo, "ref": ref, "vendor": vendor,
+                   "version": vendor_version(profiles, vendor), "files": bundle_files(vendor_dir)}
+        blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()
+        rel = f"{slicer}/{ref}/{vendor}.json"
+        (out / rel).parent.mkdir(parents=True, exist_ok=True)
+        (out / rel).write_bytes(blob)
+        vendors[vendor] = {
+            "version": payload["version"],
+            "bundle": rel,
+            "sha256": hashlib.sha256(blob).hexdigest(),
+            "bytes": len(blob),
+            "depends": [LIBRARY_VENDOR] if has_library and vendor != LIBRARY_VENDOR else [],
+            "printers": printers.get(vendor, []),
+        }
+
+    catalog_path = out / "catalog.json"
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8")) if catalog_path.exists() else {}
+    catalog.update(schema=SCHEMA, generated=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))
+    catalog.setdefault("slicers", {})[slicer] = {
+        "name": known[slicer].name, "repo": repo, "ref": ref, "commit": commit, "vendors": vendors,
+    }
+    catalog_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
+    return catalog["slicers"][slicer]
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--slicer", required=True, help="key from core/src/betterbridge/data/slicers.json")
+    ap.add_argument("--profiles", required=True, type=Path, help="resources/profiles of the slicer repository")
+    ap.add_argument("--ref", required=True, help="release tag the profiles come from")
+    ap.add_argument("--commit", help="commit sha of --ref")
+    ap.add_argument("--out", required=True, type=Path)
+    args = ap.parse_args()
+    entry = build(args.slicer, args.profiles, args.ref, args.commit, args.out)
+    total = sum(v["bytes"] for v in entry["vendors"].values())
+    printers = sum(len(v["printers"]) for v in entry["vendors"].values())
+    print(f"{args.slicer}@{args.ref}: {len(entry['vendors'])} vendors, {printers} printers, {total / 1e6:.1f} MB")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
