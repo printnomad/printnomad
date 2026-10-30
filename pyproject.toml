@@ -1,0 +1,19 @@
+# Configuración de desarrollo del monorepo (no es un paquete).
+# Paquetes: core/ (betterbridge) y orca-plugin/ (betterbridge-orca).
+
+[tool.pytest.ini_options]
+pythonpath = ["core/src"]
+testpaths = ["core/tests", "orca-plugin/tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["**/node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# HTML/JS embebido y XML de prueba: el largo de línea no aplica.
+"orca-plugin/betterbridge_orca/panel_html.py" = ["E501"]
+"conftest.py" = ["E501"]

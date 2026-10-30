@@ -1,0 +1,21 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Builds
+dist/
+build/
+
+# Node
+node_modules/
+
+# Notas privadas de trabajo (plan, progreso, bitácora): no se publican
+.notes/
+
+# Salidas locales
+out/
+*.report.json
