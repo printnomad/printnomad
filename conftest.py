@@ -164,6 +164,8 @@ def profiles_root(tmp_path: Path) -> Path:
         "type": "machine", "name": "Flashforge Creator 5 Pro 0.6 nozzle", "inherits": machine,
         "instantiation": "true", "nozzle_diameter": ["0.6", "0.6", "0.6", "0.6"],
     })
+    _write(ff / "process/draft024.json", {"type": "process", "name": "0.24mm Draft @FF C5", "instantiation": "true",
+                                          "compatible_printers": [machine], "layer_height": "0.24"})
     _write(ff / "process/c5p06.json", {"type": "process", "name": "0.30mm Standard @FF C5 0.6 nozzle",
                                        "instantiation": "true", "layer_height": "0.3",
                                        "compatible_printers": ["Flashforge Creator 5 Pro 0.6 nozzle"]})

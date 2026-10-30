@@ -183,7 +183,10 @@ class Target:
         def key(name: str):
             lh = float(self.lib.resolve("process", name).get("layer_height", 0) or 0)
             user = self.lib.vendors.get(("process", name)) == USER_VENDOR
-            return abs(lh - layer_height), user, name   # a igual altura, el de sistema
+            # A igual altura de capa: el de sistema y, entre ellos, el "Standard"
+            # (no "Draft", "Fine", "Strength"…, que cambian otros ajustes).
+            standard = "standard" in name.lower()
+            return abs(lh - layer_height), user, not standard, name
 
         return min(names, key=key)
 
