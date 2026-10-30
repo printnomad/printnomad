@@ -122,6 +122,11 @@ class Target:
         return model.get("default_bed_type") or None
 
     @property
+    def shared_nozzle(self) -> bool:
+        """Una boquilla con cambiador de filamento (AMS, IFS, ACE): `single_extruder_multi_material`."""
+        return self.extruders == 1 and str(_first(self.settings.get("single_extruder_multi_material"), "0")) == "1"
+
+    @property
     def filament_printable_all(self) -> str:
         """Máscara de extrusores en los que puede ir cada filamento (bit 0 = E1)."""
         return str((1 << self.extruders) - 1)

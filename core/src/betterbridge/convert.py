@@ -200,7 +200,7 @@ def convert(
         usage[pid] = {f for f in used if 1 <= f <= n} or {1}
 
     result.usage = usage
-    assignment = assign(ftypes, usage, target.extruders, user_map)
+    assignment = assign(ftypes, usage, target.extruders, user_map, shared_nozzle=target.shared_nozzle)
     report.warnings.extend(assignment.warnings)
     report.needs_map = assignment.needs_map
     if assignment.errors:
