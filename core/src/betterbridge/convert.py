@@ -90,6 +90,8 @@ def convert(
     nozzle: str | None = None,
     user_map: dict[int, int] | None = None,
     keep_designer_filament: bool = True,
+    keep_designer_cooling: bool = False,
+    map_mode: str = rules.MAP_COMPATIBLE,
 ) -> ConversionResult:
     """Convierte `project` para la impresora `target`.
 
@@ -97,7 +99,17 @@ def convert(
     destino tiene esa variante, si no la del preset elegido.
     `keep_designer_filament`: conservar las temperaturas y la densidad que el diseñador
     cambió en sus filamentos (ver rules.DESIGNER_FILAMENT_KEEP).
+    `keep_designer_cooling`: conservar también el enfriamiento que cambió el diseñador
+    (proceso y filamentos); por defecto manda el perfil destino porque los ventiladores
+    cambian de una impresora a otra.
+    `map_mode`: rules.MAP_COMPATIBLE | MAP_EXACT | MAP_BY_SLICER (ver options.py).
     """
+    if map_mode not in rules.MAP_MODES:
+        raise ValueError(f"map_mode must be one of {rules.MAP_MODES}, not {map_mode!r}")
+
+    def keep_process_key(k: str) -> bool:
+        return keep_designer_cooling or not rules.is_cooling_key(k)
+
     report = Report(source=str(project.path), target=target.display_name, profiles=target.lib.source)
     result = ConversionResult(report=report)
     kind = detect_source(project)
@@ -159,7 +171,7 @@ def convert(
         if k in rules.KEEP_SOURCE_PROCESS_KEYS and k in src and src[k] != v and k not in author_process:
             report.kept_author.append(FieldChange(k, src[k], v, t(rules.KEEP_SOURCE_PROCESS_KEYS[k])))
             out[k] = src[k]
-        elif k in author_process and k in src and not rules.is_cooling_key(k):
+        elif k in author_process and k in src and keep_process_key(k):
             report.kept_author.append(FieldChange(k, src[k], v, t("reason.author_on_process")))
             out[k] = src[k]
         else:
@@ -167,7 +179,7 @@ def convert(
                 report.dropped.append(FieldChange(k, src[k], v, t("reason.cooling")))
             put(k, v, t("reason.target_process"))
     for k in sorted(author_process - set(process_cfg)):
-        if k in src and not rules.is_cooling_key(k):
+        if k in src and keep_process_key(k):
             report.kept_author.append(FieldChange(k, src[k], t("value.no_profile_value"), t("reason.author")))
     _collapse_variants(src, out, set(machine_cfg), target, put)
     for c in report.kept_author:
@@ -250,7 +262,8 @@ def convert(
         for k in sorted(author_f):
             if fcfgs[i] is None or not isinstance(src.get(k), list) or i >= len(src[k]):
                 continue
-            if keep_designer_filament and rules.keep_designer_filament_key(k) and isinstance(out.get(k), list):
+            if rules.keep_designer_filament_key(k, keep_designer_filament, keep_designer_cooling) \
+                    and isinstance(out.get(k), list):
                 target_value = out[k][i] if i < len(out[k]) else None
                 out[k][i] = src[k][i]
                 kept_filament.setdefault(i, set()).add(k)
@@ -276,14 +289,8 @@ def convert(
     # (OrcaSlicer 2.5: E1–E2); se lee del registro de laminadores (quirk).
     manual_limit = target.manual_map_max_extruder
     over_limit = manual_limit is not None and highest > manual_limit
-    if user_map is None and over_limit:
-        map_mode = rules.MAP_MODE_AUTO
-        report.warnings.append(t("convert.warn.map_auto_e34"))
-    else:
-        map_mode = rules.MAP_MODE_MANUAL
-        if over_limit:
-            report.warnings.append(t("convert.warn.map_manual_e34"))
-    put("filament_map_mode", map_mode, t("reason.filament_map_mode"))
+    slicer_map_mode = _slicer_map_mode(map_mode, user_map, over_limit, target.extruders, report)
+    put("filament_map_mode", slicer_map_mode, t("reason.filament_map_mode"))
     put("filament_printable", [target.filament_printable_all] * n,
         t("reason.filament_printable", count=target.extruders))
     ext_colours = list(machine_cfg.get("extruder_colour") or [])
@@ -310,8 +317,13 @@ def convert(
     for k in sorted(k for k in rules.BAMBU_ONLY_KEYS & set(out) if k not in reasons):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.bambu_hardware")))
     # Enfriamiento del origen que el perfil C5P no define: fuera, Orca usa su valor por defecto.
-    for k in sorted(k for k in out if k not in reasons and rules.is_cooling_key(k)):
+    kept_keys = {c.key for c in report.kept_author}.union(*kept_filament.values())
+    for k in sorted(k for k in out if k not in reasons and k not in kept_keys and rules.is_cooling_key(k)):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.cooling_no_value")))
+    kept_cooling = sorted({c.key for c in report.kept_author if c.key in out and rules.is_cooling_key(c.key)}
+                          | {k for ks in kept_filament.values() for k in ks if rules.is_cooling_key(k)})
+    if kept_cooling:
+        report.warnings.append(t("convert.warn.designer_cooling", keys=", ".join(kept_cooling)))
     for k, fixes in rules.VALUE_FIXES.items():
         value = out.get(k)
         values = value if isinstance(value, list) else [value]
@@ -338,7 +350,7 @@ def convert(
 
     # --- model_settings.config ------------------------------------------
     if ms_root is not None:
-        _edit_model_settings(ms_root, info, assignment.per_plate, map_mode, target, limits, report)
+        _edit_model_settings(ms_root, info, assignment.per_plate, slicer_map_mode, target, limits, report)
         result.files[MODEL_SETTINGS] = model_edit.serialize(ms_root)
 
     # --- Posición en plato ------------------------------------------------
@@ -405,6 +417,24 @@ def _note_volumetric(out: dict, report: Report, used: list[int]) -> None:
             capped.append(t("convert.note.volumetric_item", key=c.key, speed=f"{speed:g}", actual=f"{cap / area:.0f}"))
     if capped:
         report.notes.append(t("convert.note.volumetric", cap=f"{cap:g}", items=", ".join(capped)))
+
+
+def _slicer_map_mode(map_mode: str, user_map, over_limit: bool, extruders: int, report: Report) -> str:
+    """Slicer's `filament_map_mode` for the `map_mode` option.
+
+    An assignment the user chose by hand (`user_map`) is always enforced (manual).
+    Otherwise: compatible → automatic; exact → manual; slicer → manual unless the
+    target slicer rejects manual mode on the extruders in use.
+    """
+    if user_map is not None or map_mode == rules.MAP_EXACT or (map_mode == rules.MAP_BY_SLICER and not over_limit):
+        if over_limit:
+            report.warnings.append(t("convert.warn.map_manual_e34"))
+        return rules.MAP_MODE_MANUAL
+    if map_mode == rules.MAP_BY_SLICER:
+        report.warnings.append(t("convert.warn.map_auto_e34"))
+    elif extruders > 1:
+        report.notes.append(t("convert.note.map_compatible"))
+    return rules.MAP_MODE_AUTO
 
 
 def _edit_model_settings(root, info, per_plate, map_mode, target, limits, report: Report) -> None:

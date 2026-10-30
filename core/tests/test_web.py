@@ -45,3 +45,14 @@ def test_convert_file_reports_input_errors(profiles_root, tmp_path):
     assert not res["ok"] and res["output"] is None and "No Such Printer" in res["text"]
     res = web.convert_file(str(src), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root), map_text="x")
     assert not res["ok"] and res["report"] is None
+
+
+def test_convert_file_options(profiles_root, tmp_path):
+    src = make_bambu_3mf(tmp_path / "boat.3mf", [PLA], [["2"]])
+    res = web.convert_file(str(src), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root),
+                           options={"map_mode": "exact"})
+    assert res["ok"]
+    res = web.convert_file(str(src), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root),
+                           options={"map_mode": "sideways"}, lang="en")
+    assert not res["ok"] and "map_mode" in res["text"]
+    assert {o["key"] for o in web.list_options("es")} >= {"map_mode", "keep_designer_cooling"}

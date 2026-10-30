@@ -11,11 +11,19 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import i18n, read_3mf, write_3mf
+from . import options as conversion_options
 from .convert import convert
 from .profiles import ProfileError, ProfileLibrary
 from .remap_filaments import MapError, parse_map
 from .slicers import registry
 from .target import Target, find_printer
+
+
+def list_options(lang: str | None = None) -> list[dict]:
+    """Advanced options with texts in `lang` (for the settings screens)."""
+    if lang:
+        i18n.set_language(lang)
+    return conversion_options.describe()
 
 
 def list_printers(bundles: list[dict]) -> list[dict]:
@@ -49,31 +57,32 @@ def convert_file(
     platform: str | None = None,
     nozzle: str | None = None,
     map_text: str | None = None,
-    keep_designer_filament: bool = True,
+    options: dict | None = None,
     lang: str | None = None,
 ) -> dict:
     """Convert `src` for `printer` and write the result into `out_dir`.
 
     Returns {"ok", "output", "needs_map", "report", "text"}; `output` is the path of
-    the converted project or None. Errors in the input (unknown printer, bad map)
-    come back in the report instead of raising, like the CLI does.
+    the converted project or None. `options` are the advanced options (see
+    options.py; missing ones take their defaults). Errors in the input (unknown
+    printer, bad map or option) come back in the report instead of raising.
     """
     if lang:
         i18n.set_language(lang)
     project = read_3mf.load(src)
     try:
         user_map = parse_map(map_text) if map_text else None
+        chosen = conversion_options.resolve(options)
         lib = ProfileLibrary.from_bundles(bundles)
         name = find_printer(lib, printer)
         if not name:
             raise ProfileError(i18n.t("target.error.unknown_printer", name=printer))
         known = registry(platform=platform) if slicer else {}
         target = Target(lib, name, known.get(slicer))
-    except (MapError, ProfileError) as e:
+    except (MapError, ProfileError, conversion_options.OptionError) as e:
         return {"ok": False, "output": None, "needs_map": False, "report": None, "text": str(e)}
 
-    result = convert(project, target, nozzle=nozzle, user_map=user_map,
-                     keep_designer_filament=keep_designer_filament)
+    result = convert(project, target, nozzle=nozzle, user_map=user_map, **chosen)
     report = result.report
     dest = Path(out_dir) / write_3mf.output_path(Path(src), target.output_suffix).name
     if report.ok:

@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from betterbridge import read_3mf
+from betterbridge import read_3mf, rules
 from betterbridge.convert import convert
 from betterbridge.model_edit import meta
 from betterbridge.profiles import ProfileLibrary
@@ -90,7 +90,7 @@ def test_author_process_override_kept_and_limits_warned(lib, tmp_path):
 
 def test_filament_profiles_and_author_filament_overrides_reported(lib, tmp_path):
     _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]],
-                                           object_extruders={"2": 3}))
+                                           object_extruders={"2": 3}), map_mode=rules.MAP_BY_SLICER)
     assert s["filament_settings_id"] == [
         "Flashforge PLA Basic @FF C5P", "Flashforge PLA Matte @FF C5P", "Flashforge PETG Basic @FF C5P"]
     assert s["filament_max_volumetric_speed"] == ["18", "18", "18"]
@@ -98,7 +98,7 @@ def test_filament_profiles_and_author_filament_overrides_reported(lib, tmp_path)
     assert s["filament_map"] == ["1", "2", "3"]
     assert s["extruder_colour"][:3] == ["#FF0000", "#00FF00", "#0000FF"]
     assert s["filament_printable"] == ["15"] * 3
-    # E3 en uso sin --map: modo automático (Orca rechaza el manual en E3/E4).
+    # Modo "según laminador", E3 en uso sin --map: automático (Orca rechaza el manual en E3/E4).
     assert s["filament_map_mode"] == "Auto For Flush"
     assert any("modo automático" in w for w in result.report.warnings)
     dropped = [d for d in result.report.dropped if d.key.startswith("filament_max_volumetric_speed")]
@@ -143,7 +143,8 @@ def test_more_than_four_filaments(lib, tmp_path):
     ms = ET.fromstring(result.files[read_3mf.MODEL_SETTINGS])
     maps = [meta(p)["filament_maps"] for p in ms.findall("plate")]
     assert maps[0].split()[4] == "1" and maps[1].split()[3] == "1"
-    assert all(meta(p)["filament_map_mode"] == "Manual" for p in ms.findall("plate"))
+    # Compatible (por defecto): el reparto por placa queda como sugerencia, en automático.
+    assert all(meta(p)["filament_map_mode"] == "Auto For Flush" for p in ms.findall("plate"))
 
     # Pintura de color: uso desconocido, hace falta --map.
     painted = make_bambu_3mf(tmp_path / "b.3mf", fil, [["2"]], paint=True)
@@ -271,7 +272,8 @@ def test_bambu_only_key_kept_when_target_defines_it(lib, tmp_path, profiles_root
 
 def test_manual_extruder_map_kept_when_slicer_has_no_limit(lib, tmp_path):
     """Flash Studio respeta la asignación manual en E3/E4: sin la particularidad de Orca, se queda manual."""
-    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]]), slicer=None)
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]]), slicer=None,
+                       map_mode=rules.MAP_BY_SLICER)
     assert s["filament_map_mode"] == "Manual" and s["filament_map"] == ["1", "2", "3"]
     assert not any("modo automático" in w for w in result.report.warnings)
 
@@ -308,3 +310,34 @@ def test_bambu_gcode_from_target_profile_is_not_warned(lib, tmp_path, profiles_r
     f.write_text(_json.dumps(d))
     _, result, _ = run(ProfileLibrary.load(profiles_root), make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
     assert not any("machine_end_gcode" in w for w in result.report.warnings)
+
+
+def test_map_mode_compatible_by_default_and_exact_on_request(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]], object_extruders={"2": 3})
+    _, result, s = run(lib, path)
+    assert s["filament_map_mode"] == "Auto For Flush" and s["filament_map"] == ["1", "2", "3"]
+    assert any("cualquier laminador" in n for n in result.report.notes)
+    _, result, s = run(lib, path, map_mode=rules.MAP_EXACT)
+    assert s["filament_map_mode"] == "Manual"
+    assert any("OrcaSlicer 2.5 lo rechaza" in w for w in result.report.warnings)
+    _, result, s = run(lib, path, user_map={1: 1, 2: 2, 3: 3})
+    assert s["filament_map_mode"] == "Manual"  # elegida a mano: siempre se impone
+    with pytest.raises(ValueError):
+        run(lib, path, map_mode="nope")
+
+
+def test_designer_cooling_kept_on_request_with_warning(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "ironing_fan_speed": ["40"],
+        "fan_max_speed": ["60"],
+        "different_settings_to_system": ["ironing_fan_speed", "fan_max_speed", ""],
+    })
+    _, result, s = run(lib, path)
+    assert "ironing_fan_speed" not in s and s.get("fan_max_speed") != ["60"]
+    assert not any("enfriamiento del diseñador" in w for w in result.report.warnings)
+
+    _, result, s = run(lib, path, keep_designer_cooling=True)
+    assert s["ironing_fan_speed"] == ["40"] and s["fan_max_speed"] == ["60"]
+    assert s["different_settings_to_system"][1] == "fan_max_speed"
+    warning = next(w for w in result.report.warnings if "enfriamiento del diseñador" in w)
+    assert "fan_max_speed" in warning and "ironing_fan_speed" in warning

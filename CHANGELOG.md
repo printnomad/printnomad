@@ -9,6 +9,9 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Filament diameter 2.85 mm instead of 1.75 mm** for Flashforge PLA profiles: profile inheritance now resolves parents within the same vendor, then the common filament library, as OrcaSlicer does. Projects converted with earlier versions must be converted again before printing.
 
 ### Added
+- **Conversion options as data** (`betterbridge.options`): one list of options with defaults and translated labels, help and warnings, shared by the CLI, the plugin and the extension. CLI: `--map-mode`, `--designer-cooling`.
+- **Filament assignment mode**: `compatible` (default; the slicer finalises the assignment, so projects slice in any Orca-based slicer, as other converters do), `exact` (the planned assignment is enforced; OrcaSlicer 2.5 rejects it on extruders 3–4) and `slicer` (previous behaviour). An assignment chosen by hand is always enforced.
+- **Designer's cooling** can be kept on request (`keep_designer_cooling`, off by default) with a warning: fan percentages refer to the source printer's fans.
 - **Browser extension** (`extension/`, Chrome/Chromium, Manifest V3): converts projects in the browser with the same core (Pyodide), for the printers in *My printers*; downloads the result and shows it in Finder. Options page with the profile source and a manual "convert a file". English and Spanish.
 - **Profile catalog** from the slicers' official repositories (`tools/build_profile_catalog.py`, published weekly by CI): one bundle per vendor with sha256 and the usable printers; conversions with it are byte-identical to using the repository folders.
 - Reports name where the target profiles came from (folders, or `repo@release`).

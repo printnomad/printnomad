@@ -33,6 +33,12 @@ KEEP_SOURCE_PROCESS_KEYS = {
 }
 
 # Modos de asignación de filamentos a extrusores en project_settings (filament_map_mode).
+# How BetterBridge chooses the slicer's assignment mode (option `map_mode`):
+# compatible = automatic in the slicer (opens and slices in every Orca-based slicer),
+# exact = manual (the planned assignment is enforced), slicer = manual unless the
+# target slicer rejects it (data/slicers.json quirk manual_map_max_extruder).
+MAP_COMPATIBLE, MAP_EXACT, MAP_BY_SLICER = "compatible", "exact", "slicer"
+MAP_MODES = (MAP_COMPATIBLE, MAP_EXACT, MAP_BY_SLICER)
 MAP_MODE_MANUAL = "Manual"
 MAP_MODE_AUTO = "Auto For Flush"
 
@@ -60,8 +66,15 @@ DESIGNER_FILAMENT_KEEP = re.compile(r"^(nozzle_temperature(_initial_layer|_range
                                     r"[a-z_]*plate_temp(_initial_layer)?|filament_density)$")
 
 
-def keep_designer_filament_key(key: str) -> bool:
-    return bool(DESIGNER_FILAMENT_KEEP.match(key)) and not is_cooling_key(key)
+def keep_designer_filament_key(key: str, filament: bool = True, cooling: bool = False) -> bool:
+    """Whether the designer's value of a filament setting is kept on the target profile.
+
+    `filament`: material choices (temperatures, density); `cooling`: fan settings, off
+    by default because fans differ between printers (see option keep_designer_cooling).
+    """
+    if is_cooling_key(key):
+        return cooling
+    return filament and bool(DESIGNER_FILAMENT_KEEP.match(key))
 
 
 # Valores que OrcaSlicer rechaza o reinterpreta: valor -> valor válido.

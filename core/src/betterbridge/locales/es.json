@@ -128,5 +128,22 @@
   "cli.printers.slicer_heading": "{name} (--slicer {key}):",
   "cli.printers.user": "preset tuyo",
   "cli.printers.help.all": "listar también los presets con perfiles incompletos en ese laminador",
-  "cli.printers.incomplete": "perfiles incompletos: no se puede usar"
+  "cli.printers.incomplete": "perfiles incompletos: no se puede usar",
+  "convert.note.map_compatible": "la asignación de filamentos a extrusores queda en manos del laminador (modo automático) para que el proyecto lamine en cualquier laminador basado en Orca; la asignación prevista queda como sugerencia",
+  "convert.warn.designer_cooling": "se conservó el enfriamiento del diseñador ({keys}): los porcentajes de ventilador se refieren a los ventiladores de la impresora de origen, que pueden ser más o menos potentes o estar numerados distinto; revisa voladizos y adhesión entre capas",
+  "option.error.unknown": "opción desconocida '{key}' (opciones: {options})",
+  "option.error.value": "valor no válido '{value}' para la opción '{key}' (permitidos: {allowed})",
+  "option.map_mode.label": "Asignación de filamentos",
+  "option.map_mode.help": "Cómo quedan atados los filamentos a los extrusores en el proyecto convertido.",
+  "option.map_mode.compatible": "Compatible: el laminador decide la asignación final (funciona en cualquier laminador)",
+  "option.map_mode.exact": "Exacta: se impone la asignación prevista",
+  "option.map_mode.slicer": "Según el laminador: exacta salvo que el laminador elegido la rechace",
+  "option.map_mode.warning": "OrcaSlicer 2.5 no lamina una asignación manual en los extrusores 3–4; úsala con Flash Studio o cuando necesites un extrusor concreto para cada filamento.",
+  "option.keep_designer_filament.label": "Conservar las temperaturas de filamento del diseñador",
+  "option.keep_designer_filament.help": "Las temperaturas de boquilla y cama y la densidad que cambió el diseñador se conservan sobre el perfil de filamento de tu impresora.",
+  "option.keep_designer_cooling.label": "Conservar el enfriamiento del diseñador",
+  "option.keep_designer_cooling.help": "Los ajustes de ventiladores y enfriamiento que cambió el diseñador se conservan en lugar de los del perfil de tu impresora.",
+  "option.keep_designer_cooling.warning": "Los porcentajes de ventilador son relativos a los ventiladores de cada impresora. Una impresora con ventiladores más potentes o más numerosos puede enfriar de más (poca adhesión entre capas, deformación en PETG/ABS) o de menos (voladizos y puentes caídos). Úsalo solo si el enfriamiento del diseñador es esencial para el modelo.",
+  "cli.help.designer_cooling": "conservar el enfriamiento del diseñador (los ventiladores cambian entre impresoras: revisa el resultado)",
+  "cli.help.map_mode": "modo de asignación de filamentos: {modes} (por defecto: compatible)"
 }

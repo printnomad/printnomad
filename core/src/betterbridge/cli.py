@@ -11,7 +11,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import i18n, read_3mf, write_3mf
+from . import i18n, read_3mf, rules, write_3mf
 from .convert import convert
 from .i18n import t
 from .profiles import USER_VENDOR, ProfileError
@@ -34,6 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--report", type=Path, help=t("cli.help.report"))
     p.add_argument("--force", action="store_true", help=t("cli.help.force"))
     p.add_argument("--no-designer-filament", action="store_true", help=t("cli.help.no_designer_filament"))
+    p.add_argument("--designer-cooling", action="store_true", help=t("cli.help.designer_cooling"))
+    p.add_argument("--map-mode", choices=rules.MAP_MODES, default=rules.MAP_COMPATIBLE,
+                   help=t("cli.help.map_mode", modes=", ".join(rules.MAP_MODES)))
     p.add_argument("-v", "--verbose", action="store_true", help=t("cli.help.verbose"))
     p.add_argument("--lang", help=t("cli.help.lang", languages=", ".join(i18n.available_languages())))
     return p
@@ -126,7 +129,8 @@ def main(argv: list[str] | None = None) -> int:
     before = write_3mf.sha256_file(src)
     project = read_3mf.load(src)
     result = convert(project, target, nozzle=args.nozzle, user_map=user_map,
-                     keep_designer_filament=not args.no_designer_filament)
+                     keep_designer_filament=not args.no_designer_filament,
+                     keep_designer_cooling=args.designer_cooling, map_mode=args.map_mode)
     report = result.report
 
     dest = write_3mf.output_path(src, target.output_suffix)

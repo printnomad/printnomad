@@ -128,5 +128,22 @@
   "cli.printers.slicer_heading": "{name} (--slicer {key}):",
   "cli.printers.user": "your preset",
   "cli.printers.help.all": "also list presets whose profiles are incomplete in that slicer",
-  "cli.printers.incomplete": "incomplete profiles: cannot be used"
+  "cli.printers.incomplete": "incomplete profiles: cannot be used",
+  "convert.note.map_compatible": "filament-to-extruder assignment left to the slicer (automatic mode) so the project slices in any Orca-based slicer; the planned assignment is the suggested one",
+  "convert.warn.designer_cooling": "the designer's cooling settings were kept ({keys}): fan percentages refer to the source printer's fans, which may be stronger, weaker or numbered differently; check overhangs and layer adhesion",
+  "option.error.unknown": "unknown option '{key}' (options: {options})",
+  "option.error.value": "invalid value '{value}' for option '{key}' (allowed: {allowed})",
+  "option.map_mode.label": "Filament assignment",
+  "option.map_mode.help": "How filaments are tied to extruders in the converted project.",
+  "option.map_mode.compatible": "Compatible: the slicer finalises the assignment (works in every slicer)",
+  "option.map_mode.exact": "Exact: enforce the planned assignment",
+  "option.map_mode.slicer": "Depends on the slicer: exact unless the chosen slicer rejects it",
+  "option.map_mode.warning": "OrcaSlicer 2.5 refuses to slice a manual assignment on extruders 3–4; use this with Flash Studio or when you need a specific extruder for each filament.",
+  "option.keep_designer_filament.label": "Keep the designer's filament temperatures",
+  "option.keep_designer_filament.help": "Nozzle and bed temperatures and density the designer changed are kept on top of your printer's filament profile.",
+  "option.keep_designer_cooling.label": "Keep the designer's cooling",
+  "option.keep_designer_cooling.help": "Fan and cooling settings the designer changed are kept instead of your printer's profile values.",
+  "option.keep_designer_cooling.warning": "Fan percentages are relative to each printer's fans. A printer with stronger or more fans can over-cool (weak layer adhesion, warping in PETG/ABS) or under-cool (sagging overhangs and bridges). Use it only when the designer's cooling is essential to the model.",
+  "cli.help.designer_cooling": "keep the designer's cooling settings (fans differ between printers: check the result)",
+  "cli.help.map_mode": "filament assignment mode: {modes} (default: compatible)"
 }
