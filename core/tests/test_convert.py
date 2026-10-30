@@ -415,3 +415,14 @@ def test_designer_changes_compared_with_the_source_preset(lib, tmp_path):
 
     _, result, _ = run(lib, path)  # sin perfiles de origen: como antes
     assert "wall_loops" in {c.key for c in result.report.kept_author} and not result.report.not_changed
+
+
+def test_rule_kept_first_layer_has_no_original_value_and_says_why(lib, tmp_path):
+    source = ProfileLibrary.from_bundles([{"vendor": "BBL", "files": {
+        "process/a1.json": {"type": "process", "name": "0.20mm Standard @BBL A1", "initial_layer_print_height": "0.2"},
+    }}])
+    _, result, _ = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]), source_lib=source)
+    first = next(c for c in result.report.kept_author if c.key == "initial_layer_print_height")
+    assert first.source_preset is None
+    line = next(x for x in result.report.to_text().splitlines() if "initial_layer_print_height" in x)
+    assert "→" not in line and "[" in line

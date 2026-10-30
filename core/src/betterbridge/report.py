@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 
+from . import rules
 from .i18n import t
 
 
@@ -113,7 +114,9 @@ class Report:
             for c in self.kept_author:
                 was = "" if c.source_preset is None else _short(c.source_preset) + " → "
                 target = t("report.kept_author_line", value=_short(c.final))
-                lines.append(f"  {c.key}: {was}{_short(c.original)} {target}")
+                # Rule-kept values (not the designer's) say why.
+                why = f" [{c.reason}]" if c.key in rules.KEEP_SOURCE_PROCESS_KEYS else ""
+                lines.append(f"  {c.key}: {was}{_short(c.original)} {target}{why}")
         if self.dropped:
             lines.append(t("report.dropped", count=len(self.dropped)))
             lines += [f"  {c.key}: {_short(c.original)} [{c.reason}]" for c in self.dropped]

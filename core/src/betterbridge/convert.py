@@ -186,8 +186,8 @@ def convert(
         return result
     for k, v in process_cfg.items():
         if k in rules.KEEP_SOURCE_PROCESS_KEYS and k in src and src[k] != v and k not in author_process:
-            report.kept_author.append(FieldChange(k, src[k], v, t(rules.KEEP_SOURCE_PROCESS_KEYS[k]),
-                                                  _preset_value(source_process, k)))
+            # Kept by a BetterBridge rule, not changed by the designer: no original value.
+            report.kept_author.append(FieldChange(k, src[k], v, t(rules.KEEP_SOURCE_PROCESS_KEYS[k])))
             out[k] = src[k]
         elif k in author_process and k in src and keep_process_key(k):
             report.kept_author.append(FieldChange(k, src[k], v, t("reason.author_on_process"),
