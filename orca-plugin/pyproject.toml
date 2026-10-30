@@ -2,7 +2,7 @@
 # genera una wheel con este paquete y una copia del núcleo (core/) dentro.
 [project]
 name = "betterbridge-orca"
-version = "0.3.1"
+version = "0.4.0"
 description = "OrcaSlicer plugin: convert the opened project to another printer with BetterBridge"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
