@@ -1,0 +1,80 @@
+"""Genera un HTML para ver el panel del plugin en el navegador, con datos reales.
+
+Uso: python orca-plugin/tools/preview_panel.py proyecto.3mf [--out panel_preview.html]
+
+No escribe ningún .3mf: la conversión se calcula en memoria y el botón
+"Convertir" del HTML muestra ese resultado.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent          # orca-plugin/
+sys.path.insert(0, str(PLUGIN_ROOT.parent / "core" / "src"))
+
+import runpy  # noqa: E402
+
+from betterbridge import read_3mf, write_3mf  # noqa: E402
+from betterbridge.convert import convert  # noqa: E402
+from betterbridge.printer_profiles import creator5pro  # noqa: E402
+from betterbridge.profiles import ProfileLibrary, find_root  # noqa: E402
+
+PAGE = runpy.run_path(str(PLUGIN_ROOT / "betterbridge_orca" / "panel_html.py"))["PAGE"]
+
+SHIM = """<script>
+window.orca = (function(){
+  var handlers = [], data = %s;
+  function deliver(m){ setTimeout(function(){ handlers.forEach(function(h){ h(m); }); }, 250); }
+  return {
+    onMessage: function(h){ handlers.push(h); },
+    postMessage: function(m){
+      if (m.type === 'ready' && location.hash === '#result') deliver(data.result);
+      else if (m.type === 'ready' || m.type === 'preview') deliver(data.preview);
+      else if (m.type === 'convert') deliver(data.result);
+    },
+    close: function(){ document.body.innerHTML = '<p style="padding:12px">(panel cerrado)</p>'; }
+  };
+})();
+</script>"""
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("project", type=Path)
+    ap.add_argument("--out", type=Path, default=Path("panel_preview.html"))
+    args = ap.parse_args()
+
+    lib = ProfileLibrary.load(find_root())
+    project = read_3mf.load(args.project)
+    result = convert(project, lib)
+    rep = result.report
+    dest = write_3mf.output_path(args.project, creator5pro.OUTPUT_SUFFIX)
+    preview = {
+        "type": "preview", "project": args.project.name, "source_kind": rep.source_kind,
+        "target": creator5pro.DISPLAY_NAME, "extruders": creator5pro.EXTRUDERS,
+        "nozzle": rep.presets.get("nozzle", "0.4"), "nozzles": list(creator5pro.NOZZLES),
+        "process": rep.presets.get("process", ""),
+        "filaments": [{
+            "index": f.index, "type": f.source_type, "colour": f.colour, "source": f.source_profile,
+            "target": f.target_profile,
+            "plates": sorted(p for p, u in result.usage.items() if u is None or f.index in u),
+            "extruder": next(iter(f.extruders.values()), None)} for f in rep.filaments],
+        "needs_map": any("--map" in e for e in rep.errors),
+        "blocking": any("--map" not in e for e in rep.errors),
+        "errors": rep.errors, "warnings": rep.warnings, "output_name": dest.name,
+    }
+    rep.output = str(dest)
+    res = {"type": "result", "ok": rep.ok, "project_name": args.project.name, "output": rep.output,
+           "output_name": dest.name, "report_name": dest.with_suffix(".report.json").name,
+           "report": rep.to_dict()}
+    shim = SHIM % json.dumps({"preview": preview, "result": res}, ensure_ascii=False).replace("</", "<\\/")
+    args.out.write_text(PAGE.replace("<script>", shim + "\n<script>", 1), encoding="utf-8")
+    print(f"abre: {args.out.resolve()}")
+
+
+if __name__ == "__main__":
+    main()

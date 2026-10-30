@@ -1,0 +1,8 @@
+# Metadatos del plugin de OrcaSlicer. No se instala con pip: tools/build.py
+# genera una wheel con este paquete y una copia del núcleo (core/) dentro.
+[project]
+name = "betterbridge-orca"
+version = "0.2.9"
+description = "OrcaSlicer plugin: convert the opened project to another printer with BetterBridge"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.12"
