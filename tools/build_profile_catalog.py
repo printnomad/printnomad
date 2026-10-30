@@ -117,7 +117,7 @@ def main() -> int:
     ap.add_argument("--profiles", required=True, type=Path, help="resources/profiles of the slicer repository")
     ap.add_argument("--ref", required=True, help="release tag the profiles come from")
     ap.add_argument("--commit", help="commit sha of --ref")
-    ap.add_argument("--from-app", action="store_true", help="--profiles is an installed app's folder, --ref its version")
+    ap.add_argument("--from-app", action="store_true", help="--profiles is an installed app folder, --ref its version")
     ap.add_argument("--out", required=True, type=Path)
     args = ap.parse_args()
     entry = build(args.slicer, args.profiles, args.ref, args.commit, args.out, args.from_app)
