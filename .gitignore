@@ -19,3 +19,6 @@ node_modules/
 # Salidas locales
 out/
 *.report.json
+
+# Grafo de conocimiento local (graphify): cada desarrollador lo regenera
+graphify-out/
