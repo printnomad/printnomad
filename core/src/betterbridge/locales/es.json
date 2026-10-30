@@ -125,5 +125,7 @@
   "cli.printers.help.json": "salida en JSON",
   "cli.printers.none": "No se encontraron presets de impresora.",
   "cli.printers.slicer_heading": "{name} (--slicer {key}):",
-  "cli.printers.user": "preset tuyo"
+  "cli.printers.user": "preset tuyo",
+  "cli.printers.help.all": "listar también los presets con perfiles incompletos en ese laminador",
+  "cli.printers.incomplete": "perfiles incompletos: no se puede usar"
 }

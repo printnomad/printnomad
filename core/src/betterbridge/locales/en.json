@@ -125,5 +125,7 @@
   "cli.printers.help.json": "output JSON",
   "cli.printers.none": "No printer presets found.",
   "cli.printers.slicer_heading": "{name} (--slicer {key}):",
-  "cli.printers.user": "your preset"
+  "cli.printers.user": "your preset",
+  "cli.printers.help.all": "also list presets whose profiles are incomplete in that slicer",
+  "cli.printers.incomplete": "incomplete profiles: cannot be used"
 }

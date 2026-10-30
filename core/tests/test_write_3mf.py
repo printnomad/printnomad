@@ -78,9 +78,16 @@ def test_cli_printers_lists_presets(tmp_path, monkeypatch, capsys):
     (root / "V" / "machine").mkdir(parents=True)
     (root / "V/machine/a.json").write_text(_json.dumps({"type": "machine", "name": "V Printer 0.4 nozzle"}))
     (root / "V/machine/b.json").write_text(_json.dumps({"type": "machine", "name": "base", "instantiation": "false"}))
+    (root / "V/machine/c.json").write_text(_json.dumps({"type": "machine", "name": "Broken", "inherits": "missing"}))
+    (root / "V" / "process").mkdir()
+    (root / "V/process/p.json").write_text(_json.dumps({"type": "process", "name": "0.20 @V",
+                                                        "compatible_printers": ["V Printer 0.4 nozzle"]}))
     fake = slicers.Slicer(key="fake", name="Fake", system_roots=[root])
     monkeypatch.setattr(cli, "installed_slicers", lambda: [fake])
     assert cli.main(["printers", "--json"]) == cli.EXIT_OK
     rows = _json.loads(capsys.readouterr().out)
-    assert rows == [{"slicer": "fake", "slicer_name": "Fake", "printer": "V Printer 0.4 nozzle", "user": False}]
+    assert rows == [{"slicer": "fake", "slicer_name": "Fake", "printer": "V Printer 0.4 nozzle", "user": False,
+                     "usable": True}]
+    assert cli.main(["printers", "--json", "--all"]) == cli.EXIT_OK
+    assert [r["printer"] for r in _json.loads(capsys.readouterr().out)] == ["Broken", "V Printer 0.4 nozzle"]
     assert cli.main(["printers", "--search", "nothing"]) == cli.EXIT_OK

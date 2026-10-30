@@ -17,7 +17,7 @@ from .i18n import t
 from .profiles import USER_VENDOR, ProfileError
 from .remap_filaments import MapError, parse_map
 from .slicers import installed_slicers, registry
-from .target import load_target
+from .target import Target, load_target
 
 EXIT_OK, EXIT_ERROR, EXIT_NEEDS_INPUT = 0, 1, 2
 
@@ -55,6 +55,7 @@ def list_printers(argv: list[str]) -> int:
     p.add_argument("--slicer", help=t("cli.help.slicer"))
     p.add_argument("--search", help=t("cli.printers.help.search"))
     p.add_argument("--json", action="store_true", help=t("cli.printers.help.json"))
+    p.add_argument("--all", action="store_true", help=t("cli.printers.help.all"))
     p.add_argument("--lang", help=t("cli.help.lang", languages=", ".join(i18n.available_languages())))
     args = p.parse_args(argv)
     if args.slicer:
@@ -77,8 +78,14 @@ def list_printers(argv: list[str]) -> int:
                 continue
             if args.search and args.search.lower() not in name.lower():
                 continue
+            try:
+                usable = Target(lib, name, s).is_usable()
+            except ProfileError:
+                usable = False
+            if not usable and not args.all:
+                continue
             found.append({"slicer": s.key, "slicer_name": s.name, "printer": name,
-                          "user": lib.vendors.get(("machine", name)) == USER_VENDOR})
+                          "user": lib.vendors.get(("machine", name)) == USER_VENDOR, "usable": usable})
     if args.json:
         print(json.dumps(found, ensure_ascii=False, indent=2))
         return EXIT_OK
@@ -90,7 +97,9 @@ def list_printers(argv: list[str]) -> int:
         if row["slicer"] != current:
             current = row["slicer"]
             print(t("cli.printers.slicer_heading", name=row["slicer_name"], key=row["slicer"]))
-        print(f"  {row['printer']}" + (f"  ({t('cli.printers.user')})" if row["user"] else ""))
+        notes = [t("cli.printers.user")] if row["user"] else []
+        notes += [] if row["usable"] else [t("cli.printers.incomplete")]
+        print(f"  {row['printer']}" + (f"  ({', '.join(notes)})" if notes else ""))
     return EXIT_OK
 
 

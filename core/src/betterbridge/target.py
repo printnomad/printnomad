@@ -145,6 +145,18 @@ class Target:
     def limits(self) -> dict[str, float]:
         return rules.speed_limits(self.settings)
 
+    def is_usable(self) -> bool:
+        """Perfiles completos: herencia resoluble y al menos un proceso compatible.
+
+        Algunos laminadores traen copias incompletas de otros fabricantes (Flash Studio
+        incluye presets de Creality sin su perfil base, o la Kobra Neo sin procesos).
+        """
+        try:
+            self.lib.resolve("machine", self.machine)
+            return bool(self.lib.instantiable("process", self.compatible))
+        except ProfileError:
+            return False
+
     def is_same_printer(self, settings: dict) -> bool:
         return settings.get("printer_settings_id") in self.compatible
 
