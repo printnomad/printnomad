@@ -63,7 +63,7 @@ def main() -> None:
             "target": f.target_profile,
             "plates": sorted(p for p, u in result.usage.items() if u is None or f.index in u),
             "extruder": next(iter(f.extruders.values()), None)} for f in rep.filaments],
-        "needs_map": any("--map" in e for e in rep.errors),
+        "needs_map": rep.needs_map,
         "blocking": any("--map" not in e for e in rep.errors),
         "errors": rep.errors, "warnings": rep.warnings, "output_name": dest.name,
     }

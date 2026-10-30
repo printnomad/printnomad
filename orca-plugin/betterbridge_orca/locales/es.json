@@ -1,0 +1,12 @@
+{
+  "_meta": {"name": "Español", "contributors": []},
+
+  "plugin.notify.project_from": "Proyecto de {source}.",
+  "plugin.notify.convert_link": "Convertir a {target}…",
+  "plugin.notify.created": "Creado {name}. Ábrelo desde el panel BetterBridge.",
+  "plugin.notify.failed": "No se pudo convertir; detalles en el panel BetterBridge.",
+  "plugin.notify.same_window_unavailable": "Abrir en esta ventana no está disponible ({detail}); se abre en otra ventana.",
+  "plugin.notify.open_failed": "No se pudo abrir {name} en {app}.",
+  "plugin.busy.analyzing": "Analizando {name}…",
+  "plugin.error.unexpected": "Error inesperado: {detail}"
+}

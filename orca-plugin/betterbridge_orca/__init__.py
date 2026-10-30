@@ -22,8 +22,9 @@ from urllib.parse import quote
 
 import orca
 
-from .core import read_3mf, write_3mf
+from .core import i18n, read_3mf, write_3mf
 from .core.convert import convert
+from .core.i18n import t
 from .core.printer_profiles import creator5pro
 from .core.profiles import DEFAULT_ROOTS, ProfileLibrary, find_root
 from .core.remap_filaments import parse_map
@@ -61,6 +62,23 @@ SOURCE_NAMES = {
 # Carpetas habituales de proyectos: se piden una vez al activar el plugin para
 # no preguntar en cada archivo.
 USER_FOLDERS = [str(Path.home() / d) + "/*" for d in ("Downloads", "Documents", "Desktop")]
+
+# Identificador de la capacidad para Orca (estado activado, configuración): estable y
+# sin traducir. No cambiarlo sin migración: Orca guarda ambos bajo este nombre.
+CAPABILITY_NAME = "BetterBridge"
+
+# Mensajes propios del plugin (locales/*.json) además de los del núcleo.
+i18n.add_catalog_dir(Path(__file__).parent / "locales")
+
+
+def _orca_language() -> str | None:
+    """Idioma de la interfaz de OrcaSlicer (p. ej. "es_ES"), si la API lo da."""
+    try:
+        info = orca.host.app_info()
+        return info.get("language") if isinstance(info, dict) else getattr(info, "language", None)
+    except Exception as e:  # API alpha o fuera del hilo de la UI
+        log.info("idioma de Orca no disponible: %s", e)
+        return None
 
 # "Abrir en…": la API de plugins no puede abrir proyectos (solo lee y exporta), así
 # que se pide a macOS. Orca autoriza procesos por texto exacto del comando, por eso
@@ -141,9 +159,10 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         self._last: dict | None = None  # último mensaje enviado, para reenviarlo en "ready"
         self._cached = None  # (boquilla, ConversionResult) de la última vista previa
         self._output: Path | None = None  # último .3mf convertido, para "Abrir en…"
+        self._language_set = False
 
     def get_name(self):
-        return "Convertir a Creator 5 Pro"
+        return CAPABILITY_NAME
 
     def execute(self, *args, **kwargs):
         return orca.ExecutionResult.skipped("solo reacciona al abrir proyectos")
@@ -162,6 +181,9 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
 
     # --- eventos ---------------------------------------------------------
     def on_lifecycle_event(self, event, ctx):
+        if not self._language_set:
+            i18n.set_language(_orca_language())
+            self._language_set = True
         if event == orca.LifecycleEvent.ProjectClosed:
             self._project = self._cached = None
             return
@@ -180,8 +202,8 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         ui = orca.host.ui
         ui.push_notification(
             ui.NotificationLevel.RegularNotificationLevel,
-            f"Proyecto de {SOURCE_NAMES[kind]}.",
-            hyper_text=f"Convertir a {creator5pro.DISPLAY_NAME}…",
+            t("plugin.notify.project_from", source=SOURCE_NAMES[kind]),
+            hyper_text=t("plugin.notify.convert_link", target=creator5pro.DISPLAY_NAME),
             on_click=lambda: self._open(path),
         )
 
@@ -189,7 +211,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
     def _open(self, path: Path) -> bool:
         if path != self._path:
             self._path, self._project, self._cached = path, None, None
-        self._last = {"type": "busy", "text": f"Analizando {path.name}…"}
+        self._last = {"type": "busy", "text": t("plugin.busy.analyzing", name=path.name)}
         try:
             if self._panel is not None and self._panel.is_open():
                 self._panel.show()
@@ -243,7 +265,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
             log.info("fin %s", fn.__name__)
         except Exception as e:  # el plugin nunca debe tumbar el slicer
             log.exception("error en %s", fn.__name__)
-            self._post({"type": "error", "text": f"Error inesperado: {e}"})
+            self._post({"type": "error", "text": t("plugin.error.unexpected", detail=e)})
 
     def _open_output(self, app_key: str | None) -> None:
         if not self._output or app_key not in OPEN_APPS:
@@ -254,7 +276,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
                 url = serve_once(self._output)
             except OSError as e:
                 log.warning("servidor local no disponible (%s); se abre en otra ventana", e)
-                self._notify(f"Abrir en esta ventana no disponible ({e}); se abre en otra ventana.")
+                self._notify(t("plugin.notify.same_window_unavailable", detail=e))
             else:
                 OPEN_URL_TARGET.write_text(quote(url, safe=""), encoding="utf-8")
                 code = os.system(_open_url_command())
@@ -264,7 +286,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         code = os.system(_open_command(name))
         log.info("abrir %s en %s: código %s", self._output.name, name, code)
         if code != 0:
-            self._notify(f"No se pudo abrir {self._output.name} en {name}.")
+            self._notify(t("plugin.notify.open_failed", name=self._output.name, app=name))
 
     def _notify(self, text: str) -> None:
         ui = orca.host.ui
@@ -287,8 +309,8 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         # Si se convierte sin tocar la tabla, se reutiliza este cálculo.
         self._cached = (result.report.presets.get("nozzle"), result)
         rep = result.report
-        needs_map = any("--map" in e for e in rep.errors)
-        errors = [e.replace("indica --map", "elige los extrusores en la tabla") for e in rep.errors]
+        needs_map = rep.needs_map
+        errors = rep.errors
         n = len(rep.filaments)
         filaments = []
         for f in rep.filaments:
@@ -297,7 +319,8 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
             filaments.append({"index": f.index, "type": f.source_type, "colour": f.colour,
                               "source": f.source_profile, "target": f.target_profile,
                               "plates": plates, "extruder": ext})
-        blocking = any(e for e in rep.errors if "--map" not in e)
+        # Los errores de asignación se resuelven en la tabla del panel; cualquier otro bloquea.
+        blocking = bool(rep.errors) and not needs_map
         self._post({
             "type": "preview",
             "project": self._path.name,
@@ -360,8 +383,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         level = orca.host.ui.NotificationLevel
         orca.host.ui.push_notification(
             level.RegularNotificationLevel if report.ok else level.WarningNotificationLevel,
-            f"Creado {dest.name}. Ábrelo desde el panel BetterBridge." if report.ok
-            else "No se pudo convertir; detalles en el panel BetterBridge.")
+            t("plugin.notify.created", name=dest.name) if report.ok else t("plugin.notify.failed"))
 
 
 @orca.plugin
