@@ -4,7 +4,7 @@ Open a 3D-printing project from any model repository in **your** printer's slice
 
 BetterBridge converts 3MF projects made in Bambu Studio (and PrusaSlicer, basic support) for another printer and another Orca-based slicer: it swaps the printer, process and filament profiles for the target ones, keeps the designer's tweaks on top, maps filaments to the target's extruders, and reports every change it makes. The original file is never modified and the geometry stays byte-identical.
 
-> **Status:** early development. The converter works today for the Flashforge Creator 5 Pro (validated by slicing in OrcaSlicer 2.5 and Flash Studio 1.7). Support for any printer and a browser extension for MakerWorld are in progress.
+> **Status:** early development. Any printer preset of an installed slicer can be the target; validated by slicing with the Flashforge Creator 5 Pro in OrcaSlicer 2.5 and Flash Studio 1.7. A browser extension for MakerWorld is in progress.
 
 *Español:* BetterBridge convierte proyectos 3MF de Bambu Studio para abrirlos en el laminador de tu impresora (OrcaSlicer y sus derivados), conservando los ajustes del diseñador. La documentación en español llegará con la primera versión pública.
 
@@ -22,15 +22,15 @@ See [docs/architecture.md](docs/architecture.md) for how the pieces fit together
 
 ## Quick start (CLI)
 
-Requires Python 3.12+ and a slicer installation that provides the target profiles (today: Flash Studio).
+Requires Python 3.12+ and an installed slicer with the target printer's profiles (macOS today: Flash Studio, Bambu Studio; OrcaSlicer 2.5 user presets).
 
 ```sh
 python -m venv .venv && .venv/bin/pip install -e core
-.venv/bin/betterbridge ~/Downloads/model.3mf --target creator5pro
+.venv/bin/betterbridge ~/Downloads/model.3mf --printer "Flashforge Creator 5 Pro 0.4 nozzle"
 # -> ~/Downloads/model_CREATOR5_PRO.3mf and model_CREATOR5_PRO.report.json
 ```
 
-Options: `--map 1:1,2:2,5:1` (filament → extruder, only needed when a plate uses more filaments than the printer has extruders), `--nozzle 0.6`, `--out DIR`, `--force`, `-v`. Exit codes: `0` converted, `1` error, `2` needs `--map`.
+`--printer` takes any printer preset of an installed slicer, system or your own (a unique part of the name is enough); add `--slicer flashstudio|bambustudio|orcaslicer` to pick the slicer, or `--profiles-dir DIR` for a profiles folder. Other options: `--map 1:1,2:2,5:1` (filament → extruder, only needed when a plate uses more filaments than the printer has extruders), `--nozzle 0.6`, `--out DIR`, `--force`, `--lang`, `-v`. Exit codes: `0` converted, `1` error, `2` needs `--map`.
 
 ## OrcaSlicer plugin
 

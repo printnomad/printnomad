@@ -1,8 +1,8 @@
 import pytest
 
 from betterbridge import rules
-from betterbridge.printer_profiles import creator5pro as t
-from betterbridge.profiles import ProfileError, ProfileLibrary, find_root
+from betterbridge.profiles import ProfileError, ProfileLibrary
+from betterbridge.target import Target, find_printer, load_target, output_suffix
 
 MACHINE = "Flashforge Creator 5 Pro 0.4 nozzle"
 
@@ -36,18 +36,44 @@ def test_missing_parent_raises(profiles_root):
         lib.resolve("machine", "misplaced")
 
 
-def test_find_root_explicit_and_missing(profiles_root, tmp_path, monkeypatch):
-    assert find_root(profiles_root) == profiles_root
-    monkeypatch.setattr("betterbridge.profiles.DEFAULT_ROOTS", ())
-    monkeypatch.delenv("BETTERBRIDGE_PROFILES", raising=False)
+def test_load_target_from_profiles_dir_and_errors(profiles_root, monkeypatch):
+    target = load_target("Creator 5 Pro 0.4", profiles_dir=profiles_root)   # parte única del nombre
+    assert target.machine == MACHINE and target.extruders == 4 and target.nozzle == "0.4"
     with pytest.raises(ProfileError):
-        find_root(tmp_path / "nada")
+        load_target("No existe", profiles_dir=profiles_root)
+    with pytest.raises(ProfileError):
+        load_target("x", slicer="nope")
+    monkeypatch.setenv("BETTERBRIDGE_PROFILES", str(profiles_root))
+    assert load_target(MACHINE).machine == MACHINE
+
+
+def test_target_derived_properties(profiles_root):
+    target = Target(ProfileLibrary.load(profiles_root), MACHINE)
+    assert target.display_name == "Flashforge Creator 5 Pro"
+    assert target.vendor == "Flashforge"
+    assert target.output_suffix == "_CREATOR5_PRO"
+    assert target.bed_type == "Textured PEI Plate"            # del machine_model
+    assert target.filament_printable_all == "15"
+    assert target.nozzle_variants() == {"0.4": MACHINE, "0.6": "Flashforge Creator 5 Pro 0.6 nozzle"}
+    assert target.with_nozzle("0.6").nozzle == "0.6"
+    assert find_printer(target.lib, "5 Pro") is None          # ambiguo: dos coincidencias
+
+
+@pytest.mark.parametrize("model,vendor,suffix", [
+    ("Flashforge Creator 5 Pro", "Flashforge", "_CREATOR5_PRO"),
+    ("Bambu Lab P1S", "BBL", "_BAMBU_LAB_P1S"),
+    ("Creality K1 Max", "Creality", "_K1_MAX"),
+    ("Prusa MK4", "Prusa", "_MK4"),
+])
+def test_output_suffix(model, vendor, suffix):
+    assert output_suffix(model, vendor) == suffix
 
 
 def test_pick_process_closest_layer_height(profiles_root):
     lib = ProfileLibrary.load(profiles_root)
-    assert t.pick_process(lib, MACHINE, 0.2) == "0.20mm Standard @FF C5"
-    assert t.pick_process(lib, MACHINE, 0.25) == "0.24mm Standard @FF C5"
+    target = Target(lib, MACHINE)
+    assert target.pick_process(0.2) == "0.20mm Standard @FF C5"
+    assert target.pick_process(0.25) == "0.24mm Standard @FF C5"
 
 
 @pytest.mark.parametrize("ftype,source,expected", [
@@ -59,7 +85,7 @@ def test_pick_process_closest_layer_height(profiles_root):
 ])
 def test_pick_filament(profiles_root, ftype, source, expected):
     lib = ProfileLibrary.load(profiles_root)
-    assert t.pick_filament(lib, MACHINE, ftype, source) == expected
+    assert Target(lib, MACHINE).pick_filament(ftype, source) == expected
 
 
 def test_check_value_limits():
@@ -94,3 +120,20 @@ def test_inheritance_resolved_within_vendor_then_library(tmp_path):
                                        "inherits": "Generic PLA @System"})
     lib = ProfileLibrary.from_roots([tmp_path])
     assert lib.resolve("filament", "Flashforge PLA Basic @FF C5P")["filament_diameter"] == ["1.75"]
+
+
+def test_most_restrictive_quirk_applies(profiles_root):
+    from betterbridge.slicers import Slicer
+    flash = Slicer(key="flashstudio", name="Flash Studio")
+    orca = Slicer(key="orcaslicer", name="OrcaSlicer", quirks={"manual_map_max_extruder": 2})
+    lib = ProfileLibrary.load(profiles_root)
+    assert Target(lib, MACHINE, flash).manual_map_max_extruder is None
+    assert Target(lib, MACHINE, flash, (orca,)).manual_map_max_extruder == 2
+    assert Target(lib, MACHINE, flash, (orca,)).with_nozzle("0.6").manual_map_max_extruder == 2
+
+
+def test_compatibility_does_not_climb_system_ancestors(profiles_root):
+    """El preset de sistema de la C5P hereda de otro: los perfiles del padre no son compatibles."""
+    target = Target(ProfileLibrary.load(profiles_root), MACHINE)
+    assert target.compatible == [MACHINE]
+    assert "0.20mm Draft @AD5M" not in target.lib.instantiable("process", target.compatible)

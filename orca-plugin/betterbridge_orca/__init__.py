@@ -26,9 +26,9 @@ from . import page
 from .core import i18n, read_3mf, write_3mf
 from .core.convert import convert
 from .core.i18n import t
-from .core.printer_profiles import creator5pro
-from .core.profiles import DEFAULT_ROOTS, ProfileLibrary, find_root
 from .core.remap_filaments import parse_map
+from .core.slicers import registry
+from .core.target import Target, load_target
 from .local_server import serve_once
 
 log = logging.getLogger("betterbridge")
@@ -94,6 +94,25 @@ OPEN_APPS = {
 }
 SAME_WINDOW_OPTION = "abrir_en_misma_ventana_experimental"
 
+# Impresora destino. Por ahora una sola, configurable en la pestaña Config del plugin;
+# la elección por proyecto llega con el plugin general (F6).
+DEFAULT_CONFIG = {
+    "slicer": "flashstudio",
+    "printer": "Flashforge Creator 5 Pro 0.4 nozzle",
+    "profiles_dir": "",
+    SAME_WINDOW_OPTION: False,
+}
+
+
+def _profile_folders() -> list[str]:
+    """Carpetas de perfiles (sistema y usuario) de los laminadores conocidos: solo lectura."""
+    out = []
+    for s in registry().values():
+        out += [f"{root}/*" for root in s.system_roots]
+        if s.user_root:
+            out.append(f"{s.user_root}/*")
+    return out
+
 
 def _open_command(app: str) -> str:
     return f'/usr/bin/open -a "{app}" "$(/bin/cat "{OPEN_TARGET}")"'
@@ -151,7 +170,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         self._panel = None
         self._path: Path | None = None
         self._project = None      # Project3MF cargado (se reutiliza entre vista previa y conversión)
-        self._lib = None
+        self._target: Target | None = None
         self._last: dict | None = None  # último mensaje enviado, para reenviarlo en "ready"
         self._cached = None  # (boquilla, ConversionResult) de la última vista previa
         self._output: Path | None = None  # último .3mf convertido, para "Abrir en…"
@@ -164,13 +183,23 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         return orca.ExecutionResult.skipped("solo reacciona al abrir proyectos")
 
     def get_default_config(self):
-        return {"profiles_dir": "", SAME_WINDOW_OPTION: False}
+        return dict(DEFAULT_CONFIG)
 
     def _config(self) -> dict:
         try:
             return json.loads(self.get_config() or "{}")
         except (TypeError, ValueError):
             return {}
+
+    def _get_target(self) -> Target:
+        if self._target is None:
+            cfg = {**DEFAULT_CONFIG, **self._config()}
+            target = load_target(cfg["printer"], cfg.get("slicer") or None, cfg.get("profiles_dir") or None)
+            # El plugin corre en OrcaSlicer y ofrece abrir el resultado ahí: aplicar también sus límites.
+            orca_slicer = registry().get("orcaslicer")
+            target.also_open_in = (orca_slicer,) if orca_slicer else ()
+            self._target = target
+        return self._target
 
     def _same_window(self) -> bool:
         return bool(self._config().get(SAME_WINDOW_OPTION, False))
@@ -186,7 +215,12 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         if event != orca.LifecycleEvent.ProjectOpened:
             return
         path = _project_path(ctx)
-        if path is None or path.stem.endswith(creator5pro.OUTPUT_SUFFIX):
+        try:
+            target = self._get_target()
+        except Exception as e:  # impresora destino mal configurada: no molestar al abrir
+            log.warning("impresora destino no disponible: %s", e)
+            return
+        if path is None or path.stem.endswith(target.output_suffix):
             return
         try:
             kind = read_3mf.detect_source(read_3mf.peek(path))
@@ -199,7 +233,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         ui.push_notification(
             ui.NotificationLevel.RegularNotificationLevel,
             t("plugin.notify.project_from", source=SOURCE_NAMES[kind]),
-            hyper_text=t("plugin.notify.convert_link", target=creator5pro.DISPLAY_NAME),
+            hyper_text=t("plugin.notify.convert_link", target=target.display_name),
             on_click=lambda: self._open(path),
         )
 
@@ -293,15 +327,14 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
 
     # --- lógica ------------------------------------------------------------
     def _load(self):
-        if self._lib is None:
-            self._lib = ProfileLibrary.load(find_root(self._config().get("profiles_dir") or None))
+        target = self._get_target()
         if self._project is None:
             self._project = read_3mf.load(self._path)
-        return self._project, self._lib
+        return self._project, target
 
     def _send_preview(self, nozzle: str | None = None) -> None:
-        project, lib = self._load()
-        result = convert(project, lib, nozzle=nozzle)
+        project, target = self._load()
+        result = convert(project, target, nozzle=nozzle)
         # Si se convierte sin tocar la tabla, se reutiliza este cálculo.
         self._cached = (result.report.presets.get("nozzle"), result)
         rep = result.report
@@ -311,7 +344,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         filaments = []
         for f in rep.filaments:
             plates = sorted((p for p, used in result.usage.items() if used is None or f.index in used), key=str)
-            ext = next(iter(f.extruders.values()), None) or (f.index if f.index <= creator5pro.EXTRUDERS else 1)
+            ext = next(iter(f.extruders.values()), None) or (f.index if f.index <= target.extruders else 1)
             filaments.append({"index": f.index, "type": f.source_type, "colour": f.colour,
                               "source": f.source_profile, "target": f.target_profile,
                               "plates": plates, "extruder": ext})
@@ -321,24 +354,24 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
             "type": "preview",
             "project": self._path.name,
             "source_kind": SOURCE_NAMES.get(rep.source_kind, rep.source_kind),
-            "target": creator5pro.DISPLAY_NAME,
-            "extruders": creator5pro.EXTRUDERS,
-            "nozzle": rep.presets.get("nozzle", creator5pro.DEFAULT_NOZZLE),
-            "nozzles": list(creator5pro.NOZZLES),
+            "target": target.display_name,
+            "extruders": target.extruders,
+            "nozzle": rep.presets.get("nozzle", target.nozzle),
+            "nozzles": list(target.nozzle_variants()),
             "process": rep.presets.get("process", ""),
             "filaments": filaments,
             "needs_map": needs_map and n > 0,
             "blocking": blocking,
             "errors": errors,
             "warnings": rep.warnings,
-            "output_name": write_3mf.output_path(self._path, creator5pro.OUTPUT_SUFFIX).name,
-            **_existing_output(write_3mf.output_path(self._path, creator5pro.OUTPUT_SUFFIX)),
+            "output_name": write_3mf.output_path(self._path, target.output_suffix).name,
+            **_existing_output(write_3mf.output_path(self._path, target.output_suffix)),
         })
 
     def _convert(self, nozzle: str | None, mapping: str | None, overwrite: str | None = None) -> None:
-        project, lib = self._load()
+        project, target = self._load()
         user_map = parse_map(mapping) if mapping else None
-        dest = write_3mf.output_path(self._path, creator5pro.OUTPUT_SUFFIX)
+        dest = write_3mf.output_path(self._path, target.output_suffix)
         if dest.exists():
             if overwrite == "copy":
                 dest = _free_name(dest)
@@ -353,7 +386,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
             result = cached[1]
             log.info("convertir: se reutiliza la vista previa")
         else:
-            result = convert(project, lib, nozzle=nozzle, user_map=user_map)
+            result = convert(project, target, nozzle=nozzle, user_map=user_map)
         report = result.report
         if report.ok:
             log.info("escribiendo %s", dest)
@@ -387,7 +420,7 @@ class BetterBridgePlugin(orca.base):
     def register_capabilities(self):
         orca.request_permissions(
             # Perfiles de Flash Studio (solo lectura) y carpetas habituales de proyectos.
-            fs_read=[f"{root}/*" for root in map(str, DEFAULT_ROOTS)] + USER_FOLDERS,
+            fs_read=_profile_folders() + USER_FOLDERS,
             fs_readwrite=USER_FOLDERS,
             # Comandos fijos de "Abrir en…" (Orca los autoriza por texto exacto).
             # El puerto local y el hilo de la opción experimental se piden al usarla.

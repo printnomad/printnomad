@@ -1,4 +1,4 @@
-"""Command line: `betterbridge entrada.3mf --target creator5pro [--map 1:1,2:2,5:1] [--lang es]`"""
+"""Command line: `betterbridge entrada.3mf --printer "<preset>" [--slicer flashstudio] [--map 1:1,2:2] [--lang es]`"""
 
 from __future__ import annotations
 
@@ -9,11 +9,9 @@ from pathlib import Path
 from . import i18n, read_3mf, write_3mf
 from .convert import convert
 from .i18n import t
-from .printer_profiles import creator5pro
-from .profiles import ProfileError, ProfileLibrary, find_root
+from .profiles import ProfileError
 from .remap_filaments import MapError, parse_map
-
-TARGETS = {creator5pro.KEY: creator5pro}
+from .target import load_target
 
 EXIT_OK, EXIT_ERROR, EXIT_NEEDS_INPUT = 0, 1, 2
 
@@ -21,7 +19,8 @@ EXIT_OK, EXIT_ERROR, EXIT_NEEDS_INPUT = 0, 1, 2
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="betterbridge", description=t("cli.description"))
     p.add_argument("input", type=Path, help=t("cli.help.input"))
-    p.add_argument("--target", default=creator5pro.KEY, choices=sorted(TARGETS))
+    p.add_argument("--printer", help=t("cli.help.printer"))
+    p.add_argument("--slicer", help=t("cli.help.slicer"))
     p.add_argument("--map", help=t("cli.help.map"))
     p.add_argument("--nozzle", help=t("cli.help.nozzle"))
     p.add_argument("--out", type=Path, help=t("cli.help.out"))
@@ -47,7 +46,6 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     i18n.set_language(_lang_from_argv(argv))
     args = build_parser().parse_args(argv)
-    target = TARGETS[args.target]
     src: Path = args.input
     if not src.is_file():
         print(t("cli.error", message=t("cli.error.no_such_file", path=src)), file=sys.stderr)
@@ -55,17 +53,19 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         user_map = parse_map(args.map) if args.map else None
-        lib = ProfileLibrary.load(find_root(args.profiles_dir))
+        if not args.printer:
+            raise ProfileError(t("cli.error.no_printer"))
+        target = load_target(args.printer, args.slicer, args.profiles_dir)
     except (MapError, ProfileError) as e:
         print(t("cli.error", message=e), file=sys.stderr)
         return EXIT_ERROR
 
     before = write_3mf.sha256_file(src)
     project = read_3mf.load(src)
-    result = convert(project, lib, nozzle=args.nozzle, user_map=user_map, target=target)
+    result = convert(project, target, nozzle=args.nozzle, user_map=user_map)
     report = result.report
 
-    dest = write_3mf.output_path(src, target.OUTPUT_SUFFIX)
+    dest = write_3mf.output_path(src, target.output_suffix)
     if args.out:
         dest = args.out / dest.name if args.out.is_dir() else args.out
     report_path = args.report or dest.with_suffix(".report.json")

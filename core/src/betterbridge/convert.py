@@ -12,13 +12,11 @@ from dataclasses import dataclass, field
 
 from . import model_edit, rules
 from .i18n import t
-from .printer_profiles import creator5pro
-from .profiles import ProfileError, ProfileLibrary
+from .profiles import ProfileError
 from .read_3mf import (
     MODEL_FILE,
     MODEL_SETTINGS,
     PROJECT_SETTINGS,
-    SOURCE_FLASHFORGE,
     SOURCE_PRUSA,
     SOURCE_UNKNOWN,
     Project3MF,
@@ -26,6 +24,7 @@ from .read_3mf import (
 )
 from .remap_filaments import assign
 from .report import FieldChange, FilamentMapping, ObjectOverride, Report
+from .target import Target
 
 CUSTOM_GCODE_PER_LAYER = "Metadata/custom_gcode_per_layer.xml"
 
@@ -87,41 +86,45 @@ def _prusa_settings(project: Project3MF) -> dict:
 
 def convert(
     project: Project3MF,
-    lib: ProfileLibrary,
+    target: Target,
     nozzle: str | None = None,
     user_map: dict[int, int] | None = None,
-    target=creator5pro,
 ) -> ConversionResult:
-    report = Report(source=str(project.path), target=target.DISPLAY_NAME)
+    """Convierte `project` para la impresora `target`.
+
+    `nozzle`: diámetro de boquilla destino; por defecto el del proyecto si el modelo
+    destino tiene esa variante, si no la del preset elegido.
+    """
+    report = Report(source=str(project.path), target=target.display_name)
     result = ConversionResult(report=report)
     kind = detect_source(project)
     report.source_kind = kind
-    if kind == SOURCE_FLASHFORGE:
-        report.errors.append(t("convert.error.already_flashforge"))
-        return result
     if kind == SOURCE_UNKNOWN:
         report.errors.append(t("convert.error.unknown_source"))
         return result
 
     src = _prusa_settings(project) if kind == SOURCE_PRUSA else copy.deepcopy(project.project_settings)
     out = copy.deepcopy(src)
+    if target.is_same_printer(src):
+        report.errors.append(t("convert.error.already_target", target=target.display_name))
+        return result
 
     # --- Impresora -------------------------------------------------------
-    src_nozzle = str(_first(src.get("nozzle_diameter"), target.DEFAULT_NOZZLE))
-    nozzle = nozzle or (src_nozzle if src_nozzle in target.NOZZLES else target.DEFAULT_NOZZLE)
-    if nozzle not in target.NOZZLES:
-        report.errors.append(t("convert.error.nozzle_unavailable", nozzle=nozzle, options=", ".join(target.NOZZLES)))
-        return result
-    if nozzle != src_nozzle:
-        report.warnings.append(t("convert.warn.nozzle_changed", source=src_nozzle, target=nozzle))
-    machine = target.machine_name(nozzle)
-    report.presets.update(nozzle=nozzle, machine=machine)
+    src_nozzle = str(_first(src.get("nozzle_diameter"), target.nozzle))
+    variants = target.nozzle_variants()
+    wanted = nozzle or (src_nozzle if src_nozzle in variants else target.nozzle)
     try:
-        machine_cfg = lib.settings("machine", machine)
+        target = target.with_nozzle(wanted)
     except ProfileError as e:
         report.errors.append(str(e))
         return result
-    limits = rules.speed_limits(machine_cfg)
+    if target.nozzle != src_nozzle:
+        report.warnings.append(t("convert.warn.nozzle_changed", source=src_nozzle, target=target.nozzle))
+    lib = target.lib
+    machine = target.machine
+    report.presets.update(nozzle=target.nozzle, machine=machine)
+    machine_cfg = target.settings
+    limits = target.limits
 
     reasons: dict[str, str] = {}
 
@@ -143,7 +146,7 @@ def convert(
     except (TypeError, ValueError):
         layer_height = 0.2
     try:
-        process = target.pick_process(lib, machine, layer_height)
+        process = target.pick_process(layer_height)
         process_cfg = lib.settings("process", process)
         report.presets["process"] = process
     except ProfileError as e:
@@ -194,21 +197,21 @@ def convert(
         usage[pid] = {f for f in used if 1 <= f <= n} or {1}
 
     result.usage = usage
-    assignment = assign(ftypes, usage, target.EXTRUDERS, user_map)
+    assignment = assign(ftypes, usage, target.extruders, user_map)
     report.warnings.extend(assignment.warnings)
     report.needs_map = assignment.needs_map
     if assignment.errors:
         report.errors.extend(assignment.errors)
         for i in range(n):
             report.filaments.append(FilamentMapping(
-                i + 1, fids[i], ftypes[i], colours[i], target.pick_filament(lib, machine, ftypes[i], fids[i])))
+                i + 1, fids[i], ftypes[i], colours[i], target.pick_filament(ftypes[i], fids[i])))
         return result
     used_anywhere = set().union(*[u if u is not None else set(range(1, n + 1)) for u in usage.values()])
 
     # --- Filamentos --------------------------------------------------------
     fprofiles: list[str | None] = []
     for i in range(n):
-        name = target.pick_filament(lib, machine, ftypes[i], fids[i])
+        name = target.pick_filament(ftypes[i], fids[i])
         fprofiles.append(name)
         mapping = FilamentMapping(i + 1, fids[i], ftypes[i], colours[i], name,
                                   {p: m[i] for p, m in assignment.per_plate.items()
@@ -216,7 +219,7 @@ def convert(
         report.filaments.append(mapping)
         if name is None:
             msg = t("convert.warn.filament_no_equivalent", index=i + 1, profile=fids[i], type=ftypes[i],
-                    target=target.DISPLAY_NAME)
+                    target=target.display_name)
             if i + 1 in used_anywhere:
                 report.errors.append(msg)
             else:
@@ -256,17 +259,22 @@ def convert(
     gmap = assignment.global_map(n)
     put("filament_map", [str(e) for e in gmap], t("reason.filament_map"))
     highest = max((e for m in assignment.per_plate.values() for e in m), default=1)
-    if user_map is None and highest > target.ORCA_MANUAL_MAX_EXTRUDER:
+    # Algunos laminadores solo respetan la asignación manual en los primeros extrusores
+    # (OrcaSlicer 2.5: E1–E2); se lee del registro de laminadores (quirk).
+    manual_limit = target.manual_map_max_extruder
+    over_limit = manual_limit is not None and highest > manual_limit
+    if user_map is None and over_limit:
         map_mode = rules.MAP_MODE_AUTO
         report.warnings.append(t("convert.warn.map_auto_e34"))
     else:
         map_mode = rules.MAP_MODE_MANUAL
-        if highest > target.ORCA_MANUAL_MAX_EXTRUDER:
+        if over_limit:
             report.warnings.append(t("convert.warn.map_manual_e34"))
     put("filament_map_mode", map_mode, t("reason.filament_map_mode"))
-    put("filament_printable", [target.FILAMENT_PRINTABLE_ALL] * n,
-        t("reason.filament_printable", count=target.EXTRUDERS))
-    ext_colours = list(machine_cfg.get("extruder_colour") or ["#FFFFFF"] * target.EXTRUDERS)
+    put("filament_printable", [target.filament_printable_all] * n,
+        t("reason.filament_printable", count=target.extruders))
+    ext_colours = list(machine_cfg.get("extruder_colour") or [])
+    ext_colours += ["#FFFFFF"] * (target.extruders - len(ext_colours))
     for i in reversed(range(n)):
         ext_colours[gmap[i] - 1] = colours[i]
     put("extruder_colour", ext_colours, t("reason.extruder_colour"))
@@ -279,8 +287,8 @@ def convert(
     put("different_settings_to_system",
         [";".join(sorted(c.key for c in report.kept_author if c.key in out))] + [""] * n + [""],
         t("reason.author_on_presets"))
-    if "curr_bed_type" in out and out["curr_bed_type"] != target.BED_TYPE:
-        put("curr_bed_type", target.BED_TYPE, t("reason.target_bed"))
+    if target.bed_type and "curr_bed_type" in out and out["curr_bed_type"] != target.bed_type:
+        put("curr_bed_type", target.bed_type, t("reason.target_bed"))
     report.presets["filaments"] = fprofiles
 
     # --- Eliminar específico de Bambu --------------------------------------
@@ -337,13 +345,13 @@ def _collapse_variants(src: dict, out: dict, machine_keys: set[str], target, put
     variants = src.get("print_extruder_variant")
     if not isinstance(variants, list) or len(variants) < 2:
         return
-    idx = variants.index(target.EXTRUDER_VARIANT) if target.EXTRUDER_VARIANT in variants else 0
+    idx = variants.index(target.extruder_variant) if target.extruder_variant in variants else 0
     for k, v in list(out.items()):
         if (k in machine_keys or not k.endswith(rules.VARIANT_KEY_SUFFIXES)
                 or k.startswith("filament_") or not isinstance(v, list) or len(v) != len(variants)):
             continue
         put(k, v[idx], t("reason.variant_value", variant=variants[idx]))
-    put("print_extruder_variant", [target.EXTRUDER_VARIANT], t("reason.target_variant"))
+    put("print_extruder_variant", [target.extruder_variant], t("reason.target_variant"))
     put("print_extruder_id", ["1"], t("reason.target_variant"))
 
 
@@ -416,7 +424,7 @@ def _edit_model_settings(root, info, per_plate, map_mode, target, limits, report
             report.plates.append(FieldChange(t("report.plate_key", plate=pid, key="filament_map_mode"), old, map_mode,
                                              t("reason.map_mode")))
         bed = model_edit.meta(plate).get("curr_bed_type")
-        if bed and bed != target.BED_TYPE:
-            model_edit.set_meta(plate, "curr_bed_type", target.BED_TYPE)
+        if target.bed_type and bed and bed != target.bed_type:
+            model_edit.set_meta(plate, "curr_bed_type", target.bed_type)
             report.plates.append(FieldChange(t("report.plate_key", plate=pid, key="curr_bed_type"), bed,
-                                             target.BED_TYPE, t("reason.target_bed")))
+                                             target.bed_type, t("reason.target_bed")))

@@ -71,10 +71,10 @@ def test_user_presets_inherit_and_are_compatible(fake_slicer):
     assert lib.vendors[("machine", "My B")] == USER_VENDOR
     assert lib.resolve("machine", "My B")["gcode_flavor"] == "B"
     assert lib.ancestors("machine", "My B") == ["My B", "B Printer 0.4 nozzle", "fdm_base"]
-    compatible = lib.instantiable("process", lib.ancestors("machine", "My B"))
+    compatible = lib.instantiable("process", ["My B", "B Printer 0.4 nozzle"])
     assert compatible == ["0.20 @B", "Fine"]       # el preset de usuario hereda la compatibilidad
     assert lib.instantiable("filament", "My B") == []   # solo el nombre propio: sin ancestros no hay
-    assert lib.instantiable("filament", lib.ancestors("machine", "My B")) == ["B PLA"]
+    assert lib.instantiable("filament", ["My B", "B Printer 0.4 nozzle"]) == ["B PLA"]
 
 
 def test_library_without_user_presets(fake_slicer):

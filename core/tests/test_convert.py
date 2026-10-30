@@ -7,7 +7,12 @@ from betterbridge import read_3mf
 from betterbridge.convert import convert
 from betterbridge.model_edit import meta
 from betterbridge.profiles import ProfileLibrary
+from betterbridge.slicers import Slicer
+from betterbridge.target import Target
 from conftest import make_bambu_3mf
+
+# Particularidad de OrcaSlicer 2.5 (registro de laminadores): manual solo en E1–E2.
+ORCA = Slicer(key="orcaslicer", name="OrcaSlicer", quirks={"manual_map_max_extruder": 2})
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
 PLA_MATTE = ("PLA", "Bambu PLA Matte @BBL A1", "#00FF00")
@@ -20,9 +25,12 @@ def lib(profiles_root):
     return ProfileLibrary.load(profiles_root)
 
 
-def run(lib, path, **kw):
+MACHINE = "Flashforge Creator 5 Pro 0.4 nozzle"
+
+
+def run(lib, path, slicer=ORCA, **kw):
     project = read_3mf.load(path)
-    result = convert(project, lib, **kw)
+    result = convert(project, Target(lib, MACHINE, slicer), **kw)
     settings = json.loads(result.files[read_3mf.PROJECT_SETTINGS]) if result.report.ok else None
     return project, result, settings
 
@@ -162,12 +170,28 @@ def test_same_bed_keeps_model_file(lib, tmp_path):
     assert read_3mf.MODEL_FILE not in result.files
 
 
-def test_flashforge_source_rejected(lib, tmp_path):
+def test_project_already_for_target_rejected(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
-                          settings={"printer_model": "Flashforge Creator 5 Pro",
-                                    "printer_settings_id": "Flashforge Creator 5 Pro 0.4 nozzle"})
+                          settings={"printer_model": "Flashforge Creator 5 Pro", "printer_settings_id": MACHINE})
     _, result, _ = run(lib, path)
-    assert not result.report.ok
+    assert not result.report.ok and "Creator 5 Pro" in result.report.errors[0]
+
+
+def test_flashforge_source_can_be_converted_to_another_nozzle_variant(lib, tmp_path):
+    """Un proyecto de Flashforge ya no se rechaza por ser Flashforge, sino por ser la misma impresora."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
+                          settings={"printer_model": "Flashforge Adventurer 5M", "printer_settings_id": "AD5M"})
+    _, result, s = run(lib, path)
+    assert result.report.ok and s["printer_model"] == "Flashforge Creator 5 Pro"
+
+
+def test_nozzle_variant_selected_from_source(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"nozzle_diameter": ["0.6"]})
+    _, result, s = run(lib, path)
+    assert result.report.presets["machine"] == "Flashforge Creator 5 Pro 0.6 nozzle"
+    assert s["nozzle_diameter"] == ["0.6"] * 4
+    _, result, _ = run(lib, path, nozzle="0.8")
+    assert not result.report.ok and "0.8" in result.report.errors[0]
 
 
 def test_prusa_source_basic(lib, tmp_path):
@@ -240,3 +264,11 @@ def test_bambu_only_key_kept_when_target_defines_it(lib, tmp_path, profiles_root
     _, result, s = run(lib2, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"nozzle_volume": "92"}))
     assert s["nozzle_volume"] == ["0"] * 4
     assert not any(d.key == "nozzle_volume" for d in result.report.dropped)
+
+
+
+def test_manual_extruder_map_kept_when_slicer_has_no_limit(lib, tmp_path):
+    """Flash Studio respeta la asignación manual en E3/E4: sin la particularidad de Orca, se queda manual."""
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]]), slicer=None)
+    assert s["filament_map_mode"] == "Manual" and s["filament_map"] == ["1", "2", "3"]
+    assert not any("modo automático" in w for w in result.report.warnings)

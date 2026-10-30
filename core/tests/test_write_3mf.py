@@ -5,7 +5,7 @@ import zipfile
 import pytest
 
 from betterbridge import cli, read_3mf, write_3mf
-from conftest import make_bambu_3mf
+from conftest import cli_target, make_bambu_3mf
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
 
@@ -17,7 +17,7 @@ def digest(path):
 def test_cli_end_to_end(profiles_root, tmp_path, capsys):
     src = make_bambu_3mf(tmp_path / "proj.3mf", [PLA], [["2"]], bed=180)
     before = digest(src)
-    code = cli.main([str(src), "--profiles-dir", str(profiles_root)])
+    code = cli.main([str(src), *cli_target(profiles_root)])
     assert code == cli.EXIT_OK, capsys.readouterr().out
     assert digest(src) == before                        # original intacto
     out = tmp_path / "proj_CREATOR5_PRO.3mf"
@@ -32,14 +32,14 @@ def test_cli_end_to_end(profiles_root, tmp_path, capsys):
 
 def test_cli_refuses_overwrite_and_needs_map_exit_code(profiles_root, tmp_path):
     src = make_bambu_3mf(tmp_path / "p.3mf", [PLA], [["2"]])
-    assert cli.main([str(src), "--profiles-dir", str(profiles_root)]) == cli.EXIT_OK
-    assert cli.main([str(src), "--profiles-dir", str(profiles_root)]) == cli.EXIT_ERROR
-    assert cli.main([str(src), "--profiles-dir", str(profiles_root), "--force"]) == cli.EXIT_OK
+    assert cli.main([str(src), *cli_target(profiles_root)]) == cli.EXIT_OK
+    assert cli.main([str(src), *cli_target(profiles_root)]) == cli.EXIT_ERROR
+    assert cli.main([str(src), *cli_target(profiles_root), "--force"]) == cli.EXIT_OK
 
     painted = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=True)
-    assert cli.main([str(painted), "--profiles-dir", str(profiles_root)]) == cli.EXIT_NEEDS_INPUT
+    assert cli.main([str(painted), *cli_target(profiles_root)]) == cli.EXIT_NEEDS_INPUT
     assert not (tmp_path / "m_CREATOR5_PRO.3mf").exists()
-    assert cli.main([str(painted), "--profiles-dir", str(profiles_root),
+    assert cli.main([str(painted), *cli_target(profiles_root),
                      "--map", "1:1,2:2,3:3,4:4,5:4"]) == cli.EXIT_OK
 
 
