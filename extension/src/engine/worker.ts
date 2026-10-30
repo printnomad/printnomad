@@ -3,7 +3,15 @@
 // Pyodide cannot run in the MV3 service worker (no dynamic import there), so extension
 // pages start this module worker instead. Boot takes ~1 s and happens once per worker.
 import type { PyodideAPI } from "pyodide";
-import type { ConvertRequest, ConvertResult, ListPrintersRequest, PrinterInfo, Request, Response } from "./protocol.ts";
+import type {
+  ConvertRequest,
+  ConvertResult,
+  ListPrintersRequest,
+  OptionInfo,
+  PrinterInfo,
+  Request,
+  Response,
+} from "./protocol.ts";
 
 const LIB = "/lib";
 const WORK = "/work";
@@ -63,7 +71,7 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
         platform: args.platform ?? null,
         nozzle: args.nozzle ?? null,
         map_text: args.map ?? null,
-        keep_designer_filament: args.keepDesignerFilament ?? true,
+        options: py.toPy(args.options ?? {}),
         lang: args.lang ?? null,
       }),
     );
@@ -83,11 +91,27 @@ async function listPrinters(args: ListPrintersRequest): Promise<PrinterInfo[]> {
   return toJs<PrinterInfo[]>(py.pyimport("betterbridge.web").list_printers(pyBundles(py, args.bundles)));
 }
 
+async function listOptions(lang?: string): Promise<OptionInfo[]> {
+  const py = await engine();
+  return toJs<OptionInfo[]>(py.pyimport("betterbridge.web").list_options(lang ?? null));
+}
+
+async function handle(request: Request): Promise<unknown> {
+  switch (request.op) {
+    case "convert":
+      return convert(request.args);
+    case "listPrinters":
+      return listPrinters(request.args);
+    case "listOptions":
+      return listOptions(request.args.lang);
+  }
+}
+
 self.onmessage = async ({ data }: MessageEvent<Request>) => {
   let reply: Response;
   const transfer: Transferable[] = [];
   try {
-    const result = data.op === "convert" ? await convert(data.args) : await listPrinters(data.args);
+    const result = await handle(data);
     if (data.op === "convert" && (result as ConvertResult).output) transfer.push((result as ConvertResult).output!.data);
     reply = { id: data.id, ok: true, result };
   } catch (e) {

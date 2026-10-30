@@ -115,5 +115,20 @@
   },
   "permission_denied": {
     "message": "No se concedió permiso para leer la carpeta del laminador."
+  },
+  "conversion_title": {
+    "message": "Conversión"
+  },
+  "conversion_basic": {
+    "message": "BetterBridge elige los ajustes más seguros: el proyecto abre y lamina en cualquier laminador, con el enfriamiento de tu impresora y los ajustes de impresión del diseñador."
+  },
+  "conversion_advanced": {
+    "message": "Modo avanzado"
+  },
+  "conversion_reset": {
+    "message": "Restablecer valores por defecto"
+  },
+  "conversion_loading": {
+    "message": "Cargando opciones…"
   }
 }

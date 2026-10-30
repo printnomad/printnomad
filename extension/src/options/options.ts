@@ -1,7 +1,7 @@
 // Options page: My printers, where profiles come from, and a manual "Convert a file".
 import { CONFIG } from "../config.ts";
 import { Engine } from "../engine/client.ts";
-import type { PrinterInfo } from "../engine/protocol.ts";
+import type { OptionInfo, PrinterInfo } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
 import {
   getSlicerFolder,
@@ -199,6 +199,98 @@ async function pickFolder() {
   await renderPrinterChoices();
 }
 
+// --- conversion options (advanced mode) -------------------------------------
+let optionInfo: OptionInfo[] | null = null;
+
+function optionValue(o: OptionInfo): boolean | string {
+  return settings.options[o.key] ?? o.default;
+}
+
+async function setOption(o: OptionInfo, value: boolean | string) {
+  const options = { ...settings.options };
+  if (value === o.default) delete options[o.key];
+  else options[o.key] = value;
+  settings.options = options;
+  await saveSettings({ options });
+  renderOptions();
+}
+
+function optionControl(o: OptionInfo): HTMLElement {
+  const box = document.createElement("div");
+  const help = document.createElement("p");
+  help.className = "mt-1 text-xs text-muted";
+  help.textContent = o.help;
+  if (o.kind === "bool") {
+    const label = document.createElement("label");
+    label.className = "flex items-center gap-2 font-medium";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "size-4 accent-accent";
+    input.checked = optionValue(o) === true;
+    input.onchange = () => void setOption(o, input.checked);
+    const text = document.createElement("span");
+    text.textContent = o.label;
+    label.append(input, text);
+    box.append(label, help);
+  } else {
+    const fieldset = document.createElement("fieldset");
+    const legend = document.createElement("legend");
+    legend.className = "font-medium";
+    legend.textContent = o.label;
+    fieldset.append(legend, help);
+    for (const choice of o.choices ?? []) {
+      const label = document.createElement("label");
+      label.className = "mt-2 flex items-start gap-2";
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = `option-${o.key}`;
+      input.value = choice.value;
+      input.className = "mt-0.5 accent-accent";
+      input.checked = optionValue(o) === choice.value;
+      input.onchange = () => void setOption(o, choice.value);
+      const text = document.createElement("span");
+      text.textContent = choice.label;
+      label.append(input, text);
+      fieldset.append(label);
+    }
+    box.append(fieldset);
+  }
+  if (o.warning !== undefined && optionValue(o) === o.warn_when) {
+    const warning = document.createElement("p");
+    warning.className = "mt-2 rounded-md bg-warn-bg px-3 py-2 text-xs text-warn-fg";
+    warning.setAttribute("role", "alert");
+    warning.textContent = o.warning;
+    box.append(warning);
+  }
+  return box;
+}
+
+function renderOptions() {
+  const list = $("conversion-options");
+  $<HTMLInputElement>("advanced").checked = settings.advanced;
+  $("conversion-basic").hidden = settings.advanced;
+  list.hidden = !settings.advanced;
+  $("conversion-reset").hidden = !settings.advanced || Object.keys(settings.options).length === 0;
+  if (!settings.advanced) return;
+  if (!optionInfo) {
+    list.textContent = t("conversion_loading");
+    return;
+  }
+  list.replaceChildren(...optionInfo.map(optionControl));
+}
+
+async function loadOptions() {
+  renderOptions();
+  if (!settings.advanced || optionInfo) return;
+  try {
+    optionInfo = await engine.listOptions(uiLanguage());
+  } catch (e) {
+    $("conversion-options").textContent = (e as Error).message;
+    return;
+  }
+  renderOptions();
+}
+
 // --- convert a file ----------------------------------------------------------
 function showStatus(kind: keyof typeof STATUS_CLASSES, text: string) {
   const el = $("convert-status");
@@ -223,6 +315,8 @@ async function convertFile(event: SubmitEvent) {
     const [bundles, platform, data] = await Promise.all([bundlesFor(printer), platformKey(), file.arrayBuffer()]);
     const res = await engine.convert({
       name: file.name, data, printer: printer.printer, bundles, slicer: printer.slicer, platform, lang: uiLanguage(),
+      // Basic mode: the core's defaults, whatever was chosen earlier in advanced mode.
+      options: settings.advanced ? settings.options : {},
     });
     $("convert-report").textContent = res.text;
     if (res.output) {
@@ -251,6 +345,7 @@ async function main() {
   fillSlicerSelect($<HTMLSelectElement>("add-slicer"), settings.printers.at(-1)?.slicer ?? settings.localSlicer);
   renderPrinters();
   renderSource();
+  void loadOptions();
   await renderPrinterChoices();
 
   $<HTMLSelectElement>("add-slicer").onchange = () => void renderPrinterChoices();
@@ -276,6 +371,16 @@ async function main() {
     await renderPrinterChoices();
   };
   $("pick-folder").onclick = () => void pickFolder();
+  $<HTMLInputElement>("advanced").onchange = async (e) => {
+    settings.advanced = (e.target as HTMLInputElement).checked;
+    await saveSettings({ advanced: settings.advanced });
+    await loadOptions();
+  };
+  $("conversion-reset").onclick = async () => {
+    settings.options = {};
+    await saveSettings({ options: {} });
+    renderOptions();
+  };
   $<HTMLFormElement>("convert").onsubmit = (e) => void convertFile(e as SubmitEvent);
   $("convert-show").onclick = () => lastDownload !== null && chrome.downloads.show(lastDownload);
 }

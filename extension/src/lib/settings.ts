@@ -16,9 +16,13 @@ export interface Settings {
   profileSource: ProfileSource;
   /** Slicer whose data folder the user picked (profileSource "local"). */
   localSlicer: string;
+  /** Advanced mode shows the conversion options; basic mode always uses their defaults. */
+  advanced: boolean;
+  /** Values of the conversion options changed in advanced mode. */
+  options: Record<string, boolean | string>;
 }
 
-const DEFAULTS: Settings = { printers: [], profileSource: "catalog", localSlicer: "flashstudio" };
+const DEFAULTS: Settings = { printers: [], profileSource: "catalog", localSlicer: "flashstudio", advanced: false, options: {} };
 
 export async function loadSettings(): Promise<Settings> {
   // Passing the defaults returns them for the keys that were never saved.

@@ -122,5 +122,20 @@
   },
   "permission_denied": {
     "message": "Permission to read the slicer folder was not granted."
+  },
+  "conversion_title": {
+    "message": "Conversion"
+  },
+  "conversion_basic": {
+    "message": "BetterBridge picks the safest settings: the project opens and slices in any slicer, with your printer's cooling and the designer's print settings."
+  },
+  "conversion_advanced": {
+    "message": "Advanced mode"
+  },
+  "conversion_reset": {
+    "message": "Restore defaults"
+  },
+  "conversion_loading": {
+    "message": "Loading options…"
   }
 }

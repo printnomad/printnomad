@@ -1,5 +1,5 @@
 // Promise API over the conversion worker. One worker per page, started on first use.
-import type { ConvertRequest, ConvertResult, PrinterInfo, Request, Response } from "./protocol.ts";
+import type { ConvertRequest, ConvertResult, OptionInfo, PrinterInfo, Request, Response } from "./protocol.ts";
 
 type Pending = { resolve(value: unknown): void; reject(error: Error): void };
 
@@ -40,5 +40,9 @@ export class Engine {
 
   listPrinters(bundles: string[]): Promise<PrinterInfo[]> {
     return this.call({ op: "listPrinters", args: { bundles } });
+  }
+
+  listOptions(lang?: string): Promise<OptionInfo[]> {
+    return this.call({ op: "listOptions", args: { lang } });
   }
 }

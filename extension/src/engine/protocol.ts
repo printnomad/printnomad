@@ -11,8 +11,23 @@ export interface ConvertRequest {
   platform?: string;
   nozzle?: string;
   map?: string;
-  keepDesignerFilament?: boolean;
+  /** Advanced options (core/src/betterbridge/options.py); missing ones take their defaults. */
+  options?: OptionValues;
   lang?: string;
+}
+
+export type OptionValues = Record<string, boolean | string>;
+
+/** One conversion option as described by the core (betterbridge.options.describe). */
+export interface OptionInfo {
+  key: string;
+  kind: "bool" | "choice";
+  default: boolean | string;
+  label: string;
+  help: string;
+  choices?: { value: string; label: string }[];
+  warn_when?: boolean | string;
+  warning?: string;
 }
 
 export interface ConvertResult {
@@ -40,7 +55,8 @@ export interface PrinterInfo {
 
 export type Request =
   | { id: number; op: "convert"; args: ConvertRequest }
-  | { id: number; op: "listPrinters"; args: ListPrintersRequest };
+  | { id: number; op: "listPrinters"; args: ListPrintersRequest }
+  | { id: number; op: "listOptions"; args: { lang?: string } };
 
 export type Response =
   | { id: number; ok: true; result: unknown }
