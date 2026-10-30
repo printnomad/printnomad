@@ -70,3 +70,26 @@ def test_check_value_limits():
     assert t.check_value("fan_max_speed", ["100"], limits) is None
     assert t.check_value("default_acceleration", "25000", limits)
     assert t.check_value("layer_height", "0.3", limits)
+
+
+def test_inheritance_resolved_within_vendor_then_library(tmp_path):
+    """Regresión: fdm_filament_common existe en Flashforge (2.85 mm) y en la biblioteca común
+    (1.75 mm). "Generic PLA @System" (biblioteca) debe heredar el de la biblioteca, como en
+    OrcaSlicer; antes se tomaba el primero por nombre y el filamento salía con 2.85 mm."""
+    import json
+
+    def w(rel, data):
+        f = tmp_path / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(data))
+
+    w("Flashforge/filament/common.json", {"type": "filament", "name": "fdm_filament_common",
+                                          "filament_diameter": ["2.85"]})
+    w("OrcaFilamentLibrary/filament/base/common.json", {"type": "filament", "name": "fdm_filament_common",
+                                                        "filament_diameter": ["1.75"]})
+    w("OrcaFilamentLibrary/filament/pla.json", {"type": "filament", "name": "Generic PLA @System",
+                                                "inherits": "fdm_filament_common", "instantiation": "false"})
+    w("Flashforge/filament/c5p.json", {"type": "filament", "name": "Flashforge PLA Basic @FF C5P",
+                                       "inherits": "Generic PLA @System"})
+    lib = ProfileLibrary.from_roots([tmp_path])
+    assert lib.resolve("filament", "Flashforge PLA Basic @FF C5P")["filament_diameter"] == ["1.75"]
