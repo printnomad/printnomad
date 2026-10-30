@@ -27,6 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--profiles-dir", help=t("cli.help.profiles_dir"))
     p.add_argument("--report", type=Path, help=t("cli.help.report"))
     p.add_argument("--force", action="store_true", help=t("cli.help.force"))
+    p.add_argument("--no-designer-filament", action="store_true", help=t("cli.help.no_designer_filament"))
     p.add_argument("-v", "--verbose", action="store_true", help=t("cli.help.verbose"))
     p.add_argument("--lang", help=t("cli.help.lang", languages=", ".join(i18n.available_languages())))
     return p
@@ -62,7 +63,8 @@ def main(argv: list[str] | None = None) -> int:
 
     before = write_3mf.sha256_file(src)
     project = read_3mf.load(src)
-    result = convert(project, target, nozzle=args.nozzle, user_map=user_map)
+    result = convert(project, target, nozzle=args.nozzle, user_map=user_map,
+                     keep_designer_filament=not args.no_designer_filament)
     report = result.report
 
     dest = write_3mf.output_path(src, target.output_suffix)

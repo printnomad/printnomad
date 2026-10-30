@@ -25,7 +25,7 @@
   "reason.cooling_no_value": "enfriamiento: depende de los ventiladores de la máquina, manda el perfil destino (sin valor en el destino)",
   "reason.target_filament": "perfil de filamento destino",
   "reason.target_filament_profiles": "perfiles de filamento destino",
-  "reason.author_filament_replaced": "ajuste del autor para el filamento de origen; manda el perfil de filamento destino",
+  "reason.author_filament_replaced": "el ajuste del diseñador depende del hardware o la calibración de la impresora de origen; manda el perfil de filamento destino",
   "reason.filament_map": "asignación de filamentos a extrusores",
   "reason.filament_map_mode": "modo de asignación de filamentos a extrusores",
   "reason.filament_printable": "cada filamento puede ir en los {count} extrusores",
@@ -117,5 +117,7 @@
   "target.error.unknown_slicer": "laminador desconocido '{slicer}' (conocidos: {options})",
   "cli.help.printer": "preset de la impresora destino (nombre o una parte única); lístalos con `betterbridge printers`",
   "cli.help.slicer": "laminador cuyos perfiles usar (por defecto: buscar en los instalados)",
-  "cli.error.no_printer": "elige la impresora destino con --printer (ver `betterbridge printers`)"
+  "cli.error.no_printer": "elige la impresora destino con --printer (ver `betterbridge printers`)",
+  "reason.author_filament_kept": "elección del diseñador para este filamento (temperatura o densidad)",
+  "cli.help.no_designer_filament": "no conservar temperaturas ni densidad que el diseñador cambió en sus filamentos; usar los perfiles de filamento destino tal cual"
 }

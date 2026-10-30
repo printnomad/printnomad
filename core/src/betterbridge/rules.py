@@ -51,6 +51,19 @@ def is_cooling_key(key: str) -> bool:
     return key not in NOT_COOLING_KEYS and bool(COOLING_KEY.search(key))
 
 
+# Ajustes de filamento del diseñador que se conservan sobre el perfil de filamento
+# destino: decisiones sobre el material (temperaturas, densidad). Lo que depende del
+# hardware o de la calibración de cada máquina NO se conserva: caudal volumétrico
+# (hotend; un proyecto traía 50 mm³/s frente a 18 de la C5P), flow ratio, pressure
+# advance y todo el enfriamiento.
+DESIGNER_FILAMENT_KEEP = re.compile(r"^(nozzle_temperature(_initial_layer|_range_low|_range_high)?|"
+                                    r"[a-z_]*plate_temp(_initial_layer)?|filament_density)$")
+
+
+def keep_designer_filament_key(key: str) -> bool:
+    return bool(DESIGNER_FILAMENT_KEEP.match(key)) and not is_cooling_key(key)
+
+
 # Valores que OrcaSlicer rechaza o reinterpreta: valor -> valor válido.
 # None = quitar la clave para que Orca use su valor por defecto.
 VALUE_FIXES = {

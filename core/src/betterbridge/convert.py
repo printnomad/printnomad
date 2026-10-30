@@ -89,11 +89,14 @@ def convert(
     target: Target,
     nozzle: str | None = None,
     user_map: dict[int, int] | None = None,
+    keep_designer_filament: bool = True,
 ) -> ConversionResult:
     """Convierte `project` para la impresora `target`.
 
     `nozzle`: diámetro de boquilla destino; por defecto el del proyecto si el modelo
     destino tiene esa variante, si no la del preset elegido.
+    `keep_designer_filament`: conservar las temperaturas y la densidad que el diseñador
+    cambió en sus filamentos (ver rules.DESIGNER_FILAMENT_KEEP).
     """
     report = Report(source=str(project.path), target=target.display_name)
     result = ConversionResult(report=report)
@@ -241,10 +244,20 @@ def convert(
                 values.append(_first(fallback, "") if isinstance(fallback, list) else fallback)
         put(k, values if isinstance(next(c[k] for c in fcfgs if c and k in c), list) else values[0],
             t("reason.target_filament"))
+    kept_filament: dict[int, set[str]] = {}  # filamento -> claves del diseñador conservadas
     for i in range(n):
         author_f = diffs[i + 1] if len(diffs) > i + 1 else set()
         for k in sorted(author_f):
-            if fcfgs[i] is not None and k in fcfgs[i] and isinstance(src.get(k), list) and i < len(src[k]):
+            if fcfgs[i] is None or not isinstance(src.get(k), list) or i >= len(src[k]):
+                continue
+            if keep_designer_filament and rules.keep_designer_filament_key(k) and isinstance(out.get(k), list):
+                target_value = out[k][i] if i < len(out[k]) else None
+                out[k][i] = src[k][i]
+                kept_filament.setdefault(i, set()).add(k)
+                report.kept_author.append(FieldChange(
+                    t("report.filament_key", key=k, index=i + 1), src[k][i], target_value,
+                    t("reason.author_filament_kept")))
+            elif k in fcfgs[i]:
                 report.dropped.append(FieldChange(
                     t("report.filament_key", key=k, index=i + 1), src[k][i],
                     out[k][i] if isinstance(out[k], list) else out[k], t("reason.author_filament_replaced")))
@@ -285,7 +298,8 @@ def convert(
     put("print_compatible_printers", [machine], t("reason.target_process_preset"))
     put("inherits_group", [process, *[p or "" for p in fprofiles], machine], t("reason.target_presets"))
     put("different_settings_to_system",
-        [";".join(sorted(c.key for c in report.kept_author if c.key in out))] + [""] * n + [""],
+        [";".join(sorted(c.key for c in report.kept_author if c.key in out))]
+        + [";".join(sorted(kept_filament.get(i, ()))) for i in range(n)] + [""],
         t("reason.author_on_presets"))
     if target.bed_type and "curr_bed_type" in out and out["curr_bed_type"] != target.bed_type:
         put("curr_bed_type", target.bed_type, t("reason.target_bed"))

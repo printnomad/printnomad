@@ -25,7 +25,7 @@
   "reason.cooling_no_value": "cooling depends on the printer's fans; the target profile applies (no value in the target)",
   "reason.target_filament": "target filament profile",
   "reason.target_filament_profiles": "target filament profiles",
-  "reason.author_filament_replaced": "designer's setting for the source filament; the target filament profile applies",
+  "reason.author_filament_replaced": "designer's setting for the source filament depends on the source printer's hardware or calibration; the target filament profile applies",
   "reason.filament_map": "filament-to-extruder assignment",
   "reason.filament_map_mode": "filament-to-extruder assignment mode",
   "reason.filament_printable": "each filament can use any of the {count} extruders",
@@ -117,5 +117,7 @@
   "target.error.unknown_slicer": "unknown slicer '{slicer}' (known: {options})",
   "cli.help.printer": "target printer preset (name or a unique part of it); list them with `betterbridge printers`",
   "cli.help.slicer": "slicer whose profiles to use (default: search the installed ones)",
-  "cli.error.no_printer": "choose the target printer with --printer (see `betterbridge printers`)"
+  "cli.error.no_printer": "choose the target printer with --printer (see `betterbridge printers`)",
+  "reason.author_filament_kept": "designer's material choice for this filament (temperature or density)",
+  "cli.help.no_designer_filament": "do not keep the designer's filament temperatures and density; use the target filament profiles as they are"
 }
