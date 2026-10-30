@@ -24,6 +24,8 @@ export interface SlicerEntry {
   repo: string | null;
   ref: string;
   commit: string | null;
+  /** Shown in reports, e.g. "FlashForge/Orca-Flashforge@1.7.15" or "Flash Studio 1.7.20". */
+  source?: string;
   vendors: Record<string, VendorEntry>;
 }
 
@@ -71,7 +73,7 @@ export function vendorsNeeded(entry: SlicerEntry, vendor: string): string[] {
 
 /** Human-readable profile source, as the report shows it. */
 export function describeSource(entry: SlicerEntry): string {
-  return entry.repo ? `${entry.repo}@${entry.ref}` : `${entry.name} ${entry.ref}`;
+  return entry.source ?? (entry.repo ? `${entry.repo}@${entry.ref}` : `${entry.name} ${entry.ref}`);
 }
 
 /**

@@ -32,47 +32,20 @@
   "printers_remove": {
     "message": "Quitar"
   },
-  "printers_from_folder": {
-    "message": "de tu carpeta de $1"
-  },
   "profiles_title": {
     "message": "Perfiles de impresora"
-  },
-  "profiles_catalog": {
-    "message": "Descargar de los repositorios oficiales de los laminadores"
-  },
-  "profiles_catalog_hint": {
-    "message": "Último release de cada laminador. Funciona sin instalar nada."
-  },
-  "profiles_local": {
-    "message": "Usar los perfiles de mi laminador instalado (recomendado)"
-  },
-  "profiles_local_hint": {
-    "message": "Coinciden exactamente con tu app, incluidos tus propios presets. Elige su carpeta de datos, p. ej. ~/Library/Application Support/Orca-Flashforge (pulsa ⌘⇧. para ver carpetas ocultas)."
-  },
-  "profiles_local_slicer": {
-    "message": "Esta carpeta es de"
-  },
-  "profiles_pick_folder": {
-    "message": "Elegir carpeta…"
-  },
-  "profiles_folder_none": {
-    "message": "Ninguna carpeta elegida"
   },
   "profiles_status_loading": {
     "message": "Cargando el catálogo de perfiles…"
   },
   "profiles_status_ready": {
-    "message": "Catálogo: $1 laminadores, actualizado $2"
+    "message": "Perfiles: $1 (actualizados el $2)"
   },
   "profiles_status_fallback": {
-    "message": "Sin conexión: se usan los perfiles incluidos en la extensión."
+    "message": "Perfiles incluidos en la extensión: $1"
   },
   "profiles_status_error": {
     "message": "Perfiles no disponibles: $1"
-  },
-  "profiles_folder_read": {
-    "message": "$1: $2 impresoras encontradas"
   },
   "convert_title": {
     "message": "Convertir un archivo"
@@ -113,9 +86,6 @@
   "convert_no_file": {
     "message": "Elige un archivo .3mf."
   },
-  "permission_denied": {
-    "message": "No se concedió permiso para leer la carpeta del laminador."
-  },
   "conversion_title": {
     "message": "Conversión"
   },
@@ -130,5 +100,8 @@
   },
   "conversion_loading": {
     "message": "Cargando opciones…"
+  },
+  "profiles_hint": {
+    "message": "Los perfiles oficiales de cada laminador, actualizados automáticamente. Tus propios presets estarán disponibles con la app auxiliar de BetterBridge."
   }
 }

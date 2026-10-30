@@ -46,3 +46,10 @@ def test_bundles_give_the_same_library_as_folders(profiles_root, tmp_path):
     a, b = Target(from_bundles, C5P), Target(from_folders, C5P)
     assert a.settings == b.settings and a.compatible == b.compatible
     assert a.pick_process(0.2) == b.pick_process(0.2)
+
+
+def test_catalog_from_an_installed_app(profiles_root, tmp_path):
+    entry = catalog_tool.build("flashstudio", profiles_root, "1.7.20", None, tmp_path / "out", from_app=True)
+    assert entry["repo"] is None and entry["source"] == "Flash Studio 1.7.20"
+    bundles = [json.loads((tmp_path / "out" / v["bundle"]).read_bytes()) for v in entry["vendors"].values()]
+    assert ProfileLibrary.from_bundles(bundles).source == "Flash Studio 1.7.20"

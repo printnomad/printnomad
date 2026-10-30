@@ -5,7 +5,10 @@ Usage:
         --ref 1.7.15 [--commit SHA] --out OUT
 
 `DIR` is the `resources/profiles` folder of the slicer's official repository at
-`--ref` (a sparse checkout is enough). The command writes into `OUT`:
+`--ref` (a sparse checkout is enough), or with `--from-app` the profiles folder of an
+installed release of the slicer (e.g. `/Applications/Flash Studio.app/Contents/
+Resources/profiles`, `--ref` = its version) when the repository lags behind the app.
+The command writes into `OUT`:
 
 - `<slicer>/<ref>/<Vendor>.json`: one bundle per vendor with every machine,
   process and filament JSON, minified, keyed by its path inside the vendor folder.
@@ -67,11 +70,13 @@ def printers_by_vendor(lib: ProfileLibrary) -> dict[str, list[dict]]:
     return out
 
 
-def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path) -> dict:
+def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path, from_app: bool = False) -> dict:
     known = registry()
     if slicer not in known:
         raise SystemExit(f"unknown slicer {slicer!r}; known: {', '.join(known)}")
-    repo = known[slicer].profile_repo.get("github")
+    repo = None if from_app else known[slicer].profile_repo.get("github")
+    # What reports show as the profile source.
+    source = f"{repo}@{ref}" if repo else f"{known[slicer].name} {ref}"
     lib = ProfileLibrary.from_roots([profiles])
     printers = printers_by_vendor(lib)
     has_library = (profiles / LIBRARY_VENDOR).is_dir()
@@ -81,7 +86,7 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path) 
         vendor = vendor_dir.name
         if vendor != LIBRARY_VENDOR and not printers.get(vendor):
             continue  # nothing a user can pick: skip the download
-        payload = {"schema": SCHEMA, "slicer": slicer, "repo": repo, "ref": ref, "vendor": vendor,
+        payload = {"schema": SCHEMA, "slicer": slicer, "repo": repo, "ref": ref, "source": source, "vendor": vendor,
                    "version": vendor_version(profiles, vendor), "files": bundle_files(vendor_dir)}
         blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()
         rel = f"{slicer}/{ref}/{vendor}.json"
@@ -100,7 +105,7 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path) 
     catalog = json.loads(catalog_path.read_text(encoding="utf-8")) if catalog_path.exists() else {}
     catalog.update(schema=SCHEMA, generated=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))
     catalog.setdefault("slicers", {})[slicer] = {
-        "name": known[slicer].name, "repo": repo, "ref": ref, "commit": commit, "vendors": vendors,
+        "name": known[slicer].name, "repo": repo, "ref": ref, "commit": commit, "source": source, "vendors": vendors,
     }
     catalog_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
     return catalog["slicers"][slicer]
@@ -112,9 +117,10 @@ def main() -> int:
     ap.add_argument("--profiles", required=True, type=Path, help="resources/profiles of the slicer repository")
     ap.add_argument("--ref", required=True, help="release tag the profiles come from")
     ap.add_argument("--commit", help="commit sha of --ref")
+    ap.add_argument("--from-app", action="store_true", help="--profiles is an installed app's folder, --ref its version")
     ap.add_argument("--out", required=True, type=Path)
     args = ap.parse_args()
-    entry = build(args.slicer, args.profiles, args.ref, args.commit, args.out)
+    entry = build(args.slicer, args.profiles, args.ref, args.commit, args.out, args.from_app)
     total = sum(v["bytes"] for v in entry["vendors"].values())
     printers = sum(len(v["printers"]) for v in entry["vendors"].values())
     print(f"{args.slicer}@{args.ref}: {len(entry['vendors'])} vendors, {printers} printers, {total / 1e6:.1f} MB")

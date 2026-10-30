@@ -9,8 +9,8 @@ OrcaSlicer plugin (`core/`), inside the browser with [Pyodide](https://pyodide.o
 | Path | What |
 |---|---|
 | `src/engine/` | Web Worker running Pyodide + the core (`worker.ts`) and its promise API (`client.ts`) |
-| `src/profiles/` | Profile catalog published by CI (`catalog.ts`) and profiles read from an installed slicer's folder (`local.ts`) |
-| `src/options/` | Options page: My printers, profile source, convert a file |
+| `src/profiles/` | Profile catalog published by CI, with the bundled fallback (`catalog.ts`) |
+| `src/options/` | Options page: My printers, profile status, conversion options (advanced mode), convert a file |
 | `src/lib/` | i18n (`chrome.i18n`) and settings (`chrome.storage.sync`, IndexedDB) |
 | `static/` | `manifest.json` template and `_locales/<lang>/messages.json` |
 | `config.json` | Catalog URL (also the host permission) and the profiles bundled as fallback |
@@ -25,7 +25,12 @@ npm test               # unit tests (node --test)
 npm run test:e2e       # real browser (Chrome, Chromium or Brave; set CHROME_PATH otherwise)
 ```
 
-To bundle fallback profiles, build a catalog first and point the build at it:
+Extensions cannot read the installed slicer's folders (Chromium blocks them); see
+"Helper app" in [docs/architecture.md](../docs/architecture.md).
+
+To bundle fallback profiles, build a catalog first and point the build at it (from a
+repository checkout, or with `--from-app` from an installed app when its repository
+lags behind):
 
 ```sh
 python tools/build_profile_catalog.py --slicer flashstudio \

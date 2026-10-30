@@ -35,50 +35,22 @@
   "printers_remove": {
     "message": "Remove"
   },
-  "printers_from_folder": {
-    "message": "from your $1 folder",
-    "description": "$1 = slicer name"
-  },
   "profiles_title": {
     "message": "Printer profiles"
-  },
-  "profiles_catalog": {
-    "message": "Download from the slicers' official repositories"
-  },
-  "profiles_catalog_hint": {
-    "message": "Latest release of each slicer. Works without installing anything."
-  },
-  "profiles_local": {
-    "message": "Use the profiles of my installed slicer (recommended)"
-  },
-  "profiles_local_hint": {
-    "message": "Exact match with your app, including your own presets. Pick its data folder, e.g. ~/Library/Application Support/Orca-Flashforge (press ⌘⇧. to show hidden folders)."
-  },
-  "profiles_local_slicer": {
-    "message": "This folder belongs to"
-  },
-  "profiles_pick_folder": {
-    "message": "Choose folder…"
-  },
-  "profiles_folder_none": {
-    "message": "No folder chosen"
   },
   "profiles_status_loading": {
     "message": "Loading profile catalog…"
   },
   "profiles_status_ready": {
-    "message": "Catalog: $1 slicers, updated $2",
-    "description": "$1 = count, $2 = date"
+    "message": "Profiles: $1 (updated $2)",
+    "description": "$1 = sources, $2 = date"
   },
   "profiles_status_fallback": {
-    "message": "Offline: using the profiles bundled with the extension."
+    "message": "Profiles included with the extension: $1",
+    "description": "$1 = sources"
   },
   "profiles_status_error": {
     "message": "Profiles unavailable: $1"
-  },
-  "profiles_folder_read": {
-    "message": "$1: $2 printers found",
-    "description": "$1 = folder, $2 = count"
   },
   "convert_title": {
     "message": "Convert a file"
@@ -120,9 +92,6 @@
   "convert_no_file": {
     "message": "Choose a .3mf file."
   },
-  "permission_denied": {
-    "message": "Permission to read the slicer folder was not granted."
-  },
   "conversion_title": {
     "message": "Conversion"
   },
@@ -137,5 +106,8 @@
   },
   "conversion_loading": {
     "message": "Loading options…"
+  },
+  "profiles_hint": {
+    "message": "The official profiles of each slicer, updated automatically. Your own presets will be available with the BetterBridge helper app."
   }
 }

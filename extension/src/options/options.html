@@ -30,27 +30,11 @@
           </label>
           <button type="submit" class="rounded-md bg-accent px-4 py-1.5 font-medium text-on-accent disabled:opacity-50" data-i18n="printers_add"></button>
         </form>
-        <p id="local-printers-note" class="mt-2 text-xs text-muted" hidden></p>
       </section>
 
       <section class="rounded-xl border border-line bg-card p-5" aria-labelledby="profiles-title">
         <h2 id="profiles-title" class="text-base font-semibold" data-i18n="profiles_title"></h2>
-        <fieldset class="mt-3 flex flex-col gap-3">
-          <label class="flex gap-2">
-            <input type="radio" name="profile-source" value="catalog" class="mt-0.5 accent-accent" />
-            <span><span class="font-medium" data-i18n="profiles_catalog"></span><br /><span class="text-xs text-muted" data-i18n="profiles_catalog_hint"></span></span>
-          </label>
-          <label class="flex gap-2">
-            <input type="radio" name="profile-source" value="local" class="mt-0.5 accent-accent" />
-            <span><span class="font-medium" data-i18n="profiles_local"></span><br /><span class="text-xs text-muted" data-i18n="profiles_local_hint"></span></span>
-          </label>
-        </fieldset>
-        <div id="local-folder" class="mt-3 flex flex-wrap items-center gap-2 pl-6" hidden>
-          <span class="text-xs text-muted" data-i18n="profiles_local_slicer"></span>
-          <select id="local-slicer" class="rounded-md border border-line bg-surface px-2 py-1"></select>
-          <button id="pick-folder" type="button" class="rounded-md border border-line bg-surface px-3 py-1" data-i18n="profiles_pick_folder"></button>
-          <span id="folder-name" class="text-xs text-muted" data-i18n="profiles_folder_none"></span>
-        </div>
+        <p class="mt-1 text-xs text-muted" data-i18n="profiles_hint"></p>
         <p id="profiles-status" class="mt-3 text-xs text-muted" role="status"></p>
       </section>
 
