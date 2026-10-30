@@ -1,7 +1,8 @@
 {
-  "_meta": {"name": "English", "contributors": []},
-
-  "convert.error.already_flashforge": "the project is already set up for a Flashforge printer",
+  "_meta": {
+    "name": "English",
+    "contributors": []
+  },
   "convert.error.unknown_source": "unrecognised source (Metadata/project_settings.config is missing)",
   "convert.error.nozzle_unavailable": "nozzle {nozzle} is not available (options: {options})",
   "convert.warn.nozzle_changed": "source nozzle {source} → target {target}; check line widths",
@@ -14,7 +15,6 @@
   "convert.warn.override_limit": "{where}: {message} (override kept)",
   "convert.note.volumetric": "The target filament allows {cap} mm³/s; the slicer caps these designer speeds by itself, without changing the setting: {items}",
   "convert.note.volumetric_item": "{key} {speed} mm/s (~{actual} mm/s actual)",
-
   "reason.target_machine": "target printer profile",
   "reason.gcode_no_equivalent": "source G-code with no equivalent in the target",
   "reason.target_process": "target process profile",
@@ -25,7 +25,7 @@
   "reason.cooling_no_value": "cooling depends on the printer's fans; the target profile applies (no value in the target)",
   "reason.target_filament": "target filament profile",
   "reason.target_filament_profiles": "target filament profiles",
-  "reason.author_filament_replaced": "designer's setting for the source filament; the target filament profile applies",
+  "reason.author_filament_replaced": "designer's setting for the source filament depends on the source printer's hardware or calibration; the target filament profile applies",
   "reason.filament_map": "filament-to-extruder assignment",
   "reason.filament_map_mode": "filament-to-extruder assignment mode",
   "reason.filament_printable": "each filament can use any of the {count} extruders",
@@ -45,15 +45,12 @@
   "reason.kept_warning": "kept; WARNING: {message}",
   "reason.target_extruders": "target extruders",
   "reason.map_mode": "assignment mode",
-
   "value.no_profile_value": "(no value in profile)",
   "value.did_not_exist": "(did not exist)",
-
   "limit.travel_acceleration": "{key}={value} exceeds the maximum travel acceleration {max}",
   "limit.acceleration": "{key}={value} exceeds the maximum acceleration {max}",
   "limit.speed": "{key}={value} exceeds the maximum speed {max} mm/s",
   "limit.layer_height": "layer_height={value} is outside {min}–{max}",
-
   "map.error.entry_format": "invalid filament map entry '{entry}' (format filament:extruder)",
   "map.error.entry_numbers": "invalid filament map entry '{entry}' (must be numbers)",
   "map.error.repeated": "filament {filament} appears twice in the filament map",
@@ -64,7 +61,6 @@
   "map.error.too_many": "plate {plate} uses {count} filaments {filaments} but the printer has {extruders} extruders{detail}; assign the extruders manually",
   "map.error.usage_unknown": " (usage cannot be determined: colour painting or layer changes)",
   "map.warn.shared_extruder": "plate {plate}: filaments {filaments} share extruder {extruder}; a manual spool change is needed during the print",
-
   "write.error.same_as_source": "the output cannot be the original file",
   "write.error.exists": "{path} already exists",
   "write.error.corrupt_entry": "corrupt entry in the output: {name}",
@@ -72,13 +68,11 @@
   "write.error.geometry_modified": "geometry modified: {name}",
   "write.error.unexpected_content": "unexpected content in {name}",
   "write.error.not_zip": "the output is not a valid ZIP: {detail}",
-
   "profiles.error.none_found": "no profiles found in {root}",
   "profiles.error.circular": "circular inheritance in {kind} '{name}'",
   "profiles.error.not_found": "{kind} profile '{name}' not found (inherited by '{child}')",
   "profiles.error.root_not_found": "the slicer profiles folder was not found (tried: {tried}). Use --profiles-dir or the {env} variable.",
   "profiles.error.no_process": "no process profiles for '{machine}'",
-
   "report.source": "Source:  {path} ({kind})",
   "report.target": "Target:  {target}",
   "report.output": "Output:  {path}",
@@ -102,7 +96,6 @@
   "report.filament_key": "{key}[filament {index}]",
   "report.plate_key": "plate {plate} {key}",
   "report.part": "part {id}",
-
   "cli.description": "Convert a 3MF project for another printer.",
   "cli.help.input": "source .3mf project (never modified)",
   "cli.help.map": "filament:extruder pairs separated by commas, e.g. 1:1,2:2,5:1",
@@ -118,5 +111,21 @@
   "cli.error.exists": "{path} already exists (use --force to overwrite)",
   "cli.error.original_changed": "the original file changed during the conversion",
   "cli.report_path": "Report: {path}",
-  "cli.hint_map": "Assign extruders with --map filament:extruder, e.g. --map 1:1,2:2,5:1"
+  "cli.hint_map": "Assign extruders with --map filament:extruder, e.g. --map 1:1,2:2,5:1",
+  "target.error.unknown_printer": "printer preset '{name}' not found",
+  "convert.error.already_target": "the project is already set up for {target}",
+  "target.error.unknown_slicer": "unknown slicer '{slicer}' (known: {options})",
+  "cli.help.printer": "target printer preset (name or a unique part of it); list them with `betterbridge printers`",
+  "cli.help.slicer": "slicer whose profiles to use (default: search the installed ones)",
+  "cli.error.no_printer": "choose the target printer with --printer (see `betterbridge printers`)",
+  "reason.author_filament_kept": "designer's material choice for this filament (temperature or density)",
+  "cli.help.no_designer_filament": "do not keep the designer's filament temperatures and density; use the target filament profiles as they are",
+  "cli.printers.description": "List the printer presets (system and yours) of the installed slicers.",
+  "cli.printers.help.search": "only presets whose name contains this text",
+  "cli.printers.help.json": "output JSON",
+  "cli.printers.none": "No printer presets found.",
+  "cli.printers.slicer_heading": "{name} (--slicer {key}):",
+  "cli.printers.user": "your preset",
+  "cli.printers.help.all": "also list presets whose profiles are incomplete in that slicer",
+  "cli.printers.incomplete": "incomplete profiles: cannot be used"
 }

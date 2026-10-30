@@ -6,7 +6,7 @@ Standard library only, Python 3.12+ (it also runs inside OrcaSlicer's embedded P
 
 ```sh
 pip install -e core
-betterbridge model.3mf --target creator5pro      # or: python -m betterbridge …
+betterbridge model.3mf --printer "Flashforge Creator 5 Pro 0.4 nozzle"   # or: python -m betterbridge …
 ```
 
-Modules: `read_3mf` (read, detect source), `profiles` (find and resolve slicer profiles), `printer_profiles/` (target definitions), `remap_filaments`, `model_edit` (plates, overrides, positions), `convert` (pipeline), `report`, `write_3mf`, `cli`.
+Modules: `read_3mf` (read, detect source), `slicers` + `data/slicers.json` (installed slicers and where their profiles live), `profiles` (system and user presets, inheritance), `target` (target printer derived from any machine preset), `rules` (OrcaSlicer/Bambu config rules), `remap_filaments`, `model_edit` (plates, overrides, positions), `convert` (pipeline), `report`, `write_3mf`, `i18n`, `cli`.

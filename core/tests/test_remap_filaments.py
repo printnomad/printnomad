@@ -48,3 +48,11 @@ def test_user_map_shared_extruder_warns():
     assert not r.errors
     assert r.per_plate["1"] == [1, 2, 3, 4, 1]
     assert len(r.warnings) == 1 and "placa 1" in r.warnings[0]
+
+
+
+def test_shared_nozzle_accepts_any_number_of_filaments():
+    """AMS / IFS / ACE: una boquilla, cambio automático; ni errores ni avisos."""
+    r = assign(["PLA"] * 6, {"1": None, "2": {1, 6}}, 1, shared_nozzle=True)
+    assert not r.errors and not r.warnings and not r.needs_map
+    assert r.per_plate == {"1": [1] * 6, "2": [1] * 6}

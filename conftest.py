@@ -120,6 +120,14 @@ def make_bambu_3mf(
     return path
 
 
+FAKE_PRINTER = "Flashforge Creator 5 Pro 0.4 nozzle"
+
+
+def cli_target(profiles_root: Path) -> list[str]:
+    """Argumentos de la CLI para convertir a la impresora del árbol de perfiles falso."""
+    return ["--profiles-dir", str(profiles_root), "--printer", FAKE_PRINTER]
+
+
 def _write(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data), encoding="utf-8")
@@ -149,6 +157,21 @@ def profiles_root(tmp_path: Path) -> Path:
         "machine_start_gcode": ";start_gcode", "layer_change_gcode": ";AFTER_LAYER_CHANGE",
         "change_filament_gcode": "",
     })
+    _write(ff / "machine/model.json", {"type": "machine_model", "name": "Flashforge Creator 5 Pro",
+                                        "default_bed_type": "Textured PEI Plate"})
+    # Variante de boquilla del mismo modelo (para elegir boquilla).
+    _write(ff / "machine/c5p06.json", {
+        "type": "machine", "name": "Flashforge Creator 5 Pro 0.6 nozzle", "inherits": machine,
+        "instantiation": "true", "nozzle_diameter": ["0.6", "0.6", "0.6", "0.6"],
+    })
+    _write(ff / "process/draft024.json", {"type": "process", "name": "0.24mm Draft @FF C5", "instantiation": "true",
+                                          "compatible_printers": [machine], "layer_height": "0.24"})
+    _write(ff / "process/c5p06.json", {"type": "process", "name": "0.30mm Standard @FF C5 0.6 nozzle",
+                                       "instantiation": "true", "layer_height": "0.3",
+                                       "compatible_printers": ["Flashforge Creator 5 Pro 0.6 nozzle"]})
+    # Proceso compatible solo con el padre (AD5M): no debe ofrecerse para la C5P.
+    _write(ff / "process/ad5m.json", {"type": "process", "name": "0.20mm Draft @AD5M", "instantiation": "true",
+                                      "compatible_printers": ["fdm_common"], "layer_height": "0.2"})
     # Archivo de máquina guardado en la carpeta de filamentos (pasa en Flash Studio).
     _write(ff / "filament/misplaced.json", {"type": "machine", "name": "misplaced", "inherits": "nope"})
     for lh in ("0.20", "0.24"):
@@ -171,7 +194,7 @@ def profiles_root(tmp_path: Path) -> Path:
                          ("Flashforge PETG Basic @FF C5P", "Generic PETG @System")):
         _write(ff / f"filament/{name}.json", {
             "type": "filament", "name": name, "inherits": parent, "instantiation": "true",
-            "compatible_printers": [machine], "filament_settings_id": [name],
+            "compatible_printers": [machine, "Flashforge Creator 5 Pro 0.6 nozzle"], "filament_settings_id": [name],
             "filament_max_volumetric_speed": ["18"],
         })
     return root

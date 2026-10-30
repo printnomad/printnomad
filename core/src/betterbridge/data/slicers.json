@@ -1,0 +1,46 @@
+{
+  "_comment": "Laminadores conocidos. Rutas con ~ y {app}. Solo se registran rutas verificadas (campo verified); añadir otros sistemas/laminadores al comprobarlos.",
+
+  "flashstudio": {
+    "name": "Flash Studio",
+    "url_scheme": "orcaflashforge",
+    "profile_repo": {"github": "FlashForge/Orca-Flashforge", "path": "resources/profiles"},
+    "quirks": {},
+    "macos": {
+      "app": "/Applications/Flash Studio.app",
+      "system": ["{app}/Contents/Resources/profiles", "~/Library/Application Support/Orca-Flashforge/system"],
+      "user": "~/Library/Application Support/Orca-Flashforge/user"
+    },
+    "verified": "macOS, Flash Studio 1.7.20 (2026-10-30)"
+  },
+
+  "orcaslicer": {
+    "name": "OrcaSlicer",
+    "url_scheme": "orcaslicer",
+    "profile_repo": {"github": "OrcaSlicer/OrcaSlicer", "path": "resources/profiles"},
+    "quirks": {
+      "manual_map_max_extruder": 2,
+      "_manual_map_max_extruder": "OrcaSlicer 2.5 rechaza la asignación manual de filamentos en E3/E4 al laminar (comprobado con su CLI)."
+    },
+    "macos": {
+      "app": "/Applications/OrcaSlicer.app",
+      "system": ["{app}/Contents/Resources/profiles", "~/Library/Application Support/OrcaSlicer/system"],
+      "user": "~/Library/Application Support/OrcaSlicer/user"
+    },
+    "notes": "Desde 2.5 los perfiles de sistema instalados van en .opc (formato binario propio, cabecera ZCRO): no se leen; usar el repositorio.",
+    "verified": "macOS, OrcaSlicer 2.5.0-beta (2026-10-30)"
+  },
+
+  "bambustudio": {
+    "name": "Bambu Studio",
+    "url_scheme": "bambustudioopen",
+    "profile_repo": {"github": "bambulab/BambuStudio", "path": "resources/profiles"},
+    "quirks": {},
+    "macos": {
+      "app": "/Applications/BambuStudio.app",
+      "system": ["~/Library/Application Support/BambuStudio/system"],
+      "user": "~/Library/Application Support/BambuStudio/user"
+    },
+    "verified": "macOS, Bambu Studio 2.x (2026-10-30)"
+  }
+}

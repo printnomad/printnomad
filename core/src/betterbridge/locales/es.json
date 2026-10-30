@@ -1,7 +1,8 @@
 {
-  "_meta": {"name": "Español", "contributors": []},
-
-  "convert.error.already_flashforge": "el proyecto ya está configurado para una impresora Flashforge",
+  "_meta": {
+    "name": "Español",
+    "contributors": []
+  },
   "convert.error.unknown_source": "no se reconoce el origen (falta Metadata/project_settings.config)",
   "convert.error.nozzle_unavailable": "boquilla {nozzle} no disponible (opciones: {options})",
   "convert.warn.nozzle_changed": "boquilla de origen {source} → destino {target}; revisa anchos de línea",
@@ -14,7 +15,6 @@
   "convert.warn.override_limit": "{where}: {message} (override conservado)",
   "convert.note.volumetric": "El filamento destino admite {cap} mm³/s; el laminador limita solo estas velocidades del autor, sin cambiar el ajuste: {items}",
   "convert.note.volumetric_item": "{key} {speed} mm/s (~{actual} mm/s reales)",
-
   "reason.target_machine": "perfil de impresora destino",
   "reason.gcode_no_equivalent": "G-code de origen sin equivalente en el destino",
   "reason.target_process": "perfil de proceso destino",
@@ -25,7 +25,7 @@
   "reason.cooling_no_value": "enfriamiento: depende de los ventiladores de la máquina, manda el perfil destino (sin valor en el destino)",
   "reason.target_filament": "perfil de filamento destino",
   "reason.target_filament_profiles": "perfiles de filamento destino",
-  "reason.author_filament_replaced": "ajuste del autor para el filamento de origen; manda el perfil de filamento destino",
+  "reason.author_filament_replaced": "el ajuste del diseñador depende del hardware o la calibración de la impresora de origen; manda el perfil de filamento destino",
   "reason.filament_map": "asignación de filamentos a extrusores",
   "reason.filament_map_mode": "modo de asignación de filamentos a extrusores",
   "reason.filament_printable": "cada filamento puede ir en los {count} extrusores",
@@ -45,15 +45,12 @@
   "reason.kept_warning": "conservado; ADVERTENCIA: {message}",
   "reason.target_extruders": "extrusores destino",
   "reason.map_mode": "modo de asignación",
-
   "value.no_profile_value": "(sin valor en perfil)",
   "value.did_not_exist": "(no existía)",
-
   "limit.travel_acceleration": "{key}={value} supera aceleración máxima de viaje {max}",
   "limit.acceleration": "{key}={value} supera aceleración máxima {max}",
   "limit.speed": "{key}={value} supera velocidad máxima {max} mm/s",
   "limit.layer_height": "layer_height={value} fuera de rango {min}–{max}",
-
   "map.error.entry_format": "entrada del mapa de filamentos inválida '{entry}' (formato filamento:extrusor)",
   "map.error.entry_numbers": "entrada del mapa de filamentos inválida '{entry}' (deben ser números)",
   "map.error.repeated": "filamento {filament} repetido en el mapa de filamentos",
@@ -64,7 +61,6 @@
   "map.error.too_many": "placa {plate} usa {count} filamentos {filaments} y solo hay {extruders} extrusores{detail}; asigna los extrusores a mano",
   "map.error.usage_unknown": " (uso no determinable: pintura o cambios por capa)",
   "map.warn.shared_extruder": "placa {plate}: filamentos {filaments} comparten el extrusor {extruder}; requiere cambio manual de bobina durante la impresión",
-
   "write.error.same_as_source": "la salida no puede ser el archivo original",
   "write.error.exists": "{path} ya existe",
   "write.error.corrupt_entry": "entrada corrupta en la salida: {name}",
@@ -72,13 +68,11 @@
   "write.error.geometry_modified": "geometría modificada: {name}",
   "write.error.unexpected_content": "contenido inesperado en {name}",
   "write.error.not_zip": "la salida no es un ZIP válido: {detail}",
-
   "profiles.error.none_found": "no se encontraron perfiles en {root}",
   "profiles.error.circular": "herencia circular en {kind} '{name}'",
   "profiles.error.not_found": "perfil {kind} '{name}' no encontrado (heredado por '{child}')",
   "profiles.error.root_not_found": "no se encontró la carpeta de perfiles del laminador (probado: {tried}). Usa --profiles-dir o la variable {env}.",
   "profiles.error.no_process": "no hay perfiles de proceso para '{machine}'",
-
   "report.source": "Origen:  {path} ({kind})",
   "report.target": "Destino: {target}",
   "report.output": "Salida:  {path}",
@@ -102,7 +96,6 @@
   "report.filament_key": "{key}[filamento {index}]",
   "report.plate_key": "placa {plate} {key}",
   "report.part": "pieza {id}",
-
   "cli.description": "Convierte un proyecto 3MF para otra impresora.",
   "cli.help.input": "proyecto .3mf de origen (no se modifica)",
   "cli.help.map": "pares filamento:extrusor separados por comas, p. ej. 1:1,2:2,5:1",
@@ -118,5 +111,21 @@
   "cli.error.exists": "{path} ya existe (usa --force para sobrescribir)",
   "cli.error.original_changed": "el archivo original cambió durante la conversión",
   "cli.report_path": "Reporte: {path}",
-  "cli.hint_map": "Asigna los extrusores con --map filamento:extrusor, p. ej. --map 1:1,2:2,5:1"
+  "cli.hint_map": "Asigna los extrusores con --map filamento:extrusor, p. ej. --map 1:1,2:2,5:1",
+  "target.error.unknown_printer": "no se encontró el preset de impresora '{name}'",
+  "convert.error.already_target": "el proyecto ya está configurado para {target}",
+  "target.error.unknown_slicer": "laminador desconocido '{slicer}' (conocidos: {options})",
+  "cli.help.printer": "preset de la impresora destino (nombre o una parte única); lístalos con `betterbridge printers`",
+  "cli.help.slicer": "laminador cuyos perfiles usar (por defecto: buscar en los instalados)",
+  "cli.error.no_printer": "elige la impresora destino con --printer (ver `betterbridge printers`)",
+  "reason.author_filament_kept": "elección del diseñador para este filamento (temperatura o densidad)",
+  "cli.help.no_designer_filament": "no conservar temperaturas ni densidad que el diseñador cambió en sus filamentos; usar los perfiles de filamento destino tal cual",
+  "cli.printers.description": "Lista los presets de impresora (de sistema y tuyos) de los laminadores instalados.",
+  "cli.printers.help.search": "solo presets cuyo nombre contiene este texto",
+  "cli.printers.help.json": "salida en JSON",
+  "cli.printers.none": "No se encontraron presets de impresora.",
+  "cli.printers.slicer_heading": "{name} (--slicer {key}):",
+  "cli.printers.user": "preset tuyo",
+  "cli.printers.help.all": "listar también los presets con perfiles incompletos en ese laminador",
+  "cli.printers.incomplete": "perfiles incompletos: no se puede usar"
 }

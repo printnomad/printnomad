@@ -18,4 +18,4 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-betterbridge = ["locales/*.json"]
+betterbridge = ["locales/*.json", "data/*.json"]

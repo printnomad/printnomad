@@ -52,12 +52,23 @@ def assign(
     plate_usage: dict[str, set[int] | None],
     extruders: int,
     user_map: dict[int, int] | None = None,
+    shared_nozzle: bool = False,
 ) -> FilamentAssignment:
-    """`plate_usage`: filamentos (1-based) usados por placa; None = desconocido (se asumen todos)."""
+    """`plate_usage`: filamentos (1-based) usados por placa; None = desconocido (se asumen todos).
+
+    `shared_nozzle`: una sola boquilla con cambiador de filamento (AMS de Bambu, IFS de
+    Flashforge AD5X, ACE de Anycubic): todos los filamentos van al extrusor 1 y la
+    impresora los cambia sola, así que no hay límite de filamentos por placa.
+    """
     n = len(filament_types)
     result = FilamentAssignment()
     all_filaments = set(range(1, n + 1))
     plates = plate_usage or {"1": None}
+
+    if shared_nozzle:
+        for plate in plates:
+            result.per_plate[plate] = [1] * n
+        return result
 
     if user_map is not None:
         missing = sorted(all_filaments - set(user_map))

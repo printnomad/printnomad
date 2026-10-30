@@ -18,8 +18,7 @@ sys.path.insert(0, str(PLUGIN_ROOT.parent / "core" / "src"))
 
 from betterbridge import i18n, read_3mf, write_3mf  # noqa: E402
 from betterbridge.convert import convert  # noqa: E402
-from betterbridge.printer_profiles import creator5pro  # noqa: E402
-from betterbridge.profiles import ProfileLibrary, find_root  # noqa: E402
+from betterbridge.target import load_target  # noqa: E402
 
 BUILT_PANEL = PLUGIN_ROOT / "ui" / "dist" / "panel.html"   # npm run build en orca-plugin/ui
 i18n.add_catalog_dir(PLUGIN_ROOT / "betterbridge_orca" / "locales")
@@ -46,21 +45,23 @@ def main() -> None:
     ap.add_argument("project", type=Path)
     ap.add_argument("--out", type=Path, default=Path("panel_preview.html"))
     ap.add_argument("--lang", help="idioma del panel (por defecto, el del sistema)")
+    ap.add_argument("--printer", default="Flashforge Creator 5 Pro 0.4 nozzle", help="preset de impresora destino")
+    ap.add_argument("--slicer", help="laminador (por defecto, buscar en los instalados)")
     args = ap.parse_args()
     i18n.set_language(args.lang)
     if not BUILT_PANEL.exists():
         sys.exit(f"falta {BUILT_PANEL}: ejecuta `npm ci && npm run build` en orca-plugin/ui")
 
-    lib = ProfileLibrary.load(find_root())
+    target = load_target(args.printer, args.slicer)
     project = read_3mf.load(args.project)
-    result = convert(project, lib)
+    result = convert(project, target)
     rep = result.report
-    dest = write_3mf.output_path(args.project, creator5pro.OUTPUT_SUFFIX)
+    dest = write_3mf.output_path(args.project, target.output_suffix)
     preview = {
         "type": "preview", "project": args.project.name,
         "source_kind": read_3mf.SOURCE_DISPLAY_NAMES.get(rep.source_kind, rep.source_kind),
-        "target": creator5pro.DISPLAY_NAME, "extruders": creator5pro.EXTRUDERS,
-        "nozzle": rep.presets.get("nozzle", "0.4"), "nozzles": list(creator5pro.NOZZLES),
+        "target": target.display_name, "extruders": target.extruders,
+        "nozzle": rep.presets.get("nozzle", target.nozzle), "nozzles": list(target.nozzle_variants()),
         "process": rep.presets.get("process", ""),
         "filaments": [{
             "index": f.index, "type": f.source_type, "colour": f.colour, "source": f.source_profile,

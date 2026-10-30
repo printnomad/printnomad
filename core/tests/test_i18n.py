@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from betterbridge import cli, i18n
-from conftest import make_bambu_3mf
+from conftest import cli_target, make_bambu_3mf
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG_DIRS = [
@@ -85,5 +85,5 @@ def test_detect_from_environment(monkeypatch):
 @pytest.mark.parametrize("lang,expected", [("en", "Target:"), ("es", "Destino:")])
 def test_cli_language(lang, expected, profiles_root, tmp_path, capsys):
     src = make_bambu_3mf(tmp_path / "p.3mf", [("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")], [["2"]])
-    assert cli.main([str(src), "--profiles-dir", str(profiles_root), "--lang", lang]) == cli.EXIT_OK
+    assert cli.main([str(src), *cli_target(profiles_root), "--lang", lang]) == cli.EXIT_OK
     assert expected in capsys.readouterr().out

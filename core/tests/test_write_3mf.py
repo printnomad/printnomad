@@ -5,7 +5,7 @@ import zipfile
 import pytest
 
 from betterbridge import cli, read_3mf, write_3mf
-from conftest import make_bambu_3mf
+from conftest import cli_target, make_bambu_3mf
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
 
@@ -17,7 +17,7 @@ def digest(path):
 def test_cli_end_to_end(profiles_root, tmp_path, capsys):
     src = make_bambu_3mf(tmp_path / "proj.3mf", [PLA], [["2"]], bed=180)
     before = digest(src)
-    code = cli.main([str(src), "--profiles-dir", str(profiles_root)])
+    code = cli.main([str(src), *cli_target(profiles_root)])
     assert code == cli.EXIT_OK, capsys.readouterr().out
     assert digest(src) == before                        # original intacto
     out = tmp_path / "proj_CREATOR5_PRO.3mf"
@@ -32,14 +32,14 @@ def test_cli_end_to_end(profiles_root, tmp_path, capsys):
 
 def test_cli_refuses_overwrite_and_needs_map_exit_code(profiles_root, tmp_path):
     src = make_bambu_3mf(tmp_path / "p.3mf", [PLA], [["2"]])
-    assert cli.main([str(src), "--profiles-dir", str(profiles_root)]) == cli.EXIT_OK
-    assert cli.main([str(src), "--profiles-dir", str(profiles_root)]) == cli.EXIT_ERROR
-    assert cli.main([str(src), "--profiles-dir", str(profiles_root), "--force"]) == cli.EXIT_OK
+    assert cli.main([str(src), *cli_target(profiles_root)]) == cli.EXIT_OK
+    assert cli.main([str(src), *cli_target(profiles_root)]) == cli.EXIT_ERROR
+    assert cli.main([str(src), *cli_target(profiles_root), "--force"]) == cli.EXIT_OK
 
     painted = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=True)
-    assert cli.main([str(painted), "--profiles-dir", str(profiles_root)]) == cli.EXIT_NEEDS_INPUT
+    assert cli.main([str(painted), *cli_target(profiles_root)]) == cli.EXIT_NEEDS_INPUT
     assert not (tmp_path / "m_CREATOR5_PRO.3mf").exists()
-    assert cli.main([str(painted), "--profiles-dir", str(profiles_root),
+    assert cli.main([str(painted), *cli_target(profiles_root),
                      "--map", "1:1,2:2,3:3,4:4,5:4"]) == cli.EXIT_OK
 
 
@@ -68,3 +68,26 @@ def test_output_keeps_source_permissions(tmp_path):
     dest = tmp_path / "o.3mf"
     write_3mf.write(read_3mf.load(src), dest, {})
     assert dest.stat().st_mode & 0o777 == 0o644
+
+
+def test_cli_printers_lists_presets(tmp_path, monkeypatch, capsys):
+    import json as _json
+
+    from betterbridge import slicers
+    root = tmp_path / "profiles"
+    (root / "V" / "machine").mkdir(parents=True)
+    (root / "V/machine/a.json").write_text(_json.dumps({"type": "machine", "name": "V Printer 0.4 nozzle"}))
+    (root / "V/machine/b.json").write_text(_json.dumps({"type": "machine", "name": "base", "instantiation": "false"}))
+    (root / "V/machine/c.json").write_text(_json.dumps({"type": "machine", "name": "Broken", "inherits": "missing"}))
+    (root / "V" / "process").mkdir()
+    (root / "V/process/p.json").write_text(_json.dumps({"type": "process", "name": "0.20 @V",
+                                                        "compatible_printers": ["V Printer 0.4 nozzle"]}))
+    fake = slicers.Slicer(key="fake", name="Fake", system_roots=[root])
+    monkeypatch.setattr(cli, "installed_slicers", lambda: [fake])
+    assert cli.main(["printers", "--json"]) == cli.EXIT_OK
+    rows = _json.loads(capsys.readouterr().out)
+    assert rows == [{"slicer": "fake", "slicer_name": "Fake", "printer": "V Printer 0.4 nozzle", "user": False,
+                     "usable": True}]
+    assert cli.main(["printers", "--json", "--all"]) == cli.EXIT_OK
+    assert [r["printer"] for r in _json.loads(capsys.readouterr().out)] == ["Broken", "V Printer 0.4 nozzle"]
+    assert cli.main(["printers", "--search", "nothing"]) == cli.EXIT_OK

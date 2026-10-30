@@ -7,7 +7,12 @@ from betterbridge import read_3mf
 from betterbridge.convert import convert
 from betterbridge.model_edit import meta
 from betterbridge.profiles import ProfileLibrary
+from betterbridge.slicers import Slicer
+from betterbridge.target import Target
 from conftest import make_bambu_3mf
+
+# Particularidad de OrcaSlicer 2.5 (registro de laminadores): manual solo en E1–E2.
+ORCA = Slicer(key="orcaslicer", name="OrcaSlicer", quirks={"manual_map_max_extruder": 2})
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
 PLA_MATTE = ("PLA", "Bambu PLA Matte @BBL A1", "#00FF00")
@@ -20,9 +25,12 @@ def lib(profiles_root):
     return ProfileLibrary.load(profiles_root)
 
 
-def run(lib, path, **kw):
+MACHINE = "Flashforge Creator 5 Pro 0.4 nozzle"
+
+
+def run(lib, path, slicer=ORCA, **kw):
     project = read_3mf.load(path)
-    result = convert(project, lib, **kw)
+    result = convert(project, Target(lib, MACHINE, slicer), **kw)
     settings = json.loads(result.files[read_3mf.PROJECT_SETTINGS]) if result.report.ok else None
     return project, result, settings
 
@@ -54,10 +62,12 @@ def test_bambu_specifics_removed_and_reported(lib, tmp_path):
 def test_value_fixes_for_orca(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"raft_first_layer_expansion": "-1",
-                                    "ensure_vertical_shell_thickness": "enabled"},
+                                    "ensure_vertical_shell_thickness": "enabled",
+                                    "retraction_distances_when_cut": ["0"]},
                           part_overrides={"2": {"ensure_vertical_shell_thickness": "enabled"}})
     _, result, s = run(lib, path)
     assert "raft_first_layer_expansion" not in s
+    assert "retraction_distances_when_cut" not in s   # lista: también se corrige
     assert s["ensure_vertical_shell_thickness"] == "ensure_all"
     o = [o for o in result.report.object_overrides if o.key == "ensure_vertical_shell_thickness"]
     assert o and o[0].final == "ensure_all"
@@ -162,12 +172,28 @@ def test_same_bed_keeps_model_file(lib, tmp_path):
     assert read_3mf.MODEL_FILE not in result.files
 
 
-def test_flashforge_source_rejected(lib, tmp_path):
+def test_project_already_for_target_rejected(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
-                          settings={"printer_model": "Flashforge Creator 5 Pro",
-                                    "printer_settings_id": "Flashforge Creator 5 Pro 0.4 nozzle"})
+                          settings={"printer_model": "Flashforge Creator 5 Pro", "printer_settings_id": MACHINE})
     _, result, _ = run(lib, path)
-    assert not result.report.ok
+    assert not result.report.ok and "Creator 5 Pro" in result.report.errors[0]
+
+
+def test_flashforge_source_can_be_converted_to_another_nozzle_variant(lib, tmp_path):
+    """Un proyecto de Flashforge ya no se rechaza por ser Flashforge, sino por ser la misma impresora."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
+                          settings={"printer_model": "Flashforge Adventurer 5M", "printer_settings_id": "AD5M"})
+    _, result, s = run(lib, path)
+    assert result.report.ok and s["printer_model"] == "Flashforge Creator 5 Pro"
+
+
+def test_nozzle_variant_selected_from_source(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"nozzle_diameter": ["0.6"]})
+    _, result, s = run(lib, path)
+    assert result.report.presets["machine"] == "Flashforge Creator 5 Pro 0.6 nozzle"
+    assert s["nozzle_diameter"] == ["0.6"] * 4
+    _, result, _ = run(lib, path, nozzle="0.8")
+    assert not result.report.ok and "0.8" in result.report.errors[0]
 
 
 def test_prusa_source_basic(lib, tmp_path):
@@ -240,3 +266,45 @@ def test_bambu_only_key_kept_when_target_defines_it(lib, tmp_path, profiles_root
     _, result, s = run(lib2, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"nozzle_volume": "92"}))
     assert s["nozzle_volume"] == ["0"] * 4
     assert not any(d.key == "nozzle_volume" for d in result.report.dropped)
+
+
+
+def test_manual_extruder_map_kept_when_slicer_has_no_limit(lib, tmp_path):
+    """Flash Studio respeta la asignación manual en E3/E4: sin la particularidad de Orca, se queda manual."""
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]]), slicer=None)
+    assert s["filament_map_mode"] == "Manual" and s["filament_map"] == ["1", "2", "3"]
+    assert not any("modo automático" in w for w in result.report.warnings)
+
+
+
+def test_designer_filament_temperatures_kept_hardware_settings_not(lib, tmp_path):
+    """Temperaturas y densidad del diseñador se conservan; caudal y enfriamiento, del destino."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA], [["2"]], object_extruders={"2": 2}, settings={
+        "nozzle_temperature": ["200", "230"],
+        "filament_max_volumetric_speed": ["21", "50"],
+        "fan_max_speed": ["100", "100"],
+        "different_settings_to_system": ["", "", "nozzle_temperature;filament_max_volumetric_speed;fan_max_speed", ""],
+    })
+    _, result, s = run(lib, path)
+    assert s["nozzle_temperature"] == ["210", "230"]           # filamento 2: el del diseñador
+    assert s["filament_max_volumetric_speed"] == ["18", "18"]  # hardware: el del destino
+    assert s["different_settings_to_system"][2] == "nozzle_temperature"
+    kept = {c.key for c in result.report.kept_author}
+    dropped = {d.key for d in result.report.dropped}
+    assert "nozzle_temperature[filamento 2]" in kept
+    assert "filament_max_volumetric_speed[filamento 2]" in dropped
+
+    _, _, s = run(lib, path, keep_designer_filament=False)
+    assert s["nozzle_temperature"] == ["210", "210"]
+
+
+
+def test_bambu_gcode_from_target_profile_is_not_warned(lib, tmp_path, profiles_root):
+    """Destino Bambu: su G-code (M620…) es legítimo; solo se avisa si llega del origen."""
+    import json as _json
+    f = profiles_root / "Flashforge/machine/c5p.json"
+    d = _json.loads(f.read_text())
+    d["machine_end_gcode"] = "M620 S255"
+    f.write_text(_json.dumps(d))
+    _, result, _ = run(ProfileLibrary.load(profiles_root), make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
+    assert not any("machine_end_gcode" in w for w in result.report.warnings)

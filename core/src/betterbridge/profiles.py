@@ -7,7 +7,6 @@ laminador instalado, se indexan por nombre y se resuelve la cadena `inherits`.
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -15,12 +14,9 @@ from .i18n import t
 
 ENV_PROFILES = "BETTERBRIDGE_PROFILES"
 
-DEFAULT_ROOTS = (
-    Path("/Applications/Flash Studio.app/Contents/Resources/profiles"),
-    Path.home() / "Library/Application Support/Orca-Flashforge/system",
-)
-
 KINDS = ("machine", "process", "filament")
+# Además se indexa "machine_model" (datos del modelo, p. ej. la placa por defecto).
+INDEXED_KINDS = (*KINDS, "machine_model")
 
 # Claves que describen el perfil en sí y no van al proyecto.
 META_KEYS = frozenset({
@@ -94,7 +90,7 @@ class ProfileLibrary:
             name = data.get("name") or (f.stem if vendor == USER_VENDOR else None)
             # Hay archivos guardados en la carpeta equivocada: manda el campo "type".
             real_kind = data.get("type", kind)
-            if not name or real_kind not in KINDS:
+            if not name or real_kind not in INDEXED_KINDS:
                 continue
             self.by_vendor.setdefault(vendor, {}).setdefault((real_kind, name), data)
             if (real_kind, name) not in self.raw:
@@ -178,17 +174,3 @@ class ProfileLibrary:
             if machines & set(compatible):
                 out.append(name)
         return sorted(out)
-
-
-def find_root(explicit: str | Path | None = None) -> Path:
-    candidates: list[Path] = []
-    if explicit:
-        candidates.append(Path(explicit))
-    if os.environ.get(ENV_PROFILES):
-        candidates.append(Path(os.environ[ENV_PROFILES]))
-    candidates.extend(DEFAULT_ROOTS)
-    for c in candidates:
-        if (c / "Flashforge").is_dir():
-            return c
-    tried = ", ".join(str(c) for c in candidates)
-    raise ProfileError(t("profiles.error.root_not_found", tried=tried, env=ENV_PROFILES))
