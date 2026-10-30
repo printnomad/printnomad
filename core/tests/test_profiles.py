@@ -1,5 +1,6 @@
 import pytest
 
+from betterbridge import rules
 from betterbridge.printer_profiles import creator5pro as t
 from betterbridge.profiles import ProfileError, ProfileLibrary, find_root
 
@@ -64,12 +65,12 @@ def test_pick_filament(profiles_root, ftype, source, expected):
 def test_check_value_limits():
     limits = {"speed": 600, "acceleration": 20000, "travel_acceleration": 20000,
               "max_layer_height": 0.28, "min_layer_height": 0.08}
-    assert t.check_value("outer_wall_speed", "700", limits)
-    assert t.check_value("outer_wall_speed", "300", limits) is None
-    assert t.check_value("small_perimeter_speed", "50%", limits) is None
-    assert t.check_value("fan_max_speed", ["100"], limits) is None
-    assert t.check_value("default_acceleration", "25000", limits)
-    assert t.check_value("layer_height", "0.3", limits)
+    assert rules.check_value("outer_wall_speed", "700", limits)
+    assert rules.check_value("outer_wall_speed", "300", limits) is None
+    assert rules.check_value("small_perimeter_speed", "50%", limits) is None
+    assert rules.check_value("fan_max_speed", ["100"], limits) is None
+    assert rules.check_value("default_acceleration", "25000", limits)
+    assert rules.check_value("layer_height", "0.3", limits)
 
 
 def test_inheritance_resolved_within_vendor_then_library(tmp_path):

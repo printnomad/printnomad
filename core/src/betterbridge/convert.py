@@ -10,7 +10,7 @@ import json
 import math
 from dataclasses import dataclass, field
 
-from . import model_edit
+from . import model_edit, rules
 from .i18n import t
 from .printer_profiles import creator5pro
 from .profiles import ProfileError, ProfileLibrary
@@ -121,7 +121,7 @@ def convert(
     except ProfileError as e:
         report.errors.append(str(e))
         return result
-    limits = target.speed_limits(machine_cfg)
+    limits = rules.speed_limits(machine_cfg)
 
     reasons: dict[str, str] = {}
 
@@ -131,7 +131,7 @@ def convert(
 
     for k, v in machine_cfg.items():
         put(k, v, t("reason.target_machine"))
-    for k in target.GCODE_KEYS:
+    for k in rules.GCODE_KEYS:
         if k not in machine_cfg and out.get(k):
             put(k, "", t("reason.gcode_no_equivalent"))
 
@@ -150,10 +150,10 @@ def convert(
         report.errors.append(str(e))
         return result
     for k, v in process_cfg.items():
-        if k in target.KEEP_SOURCE_PROCESS_KEYS and k in src and src[k] != v and k not in author_process:
-            report.kept_author.append(FieldChange(k, src[k], v, t(target.KEEP_SOURCE_PROCESS_KEYS[k])))
+        if k in rules.KEEP_SOURCE_PROCESS_KEYS and k in src and src[k] != v and k not in author_process:
+            report.kept_author.append(FieldChange(k, src[k], v, t(rules.KEEP_SOURCE_PROCESS_KEYS[k])))
             out[k] = src[k]
-        elif k in author_process and k in src and not target.is_cooling_key(k):
+        elif k in author_process and k in src and not rules.is_cooling_key(k):
             report.kept_author.append(FieldChange(k, src[k], v, t("reason.author_on_process")))
             out[k] = src[k]
         else:
@@ -161,11 +161,11 @@ def convert(
                 report.dropped.append(FieldChange(k, src[k], v, t("reason.cooling")))
             put(k, v, t("reason.target_process"))
     for k in sorted(author_process - set(process_cfg)):
-        if k in src and not target.is_cooling_key(k):
+        if k in src and not rules.is_cooling_key(k):
             report.kept_author.append(FieldChange(k, src[k], t("value.no_profile_value"), t("reason.author")))
     _collapse_variants(src, out, set(machine_cfg), target, put)
     for c in report.kept_author:
-        msg = target.check_value(c.key, out.get(c.key, c.original), limits)
+        msg = rules.check_value(c.key, out.get(c.key, c.original), limits)
         if msg:
             report.warnings.append(t("convert.warn.author_limit", message=msg))
 
@@ -257,10 +257,10 @@ def convert(
     put("filament_map", [str(e) for e in gmap], t("reason.filament_map"))
     highest = max((e for m in assignment.per_plate.values() for e in m), default=1)
     if user_map is None and highest > target.ORCA_MANUAL_MAX_EXTRUDER:
-        map_mode = target.MAP_MODE_AUTO
+        map_mode = rules.MAP_MODE_AUTO
         report.warnings.append(t("convert.warn.map_auto_e34"))
     else:
-        map_mode = target.MAP_MODE_MANUAL
+        map_mode = rules.MAP_MODE_MANUAL
         if highest > target.ORCA_MANUAL_MAX_EXTRUDER:
             report.warnings.append(t("convert.warn.map_manual_e34"))
     put("filament_map_mode", map_mode, t("reason.filament_map_mode"))
@@ -285,12 +285,12 @@ def convert(
 
     # --- Eliminar específico de Bambu --------------------------------------
     # Solo si el perfil destino no la define (la C5P sí define p. ej. nozzle_volume).
-    for k in sorted(k for k in target.BAMBU_ONLY_KEYS & set(out) if k not in reasons):
+    for k in sorted(k for k in rules.BAMBU_ONLY_KEYS & set(out) if k not in reasons):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.bambu_hardware")))
     # Enfriamiento del origen que el perfil C5P no define: fuera, Orca usa su valor por defecto.
-    for k in sorted(k for k in out if k not in reasons and target.is_cooling_key(k)):
+    for k in sorted(k for k in out if k not in reasons and rules.is_cooling_key(k)):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.cooling_no_value")))
-    for k, fixes in target.VALUE_FIXES.items():
+    for k, fixes in rules.VALUE_FIXES.items():
         if k in out and isinstance(out[k], str) and out[k] in fixes:
             fixed = fixes[out[k]]
             if fixed is None:
@@ -299,7 +299,7 @@ def convert(
                 put(k, fixed, t("reason.orca_equivalent"))
     for k, v in out.items():
         text = "\n".join(v) if isinstance(v, list) and all(isinstance(x, str) for x in v) else v
-        marker = target.BAMBU_GCODE_MARKERS.search(text) if isinstance(text, str) else None
+        marker = rules.BAMBU_GCODE_MARKERS.search(text) if isinstance(text, str) else None
         if marker:
             report.warnings.append(t("convert.warn.bambu_gcode", key=k, marker=marker.group(0)))
 
@@ -339,7 +339,7 @@ def _collapse_variants(src: dict, out: dict, machine_keys: set[str], target, put
         return
     idx = variants.index(target.EXTRUDER_VARIANT) if target.EXTRUDER_VARIANT in variants else 0
     for k, v in list(out.items()):
-        if (k in machine_keys or not k.endswith(target.VARIANT_KEY_SUFFIXES)
+        if (k in machine_keys or not k.endswith(rules.VARIANT_KEY_SUFFIXES)
                 or k.startswith("filament_") or not isinstance(v, list) or len(v) != len(variants)):
             continue
         put(k, v[idx], t("reason.variant_value", variant=variants[idx]))
@@ -389,13 +389,13 @@ def _edit_model_settings(root, info, per_plate, map_mode, target, limits, report
             for key, value in model_edit.meta(el).items():
                 if key in model_edit.STRUCTURAL_KEYS:
                     continue
-                fixes = target.VALUE_FIXES.get(key, {})
+                fixes = rules.VALUE_FIXES.get(key, {})
                 if value in fixes and fixes[value] is not None:
                     model_edit.set_meta(el, key, fixes[value])
                     report.object_overrides.append(ObjectOverride(
                         oname, part_name, key, value, fixes[value], t("reason.orca_equivalent")))
                     continue
-                msg = target.check_value(key, value, limits)
+                msg = rules.check_value(key, value, limits)
                 reason = t("reason.kept_warning", message=msg) if msg else t("reason.kept")
                 report.object_overrides.append(ObjectOverride(oname, part_name, key, value, value, reason))
                 if msg:
