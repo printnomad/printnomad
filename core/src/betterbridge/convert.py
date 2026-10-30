@@ -320,6 +320,8 @@ def convert(
             else:
                 put(k, fixed, t("reason.orca_equivalent"))
     for k, v in out.items():
+        if k in machine_cfg and v == machine_cfg[k]:
+            continue  # viene del perfil destino (p. ej. una impresora Bambu): es su G-code legítimo
         text = "\n".join(v) if isinstance(v, list) and all(isinstance(x, str) for x in v) else v
         marker = rules.BAMBU_GCODE_MARKERS.search(text) if isinstance(text, str) else None
         if marker:

@@ -294,3 +294,15 @@ def test_designer_filament_temperatures_kept_hardware_settings_not(lib, tmp_path
 
     _, _, s = run(lib, path, keep_designer_filament=False)
     assert s["nozzle_temperature"] == ["210", "210"]
+
+
+
+def test_bambu_gcode_from_target_profile_is_not_warned(lib, tmp_path, profiles_root):
+    """Destino Bambu: su G-code (M620…) es legítimo; solo se avisa si llega del origen."""
+    import json as _json
+    f = profiles_root / "Flashforge/machine/c5p.json"
+    d = _json.loads(f.read_text())
+    d["machine_end_gcode"] = "M620 S255"
+    f.write_text(_json.dumps(d))
+    _, result, _ = run(ProfileLibrary.load(profiles_root), make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
+    assert not any("machine_end_gcode" in w for w in result.report.warnings)
