@@ -1,0 +1,126 @@
+{
+  "ext_name": {
+    "message": "BetterBridge",
+    "description": "Extension name"
+  },
+  "ext_description": {
+    "message": "Open 3D models from MakerWorld and other sites already set up for your printer and slicer.",
+    "description": "Store description"
+  },
+  "options_title": {
+    "message": "BetterBridge settings"
+  },
+  "options_subtitle": {
+    "message": "Convert projects for your own printers, keeping the designer's settings."
+  },
+  "printers_title": {
+    "message": "My printers"
+  },
+  "printers_empty": {
+    "message": "No printers yet. Add the ones you print with."
+  },
+  "printers_slicer": {
+    "message": "Slicer"
+  },
+  "printers_search": {
+    "message": "Filter printers…",
+    "description": "Placeholder of the printer filter"
+  },
+  "printers_pick": {
+    "message": "Printer"
+  },
+  "printers_add": {
+    "message": "Add"
+  },
+  "printers_remove": {
+    "message": "Remove"
+  },
+  "printers_from_folder": {
+    "message": "from your $1 folder",
+    "description": "$1 = slicer name"
+  },
+  "profiles_title": {
+    "message": "Printer profiles"
+  },
+  "profiles_catalog": {
+    "message": "Download from the slicers' official repositories"
+  },
+  "profiles_catalog_hint": {
+    "message": "Latest release of each slicer. Works without installing anything."
+  },
+  "profiles_local": {
+    "message": "Use the profiles of my installed slicer (recommended)"
+  },
+  "profiles_local_hint": {
+    "message": "Exact match with your app, including your own presets. Pick its data folder, e.g. ~/Library/Application Support/Orca-Flashforge (press ⌘⇧. to show hidden folders)."
+  },
+  "profiles_local_slicer": {
+    "message": "This folder belongs to"
+  },
+  "profiles_pick_folder": {
+    "message": "Choose folder…"
+  },
+  "profiles_folder_none": {
+    "message": "No folder chosen"
+  },
+  "profiles_status_loading": {
+    "message": "Loading profile catalog…"
+  },
+  "profiles_status_ready": {
+    "message": "Catalog: $1 slicers, updated $2",
+    "description": "$1 = count, $2 = date"
+  },
+  "profiles_status_fallback": {
+    "message": "Offline: using the profiles bundled with the extension."
+  },
+  "profiles_status_error": {
+    "message": "Profiles unavailable: $1"
+  },
+  "profiles_folder_read": {
+    "message": "$1: $2 printers found",
+    "description": "$1 = folder, $2 = count"
+  },
+  "convert_title": {
+    "message": "Convert a file"
+  },
+  "convert_hint": {
+    "message": "Try BetterBridge with a .3mf you already downloaded."
+  },
+  "convert_file": {
+    "message": "Project (.3mf)"
+  },
+  "convert_printer": {
+    "message": "For"
+  },
+  "convert_button": {
+    "message": "Convert"
+  },
+  "convert_busy": {
+    "message": "Converting…"
+  },
+  "convert_ok": {
+    "message": "Saved $1 ($2 s)",
+    "description": "$1 = file name, $2 = seconds"
+  },
+  "convert_failed": {
+    "message": "The project could not be converted. See the report."
+  },
+  "convert_needs_map": {
+    "message": "This project has more filaments than the printer has extruders; choosing the assignment is coming soon."
+  },
+  "convert_show": {
+    "message": "Show in Finder"
+  },
+  "convert_report": {
+    "message": "Conversion report"
+  },
+  "convert_no_printers": {
+    "message": "Add a printer first."
+  },
+  "convert_no_file": {
+    "message": "Choose a .3mf file."
+  },
+  "permission_denied": {
+    "message": "Permission to read the slicer folder was not granted."
+  }
+}

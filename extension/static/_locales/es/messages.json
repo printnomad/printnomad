@@ -1,0 +1,119 @@
+{
+  "ext_name": {
+    "message": "BetterBridge"
+  },
+  "ext_description": {
+    "message": "Abre modelos 3D de MakerWorld y otros sitios ya preparados para tu impresora y tu laminador."
+  },
+  "options_title": {
+    "message": "Ajustes de BetterBridge"
+  },
+  "options_subtitle": {
+    "message": "Convierte proyectos para tus impresoras conservando los ajustes del diseñador."
+  },
+  "printers_title": {
+    "message": "Mis impresoras"
+  },
+  "printers_empty": {
+    "message": "Aún no hay impresoras. Añade aquellas con las que imprimes."
+  },
+  "printers_slicer": {
+    "message": "Laminador"
+  },
+  "printers_search": {
+    "message": "Filtrar impresoras…"
+  },
+  "printers_pick": {
+    "message": "Impresora"
+  },
+  "printers_add": {
+    "message": "Añadir"
+  },
+  "printers_remove": {
+    "message": "Quitar"
+  },
+  "printers_from_folder": {
+    "message": "de tu carpeta de $1"
+  },
+  "profiles_title": {
+    "message": "Perfiles de impresora"
+  },
+  "profiles_catalog": {
+    "message": "Descargar de los repositorios oficiales de los laminadores"
+  },
+  "profiles_catalog_hint": {
+    "message": "Último release de cada laminador. Funciona sin instalar nada."
+  },
+  "profiles_local": {
+    "message": "Usar los perfiles de mi laminador instalado (recomendado)"
+  },
+  "profiles_local_hint": {
+    "message": "Coinciden exactamente con tu app, incluidos tus propios presets. Elige su carpeta de datos, p. ej. ~/Library/Application Support/Orca-Flashforge (pulsa ⌘⇧. para ver carpetas ocultas)."
+  },
+  "profiles_local_slicer": {
+    "message": "Esta carpeta es de"
+  },
+  "profiles_pick_folder": {
+    "message": "Elegir carpeta…"
+  },
+  "profiles_folder_none": {
+    "message": "Ninguna carpeta elegida"
+  },
+  "profiles_status_loading": {
+    "message": "Cargando el catálogo de perfiles…"
+  },
+  "profiles_status_ready": {
+    "message": "Catálogo: $1 laminadores, actualizado $2"
+  },
+  "profiles_status_fallback": {
+    "message": "Sin conexión: se usan los perfiles incluidos en la extensión."
+  },
+  "profiles_status_error": {
+    "message": "Perfiles no disponibles: $1"
+  },
+  "profiles_folder_read": {
+    "message": "$1: $2 impresoras encontradas"
+  },
+  "convert_title": {
+    "message": "Convertir un archivo"
+  },
+  "convert_hint": {
+    "message": "Prueba BetterBridge con un .3mf que ya descargaste."
+  },
+  "convert_file": {
+    "message": "Proyecto (.3mf)"
+  },
+  "convert_printer": {
+    "message": "Para"
+  },
+  "convert_button": {
+    "message": "Convertir"
+  },
+  "convert_busy": {
+    "message": "Convirtiendo…"
+  },
+  "convert_ok": {
+    "message": "Guardado $1 ($2 s)"
+  },
+  "convert_failed": {
+    "message": "No se pudo convertir el proyecto. Revisa el reporte."
+  },
+  "convert_needs_map": {
+    "message": "Este proyecto tiene más filamentos que extrusores la impresora; elegir la asignación llegará pronto."
+  },
+  "convert_show": {
+    "message": "Mostrar en Finder"
+  },
+  "convert_report": {
+    "message": "Reporte de la conversión"
+  },
+  "convert_no_printers": {
+    "message": "Primero añade una impresora."
+  },
+  "convert_no_file": {
+    "message": "Elige un archivo .3mf."
+  },
+  "permission_denied": {
+    "message": "No se concedió permiso para leer la carpeta del laminador."
+  }
+}

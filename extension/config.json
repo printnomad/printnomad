@@ -1,0 +1,7 @@
+{
+  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission.",
+  "catalogUrl": "https://betterbridge.github.io/profiles/catalog.json",
+  "fallbackProfiles": {
+    "flashstudio": ["Flashforge"]
+  }
+}

@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BetterBridge</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="options.js"></script>
+  </head>
+  <body class="min-h-screen text-sm">
+    <main class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+      <header>
+        <h1 class="text-2xl font-semibold" data-i18n="options_title"></h1>
+        <p class="mt-1 text-muted" data-i18n="options_subtitle"></p>
+      </header>
+
+      <section class="rounded-xl border border-line bg-card p-5" aria-labelledby="printers-title">
+        <h2 id="printers-title" class="text-base font-semibold" data-i18n="printers_title"></h2>
+        <ul id="printers" class="mt-3 flex flex-col gap-2"></ul>
+        <p id="printers-empty" class="mt-3 text-muted" data-i18n="printers_empty" hidden></p>
+        <form id="add-printer" class="mt-4 grid gap-3 sm:grid-cols-[10rem_1fr_auto] sm:items-end">
+          <label class="flex flex-col gap-1">
+            <span class="text-xs text-muted" data-i18n="printers_slicer"></span>
+            <select id="add-slicer" class="rounded-md border border-line bg-surface px-2 py-1.5"></select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-xs text-muted" data-i18n="printers_pick"></span>
+            <input id="add-filter" type="search" class="rounded-md border border-line bg-surface px-2 py-1.5" data-i18n-placeholder="printers_search" />
+            <select id="add-printer-name" size="6" class="rounded-md border border-line bg-surface px-1 py-1" required></select>
+          </label>
+          <button type="submit" class="rounded-md bg-accent px-4 py-1.5 font-medium text-on-accent disabled:opacity-50" data-i18n="printers_add"></button>
+        </form>
+        <p id="local-printers-note" class="mt-2 text-xs text-muted" hidden></p>
+      </section>
+
+      <section class="rounded-xl border border-line bg-card p-5" aria-labelledby="profiles-title">
+        <h2 id="profiles-title" class="text-base font-semibold" data-i18n="profiles_title"></h2>
+        <fieldset class="mt-3 flex flex-col gap-3">
+          <label class="flex gap-2">
+            <input type="radio" name="profile-source" value="catalog" class="mt-0.5 accent-accent" />
+            <span><span class="font-medium" data-i18n="profiles_catalog"></span><br /><span class="text-xs text-muted" data-i18n="profiles_catalog_hint"></span></span>
+          </label>
+          <label class="flex gap-2">
+            <input type="radio" name="profile-source" value="local" class="mt-0.5 accent-accent" />
+            <span><span class="font-medium" data-i18n="profiles_local"></span><br /><span class="text-xs text-muted" data-i18n="profiles_local_hint"></span></span>
+          </label>
+        </fieldset>
+        <div id="local-folder" class="mt-3 flex flex-wrap items-center gap-2 pl-6" hidden>
+          <span class="text-xs text-muted" data-i18n="profiles_local_slicer"></span>
+          <select id="local-slicer" class="rounded-md border border-line bg-surface px-2 py-1"></select>
+          <button id="pick-folder" type="button" class="rounded-md border border-line bg-surface px-3 py-1" data-i18n="profiles_pick_folder"></button>
+          <span id="folder-name" class="text-xs text-muted" data-i18n="profiles_folder_none"></span>
+        </div>
+        <p id="profiles-status" class="mt-3 text-xs text-muted" role="status"></p>
+      </section>
+
+      <section class="rounded-xl border border-line bg-card p-5" aria-labelledby="convert-title">
+        <h2 id="convert-title" class="text-base font-semibold" data-i18n="convert_title"></h2>
+        <p class="mt-1 text-muted" data-i18n="convert_hint"></p>
+        <form id="convert" class="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <label class="flex flex-col gap-1">
+            <span class="text-xs text-muted" data-i18n="convert_file"></span>
+            <input id="convert-file" type="file" accept=".3mf" class="text-xs file:mr-2 file:rounded-md file:border file:border-line file:bg-surface file:px-2 file:py-1 file:text-fg" />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-xs text-muted" data-i18n="convert_printer"></span>
+            <select id="convert-printer" class="rounded-md border border-line bg-surface px-2 py-1.5"></select>
+          </label>
+          <button id="convert-button" type="submit" class="rounded-md bg-accent px-4 py-1.5 font-medium text-on-accent disabled:opacity-50" data-i18n="convert_button"></button>
+        </form>
+        <div id="convert-result" class="mt-4 flex flex-col gap-2" hidden>
+          <div class="flex flex-wrap items-center gap-2">
+            <p id="convert-status" class="rounded-md px-2 py-1" role="status"></p>
+            <button id="convert-show" type="button" class="rounded-md border border-line bg-surface px-3 py-1" data-i18n="convert_show" hidden></button>
+          </div>
+          <details id="convert-details">
+            <summary class="cursor-pointer text-xs text-muted" data-i18n="convert_report"></summary>
+            <pre id="convert-report" class="mt-2 max-h-96 overflow-auto rounded-md border border-line bg-surface p-3 text-xs whitespace-pre-wrap"></pre>
+          </details>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

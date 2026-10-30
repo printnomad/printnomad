@@ -1,0 +1,38 @@
+# BetterBridge browser extension
+
+Chrome/Chromium extension (Manifest V3) that converts 3MF projects for the printers
+you register in **My printers**. It runs the same Python core as the CLI and the
+OrcaSlicer plugin (`core/`), inside the browser with [Pyodide](https://pyodide.org).
+
+## Layout
+
+| Path | What |
+|---|---|
+| `src/engine/` | Web Worker running Pyodide + the core (`worker.ts`) and its promise API (`client.ts`) |
+| `src/profiles/` | Profile catalog published by CI (`catalog.ts`) and profiles read from an installed slicer's folder (`local.ts`) |
+| `src/options/` | Options page: My printers, profile source, convert a file |
+| `src/lib/` | i18n (`chrome.i18n`) and settings (`chrome.storage.sync`, IndexedDB) |
+| `static/` | `manifest.json` template and `_locales/<lang>/messages.json` |
+| `config.json` | Catalog URL (also the host permission) and the profiles bundled as fallback |
+
+## Develop
+
+```sh
+npm ci
+npm run build          # → dist/ ; load it from chrome://extensions (Developer mode → Load unpacked)
+npm run typecheck
+npm test               # unit tests (node --test)
+npm run test:e2e       # real browser (Chrome, Chromium or Brave; set CHROME_PATH otherwise)
+```
+
+To bundle fallback profiles, build a catalog first and point the build at it:
+
+```sh
+python tools/build_profile_catalog.py --slicer flashstudio \
+  --profiles <Orca-Flashforge checkout>/resources/profiles --ref 1.7.15 --out /tmp/catalog
+BB_PROFILES_DIR=/tmp/catalog npm run build
+```
+
+Styles are Tailwind CSS v4 (`src/styles.css`); only classes that appear in `src/` are
+emitted, so always write complete class names. Texts live in `static/_locales` — see
+[docs/translating.md](../docs/translating.md).

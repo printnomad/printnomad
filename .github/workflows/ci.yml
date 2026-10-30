@@ -31,3 +31,29 @@ jobs:
       - run: ruff check .
       - run: pytest
       - run: python orca-plugin/tools/build.py
+
+  extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      # Chrome for Testing: branded Chrome no longer loads unpacked extensions from the command line.
+      - name: Install Chrome for Testing
+        run: echo "CHROME_PATH=$(npx --yes @puppeteer/browsers install chrome@stable --format '{{path}}')" >> "$GITHUB_ENV"
+      - run: pip install pytest  # the e2e test builds its fixtures with conftest.py
+      - run: npm run test:e2e
+        env:
+          PYTHON: python
