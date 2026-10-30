@@ -48,7 +48,7 @@ python -m venv .venv && .venv/bin/pip install -e core pytest ruff
 .venv/bin/ruff check . && .venv/bin/pytest
 ```
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Translations are welcome: see [docs/translating.md](docs/translating.md).
 
 ## License
 

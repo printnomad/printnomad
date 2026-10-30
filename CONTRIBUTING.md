@@ -32,6 +32,7 @@ Everything must pass before you open a pull request. CI runs the same commands.
 ## Code rules
 
 - **No hard-coded printer or slicer knowledge in logic.** Printer/slicer specifics live in data (profile files, target definitions, quirk tables) with a comment explaining *why* (link the slicer source when the behaviour comes from it).
+- **No user-facing text in code.** Add it to the `locales/en.json` catalog and use `t("area.key")`; see [docs/translating.md](docs/translating.md). Translations are welcome contributions!
 - **Never change the user's data silently.** Every value the converter changes, keeps or drops goes to the report with a reason.
 - **Verify, don't guess.** Slicer behaviour must be checked against its source code or by slicing with its CLI (`tools/validate_orca.py`). Note the evidence in the PR.
 - **Tests with synthetic data only.** Build fixtures with the helpers in `conftest.py`. Never commit models from MakerWorld or other repositories: they belong to their designers.

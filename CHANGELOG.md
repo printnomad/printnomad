@@ -4,7 +4,12 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Added
+- Internationalisation: all user-facing text in JSON catalogs (English and Spanish), `--lang` option, language detection (system or OrcaSlicer's), translation guide in `docs/translating.md` with automatic checks for translators.
+
 ### Changed
+- The report flags `needs_map` when filaments must be assigned to extruders manually (the CLI and the plugin no longer parse error text).
+- The OrcaSlicer plugin capability is now named `BetterBridge` (re-enable it once in the Plugins dialog).
 - Repository reorganised as a monorepo (`core/`, `orca-plugin/`, `tools/`), licensed AGPL-3.0-or-later, with contribution guidelines and CI.
 
 ## core 0.1.0 / orca-plugin 0.2.9 — 2026-10-30 (first internal version)
