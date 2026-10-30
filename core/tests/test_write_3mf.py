@@ -3,8 +3,8 @@ import json
 import zipfile
 
 import pytest
-from betterbridge import cli, read_3mf, write_3mf
 
+from betterbridge import cli, read_3mf, write_3mf
 from conftest import make_bambu_3mf
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")

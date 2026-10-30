@@ -17,3 +17,6 @@ select = ["E", "F", "W", "I", "B", "UP"]
 # HTML/JS embebido y XML de prueba: el largo de línea no aplica.
 "orca-plugin/betterbridge_orca/panel_html.py" = ["E501"]
 "conftest.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["betterbridge", "betterbridge_orca", "conftest"]

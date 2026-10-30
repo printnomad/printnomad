@@ -175,3 +175,16 @@ def profiles_root(tmp_path: Path) -> Path:
             "filament_max_volumetric_speed": ["18"],
         })
     return root
+
+
+@pytest.fixture(autouse=True)
+def _spanish_messages():
+    """Las aserciones de texto de las pruebas existentes están en español.
+
+    Las pruebas de i18n (core/tests/test_i18n.py) cambian el idioma explícitamente.
+    """
+    from betterbridge import i18n
+
+    i18n.set_language("es")
+    yield
+    i18n.set_language("es")

@@ -68,6 +68,7 @@ def fake_orca(profiles_root):
     orca.LifecycleEvent = types.SimpleNamespace(ProjectOpened="opened", ProjectClosed="closed")
     orca.host = types.SimpleNamespace(
         plater=None,
+        app_info=lambda: {"language": "es_ES", "version": "2.5.0"},
         ui=types.SimpleNamespace(NotificationLevel=Level, push_notification=push_notification,
                                  create_dock_panel=create_dock_panel))
     return orca, state
@@ -195,7 +196,7 @@ def test_panel_map_from_table(plugin, tmp_path):
     send(cap, panel, {"type": "ready"})
     preview = panel.posts[-1]
     assert preview["needs_map"] and not preview["blocking"]
-    assert "elige los extrusores" in preview["errors"][0]
+    assert "a mano" in preview["errors"][0]
     send(cap, panel, {"type": "convert", "map": "1:1,2:2,3:3,4:4,5:1", "nozzle": "0.4"})
     assert panel.posts[-1]["ok"]
 

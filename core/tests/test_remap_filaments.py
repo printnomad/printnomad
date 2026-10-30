@@ -1,4 +1,5 @@
 import pytest
+
 from betterbridge.remap_filaments import MapError, assign, parse_map
 
 
@@ -25,7 +26,7 @@ def test_more_than_four_packs_per_plate():
 
 def test_more_than_four_on_one_plate_needs_map():
     r = assign(["PLA"] * 5, {"1": {1, 2, 3, 4, 5}}, 4)
-    assert r.errors and "--map" in r.errors[0]
+    assert r.errors and r.needs_map
 
 
 def test_unknown_usage_assumes_all():
