@@ -9,6 +9,9 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Filament diameter 2.85 mm instead of 1.75 mm** for Flashforge PLA profiles: profile inheritance now resolves parents within the same vendor, then the common filament library, as OrcaSlicer does. Projects converted with earlier versions must be converted again before printing.
 
 ### Added
+- **Browser extension** (`extension/`, Chrome/Chromium, Manifest V3): converts projects in the browser with the same core (Pyodide), for the printers in *My printers*; downloads the result and shows it in Finder. Options page with the profile source and a manual "convert a file". English and Spanish.
+- **Profile catalog** from the slicers' official repositories (`tools/build_profile_catalog.py`, published weekly by CI): one bundle per vendor with sha256 and the usable printers; conversions with it are byte-identical to using the repository folders.
+- Reports name where the target profiles came from (folders, or `repo@release`).
 - **Any printer as target**: the target is built from any machine preset (system or user) of an installed slicer; extruders, nozzle variants, bed type, limits, compatible processes and filaments are derived from the profiles. User presets are found too (e.g. your own calibrated filament for the same brand). CLI: `--printer` and `--slicer` replace `--target creator5pro`.
 - **Designer's filament choices kept**: temperatures (nozzle and plates) and density the designer changed are kept on top of the target filament profile; hardware- or calibration-dependent settings (max volumetric speed, flow ratio, pressure advance, cooling) come from the target. `--no-designer-filament` turns it off.
 - `betterbridge printers [--slicer X] [--search text] [--json]` lists the printer presets (system and yours) of the installed slicers.

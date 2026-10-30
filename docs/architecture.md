@@ -16,7 +16,17 @@ OrcaSlicer (and forks with plugin support)
  └─ orca-plugin/  converts the project that is open
 
 core/  one conversion engine (Python, standard library only) used by all of the above and the CLI
+tools/build_profile_catalog.py  turns slicer releases into the profile catalog the extension downloads
 ```
+
+### Extension internals
+
+- **Engine**: Pyodide in a module Web Worker started by extension pages (`extension/src/engine/`). MV3 service workers cannot `import()` Pyodide. The core is shipped as `core.json` and written into Pyodide's file system; `betterbridge.web.convert_file()` takes profile bundles and returns plain JSON. Boot ~1 s; a 3 MB project converts in ~0.5 s.
+- **Profiles**, in order of preference chosen by the user:
+  1. *Installed slicer folder* (File System Access, permission kept): exact match with the app, user presets included.
+  2. *Catalog* built weekly by CI from the latest release of each slicer repository (`.github/workflows/profiles.yml` → GitHub Pages): one minified bundle per vendor, sha256-verified and cached by release.
+  3. *Bundled fallback* (`extension/config.json` → `fallbackProfiles`) when offline.
+  Reports name the source (`repo@release` or the folder).
 
 ## Key decisions
 
@@ -26,6 +36,7 @@ core/  one conversion engine (Python, standard library only) used by all of the 
 | Monorepo | Changes to the conversion format touch several components; one PR, shared fixtures. |
 | Single core in Python, stdlib only | One implementation for CLI, OrcaSlicer plugin (embedded Python 3.12), helper and browser (Pyodide). |
 | Convert for a specific target printer | Bed size, start/end G-code, extruder count, limits and cooling are printer-specific; switching printers inside the slicer loses the designer's settings. |
+| Python core in the browser via Pyodide, not a TypeScript port | One implementation to test; conversions are byte-identical to the CLI. ~13 MB download once, ~1 s start. |
 | Profiles from the installed slicer first | Bundled or repository copies get stale: Flashforge's public repository lags behind Flash Studio, which is why other converters produce "old vs new" values. |
 | Cooling always from the target | Printers have different fans (Creator 5 Pro: P101/P2/P3; Bambu: P1/P2/P3). |
 | Designer speeds kept even above filament flow | The slicer caps them at slice time from the selected filament's max volumetric speed (verified in G-code), so a faster filament still benefits. |
