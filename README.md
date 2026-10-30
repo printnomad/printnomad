@@ -30,7 +30,7 @@ python -m venv .venv && .venv/bin/pip install -e core
 # -> ~/Downloads/model_CREATOR5_PRO.3mf and model_CREATOR5_PRO.report.json
 ```
 
-`--printer` takes any printer preset of an installed slicer, system or your own (a unique part of the name is enough); add `--slicer flashstudio|bambustudio|orcaslicer` to pick the slicer, or `--profiles-dir DIR` for a profiles folder. Other options: `--map 1:1,2:2,5:1` (filament → extruder, only needed when a plate uses more filaments than the printer has extruders), `--nozzle 0.6`, `--out DIR`, `--force`, `--lang`, `-v`. Exit codes: `0` converted, `1` error, `2` needs `--map`.
+`--printer` takes any printer preset of an installed slicer, system or your own (a unique part of the name is enough; list them with `betterbridge printers [--search text]`); add `--slicer flashstudio|bambustudio|orcaslicer` to pick the slicer, or `--profiles-dir DIR` for a profiles folder. Other options: `--map 1:1,2:2,5:1` (filament → extruder, only needed when a plate uses more filaments than the printer has extruders), `--nozzle 0.6`, `--out DIR`, `--force`, `--lang`, `-v`. Exit codes: `0` converted, `1` error, `2` needs `--map`.
 
 ## OrcaSlicer plugin
 

@@ -68,3 +68,19 @@ def test_output_keeps_source_permissions(tmp_path):
     dest = tmp_path / "o.3mf"
     write_3mf.write(read_3mf.load(src), dest, {})
     assert dest.stat().st_mode & 0o777 == 0o644
+
+
+def test_cli_printers_lists_presets(tmp_path, monkeypatch, capsys):
+    import json as _json
+
+    from betterbridge import slicers
+    root = tmp_path / "profiles"
+    (root / "V" / "machine").mkdir(parents=True)
+    (root / "V/machine/a.json").write_text(_json.dumps({"type": "machine", "name": "V Printer 0.4 nozzle"}))
+    (root / "V/machine/b.json").write_text(_json.dumps({"type": "machine", "name": "base", "instantiation": "false"}))
+    fake = slicers.Slicer(key="fake", name="Fake", system_roots=[root])
+    monkeypatch.setattr(cli, "installed_slicers", lambda: [fake])
+    assert cli.main(["printers", "--json"]) == cli.EXIT_OK
+    rows = _json.loads(capsys.readouterr().out)
+    assert rows == [{"slicer": "fake", "slicer_name": "Fake", "printer": "V Printer 0.4 nozzle", "user": False}]
+    assert cli.main(["printers", "--search", "nothing"]) == cli.EXIT_OK

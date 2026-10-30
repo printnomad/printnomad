@@ -119,5 +119,11 @@
   "cli.help.slicer": "laminador cuyos perfiles usar (por defecto: buscar en los instalados)",
   "cli.error.no_printer": "elige la impresora destino con --printer (ver `betterbridge printers`)",
   "reason.author_filament_kept": "elección del diseñador para este filamento (temperatura o densidad)",
-  "cli.help.no_designer_filament": "no conservar temperaturas ni densidad que el diseñador cambió en sus filamentos; usar los perfiles de filamento destino tal cual"
+  "cli.help.no_designer_filament": "no conservar temperaturas ni densidad que el diseñador cambió en sus filamentos; usar los perfiles de filamento destino tal cual",
+  "cli.printers.description": "Lista los presets de impresora (de sistema y tuyos) de los laminadores instalados.",
+  "cli.printers.help.search": "solo presets cuyo nombre contiene este texto",
+  "cli.printers.help.json": "salida en JSON",
+  "cli.printers.none": "No se encontraron presets de impresora.",
+  "cli.printers.slicer_heading": "{name} (--slicer {key}):",
+  "cli.printers.user": "preset tuyo"
 }

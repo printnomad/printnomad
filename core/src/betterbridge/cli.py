@@ -1,16 +1,22 @@
-"""Command line: `betterbridge entrada.3mf --printer "<preset>" [--slicer flashstudio] [--map 1:1,2:2] [--lang es]`"""
+"""Command line.
+
+    betterbridge entrada.3mf --printer "<preset>" [--slicer flashstudio] [--map 1:1,2:2] [--lang es]
+    betterbridge printers [--slicer flashstudio] [--search "creator"] [--json]
+"""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from . import i18n, read_3mf, write_3mf
 from .convert import convert
 from .i18n import t
-from .profiles import ProfileError
+from .profiles import USER_VENDOR, ProfileError
 from .remap_filaments import MapError, parse_map
+from .slicers import installed_slicers, registry
 from .target import load_target
 
 EXIT_OK, EXIT_ERROR, EXIT_NEEDS_INPUT = 0, 1, 2
@@ -43,9 +49,56 @@ def _lang_from_argv(argv: list[str]) -> str | None:
     return None
 
 
+def list_printers(argv: list[str]) -> int:
+    """`betterbridge printers [--slicer X] [--search texto] [--json]`."""
+    p = argparse.ArgumentParser(prog="betterbridge printers", description=t("cli.printers.description"))
+    p.add_argument("--slicer", help=t("cli.help.slicer"))
+    p.add_argument("--search", help=t("cli.printers.help.search"))
+    p.add_argument("--json", action="store_true", help=t("cli.printers.help.json"))
+    p.add_argument("--lang", help=t("cli.help.lang", languages=", ".join(i18n.available_languages())))
+    args = p.parse_args(argv)
+    if args.slicer:
+        known = registry()
+        if args.slicer not in known:
+            print(t("cli.error", message=t("target.error.unknown_slicer", slicer=args.slicer,
+                                           options=", ".join(known))), file=sys.stderr)
+            return EXIT_ERROR
+        slicers = [known[args.slicer]]
+    else:
+        slicers = installed_slicers()
+    found: list[dict] = []
+    for s in slicers:
+        try:
+            lib = s.library()
+        except ProfileError:
+            continue
+        for name in lib.names("machine"):
+            if str(lib.raw[("machine", name)].get("instantiation", "true")).lower() != "true":
+                continue
+            if args.search and args.search.lower() not in name.lower():
+                continue
+            found.append({"slicer": s.key, "slicer_name": s.name, "printer": name,
+                          "user": lib.vendors.get(("machine", name)) == USER_VENDOR})
+    if args.json:
+        print(json.dumps(found, ensure_ascii=False, indent=2))
+        return EXIT_OK
+    if not found:
+        print(t("cli.printers.none"))
+        return EXIT_OK
+    current = None
+    for row in found:
+        if row["slicer"] != current:
+            current = row["slicer"]
+            print(t("cli.printers.slicer_heading", name=row["slicer_name"], key=row["slicer"]))
+        print(f"  {row['printer']}" + (f"  ({t('cli.printers.user')})" if row["user"] else ""))
+    return EXIT_OK
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     i18n.set_language(_lang_from_argv(argv))
+    if argv and argv[0] == "printers":
+        return list_printers(argv[1:])
     args = build_parser().parse_args(argv)
     src: Path = args.input
     if not src.is_file():

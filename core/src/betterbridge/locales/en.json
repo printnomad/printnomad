@@ -119,5 +119,11 @@
   "cli.help.slicer": "slicer whose profiles to use (default: search the installed ones)",
   "cli.error.no_printer": "choose the target printer with --printer (see `betterbridge printers`)",
   "reason.author_filament_kept": "designer's material choice for this filament (temperature or density)",
-  "cli.help.no_designer_filament": "do not keep the designer's filament temperatures and density; use the target filament profiles as they are"
+  "cli.help.no_designer_filament": "do not keep the designer's filament temperatures and density; use the target filament profiles as they are",
+  "cli.printers.description": "List the printer presets (system and yours) of the installed slicers.",
+  "cli.printers.help.search": "only presets whose name contains this text",
+  "cli.printers.help.json": "output JSON",
+  "cli.printers.none": "No printer presets found.",
+  "cli.printers.slicer_heading": "{name} (--slicer {key}):",
+  "cli.printers.user": "your preset"
 }
