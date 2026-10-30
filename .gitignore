@@ -6,7 +6,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# Builds
+# Builds (incluye orca-plugin/ui/dist: HTML del panel generado con Tailwind)
 dist/
 build/
 

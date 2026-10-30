@@ -15,6 +15,16 @@ from conftest import make_bambu_3mf
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent          # orca-plugin/
 CORE_PKG = PLUGIN_ROOT.parent / "core" / "src" / "betterbridge"
 PLUGIN_PKG = PLUGIN_ROOT / "betterbridge_orca"
+UI_DIR = PLUGIN_ROOT / "ui"
+BUILT_PANEL = UI_DIR / "dist" / "panel.html"
+HAVE_UI_TOOLS = shutil.which("node") is not None and (UI_DIR / "node_modules" / "jsdom").exists()
+
+
+def _built_panel() -> str | None:
+    """Panel compilado con Tailwind (lo compila si hay node y dependencias)."""
+    if HAVE_UI_TOOLS:
+        subprocess.run(["npm", "run", "build"], cwd=UI_DIR, check=True, capture_output=True)
+    return BUILT_PANEL.read_text(encoding="utf-8") if BUILT_PANEL.exists() else None
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
 
 
@@ -79,6 +89,9 @@ def plugin(tmp_path, profiles_root, monkeypatch):
     pkg = tmp_path / "pkg" / "betterbridge_orca"
     shutil.copytree(PLUGIN_PKG, pkg)
     shutil.copytree(CORE_PKG, pkg / "core")
+    # El HTML del panel viene del build de ui/; sin node basta una plantilla mínima.
+    (pkg / "panel.html").write_text(
+        _built_panel() or "<script>window.BB_I18N = __BB_I18N__;</script>", encoding="utf-8")
     orca, state = fake_orca(profiles_root)
     monkeypatch.setitem(sys.modules, "orca", orca)
     monkeypatch.syspath_prepend(str(pkg.parent))
@@ -211,36 +224,39 @@ def test_flashforge_and_converted_projects_are_ignored(plugin, tmp_path):
     assert state["notifications"] == []
 
 
-JS_DIR = PLUGIN_ROOT / "tests" / "js"
+def test_panel_messages_exist_for_every_key_used():
+    """Cada clave panel.* que usa panel.js existe en el catálogo inglés (y por tanto en todos)."""
+    import json
+    import re
+    used = set(re.findall(r"'(panel\.[a-z0-9_.]+)'", (UI_DIR / "src" / "panel.js").read_text(encoding="utf-8")))
+    english = json.loads((PLUGIN_PKG / "locales" / "en.json").read_text(encoding="utf-8"))
+    assert used, "no panel.* keys found in panel.js"
+    missing = sorted(used - set(english))
+    assert not missing, f"keys used in panel.js but missing in en.json: {missing}"
 
 
-def _page(tmp_path):
-    import runpy
-    page = runpy.run_path(str(PLUGIN_PKG / "panel_html.py"))["PAGE"]
-    path = tmp_path / "panel.html"
-    path.write_text(page, encoding="utf-8")
-    return page, path
+def test_page_injects_translations(plugin):
+    module, _, _ = plugin
+    html = module.page.render("en", template="<script>window.BB_I18N = __BB_I18N__;</script>")
+    assert '"panel.convert": "Convert"' in html and "__BB_I18N__" not in html
+    assert '"plugin.' not in html  # solo los textos del panel
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="node no disponible")
-def test_panel_javascript_parses(tmp_path):
-    page, _ = _page(tmp_path)
-    js = tmp_path / "panel.js"
-    js.write_text(page.split("<script>", 1)[1].split("</script>", 1)[0], encoding="utf-8")
-    subprocess.run(["node", "--check", str(js)], check=True)
+@pytest.mark.skipif(not HAVE_UI_TOOLS, reason="falta node o las dependencias de ui/ (cd orca-plugin/ui && npm ci)")
+def test_panel_flow_in_browser_dom(plugin, tmp_path):
+    """El panel compilado, en un DOM con el puente real de Orca: cargar, convertir, volver, mapa, cerrar.
 
-
-@pytest.mark.skipif(shutil.which("node") is None or not (JS_DIR / "node_modules" / "jsdom").exists(),
-                    reason="falta node o jsdom (cd tests/js && npm install)")
-def test_panel_flow_in_browser_dom(tmp_path):
-    """La página en un DOM con el shim real de Orca: cargar, convertir, volver, mapa, cerrar.
-
-    El shim de Orca traga las excepciones de JS, así que un error de la página
+    El puente de Orca traga las excepciones de JS, así que un error de la página
     (p. ej. leer un <select> ya borrado) solo se ve aquí.
     """
-    _, path = _page(tmp_path)
-    proc = subprocess.run(["node", str(JS_DIR / "panel_flow.js"), str(path)],
-                          capture_output=True, text=True, cwd=JS_DIR)
+    module, _, _ = plugin
+    html = module.page.render("es")
+    assert "/*__BB_CSS__*/" not in html and ".bg-accent" in html   # CSS de Tailwind incrustado
+    assert ".bg-red-500" not in html                                # y solo con clases usadas
+    path = tmp_path / "panel.html"
+    path.write_text(html, encoding="utf-8")
+    proc = subprocess.run(["node", str(UI_DIR / "tests" / "panel_flow.cjs"), str(path)],
+                          capture_output=True, text=True, cwd=UI_DIR)
     assert proc.returncode == 0, proc.stderr + proc.stdout
 
 
