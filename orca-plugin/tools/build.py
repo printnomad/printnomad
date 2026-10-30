@@ -33,7 +33,7 @@ def _record_line(name: str, data: bytes) -> str:
     return f"{name},sha256={digest},{len(data)}"
 
 
-PACKAGE_PATTERNS = ("*.py", "locales/*.json")
+PACKAGE_PATTERNS = ("*.py", "locales/*.json", "data/*.json")
 
 
 def _package_files(root: Path) -> list[Path]:
