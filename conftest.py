@@ -184,6 +184,7 @@ def build_profiles_tree(tmp_path: Path) -> Path:
             "type": "process", "name": f"{lh}mm Standard @FF C5", "instantiation": "true",
             "compatible_printers": [machine], "layer_height": lh.rstrip("0") if lh != "0.20" else "0.2",
             "sparse_infill_speed": "230", "outer_wall_speed": "150", "initial_layer_print_height": "0.25",
+            "enable_prime_tower": "1", "default_acceleration": "8000", "elefant_foot_compensation": "0.1",
         })
     _write(root / "OrcaFilamentLibrary/filament/base_pla.json", {
         "type": "filament", "name": "Generic PLA @System", "instantiation": "false",

@@ -341,3 +341,29 @@ def test_designer_cooling_kept_on_request_with_warning(lib, tmp_path):
     assert s["different_settings_to_system"][1] == "fan_max_speed"
     warning = next(w for w in result.report.warnings if "enfriamiento del modelo" in w)
     assert "fan_max_speed" in warning and "ironing_fan_speed" in warning
+
+
+def test_printer_dependent_process_settings_come_from_the_target(lib, tmp_path):
+    """Purge tower, accelerations, calibration and file naming belong to the printer."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PETG], [["2"]], object_extruders={"2": 2}, settings={
+        "enable_prime_tower": "0", "default_acceleration": "12000", "elefant_foot_compensation": "0",
+        "xy_hole_compensation": "0.05", "filename_format": "{input_filename_base}.gcode", "wall_loops": "4",
+        "different_settings_to_system": [
+            "enable_prime_tower;default_acceleration;elefant_foot_compensation;xy_hole_compensation;"
+            "filename_format;wall_loops", "", "", ""],
+    })
+    _, result, s = run(lib, path)
+    assert s["enable_prime_tower"] == "1" and s["default_acceleration"] == "8000"
+    assert s["elefant_foot_compensation"] == "0.1"
+    assert "xy_hole_compensation" not in s and "filename_format" not in s  # sin valor en el perfil: el del laminador
+    assert s["wall_loops"] == "4"                                          # del modelo
+    assert s["different_settings_to_system"][0].split(";") == ["initial_layer_print_height", "wall_loops"]
+    dropped = {d.key: d.reason for d in result.report.dropped}
+    assert "impresora" in dropped["enable_prime_tower"] and "xy_hole_compensation" in dropped
+    assert not any("ajustes de impresora del modelo" in w for w in result.report.warnings)
+
+    _, result, s = run(lib, path, keep_designer_printer_settings=True)
+    assert s["enable_prime_tower"] == "0" and s["default_acceleration"] == "12000"
+    assert s["xy_hole_compensation"] == "0.05"
+    warning = next(w for w in result.report.warnings if "ajustes de impresora del modelo" in w)
+    assert "enable_prime_tower" in warning

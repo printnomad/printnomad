@@ -35,6 +35,7 @@ OPTIONS: tuple[Option, ...] = (
     Option("map_mode", rules.MAP_COMPATIBLE, rules.MAP_MODES, warn_when=rules.MAP_EXACT),
     Option("keep_designer_filament", True),
     Option("keep_designer_cooling", False, warn_when=True),
+    Option("keep_designer_printer_settings", False, warn_when=True),
 )
 BY_KEY = {o.key: o for o in OPTIONS}
 

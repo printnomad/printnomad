@@ -145,5 +145,10 @@
   "option.keep_designer_cooling.help": "Los valores de ventiladores y enfriamiento del modelo se mantienen en lugar de los del perfil de tu impresora.",
   "option.keep_designer_cooling.warning": "Los porcentajes de ventilador son relativos a los ventiladores de cada impresora. Una impresora con ventiladores más potentes o más numerosos puede enfriar de más (poca adhesión entre capas, deformación en PETG/ABS) o de menos (voladizos y puentes caídos). Úsalo solo si el enfriamiento del modelo es esencial.",
   "cli.help.designer_cooling": "mantener los valores de enfriamiento del modelo (los ventiladores cambian entre impresoras: revisa el resultado)",
-  "cli.help.map_mode": "modo de asignación de filamentos: {modes} (por defecto: compatible)"
+  "cli.help.map_mode": "modo de asignación de filamentos: {modes} (por defecto: compatible)",
+  "reason.printer_setting": "depende de la impresora (torre de purga, aceleraciones, calibración); manda el perfil destino",
+  "convert.warn.designer_printer_settings": "se mantuvieron los ajustes de impresora del modelo ({keys}): se eligieron para la impresora de origen; revisa la torre de purga y la primera capa",
+  "option.keep_designer_printer_settings.label": "Mantener también los ajustes de impresora del modelo",
+  "option.keep_designer_printer_settings.help": "La torre de purga, las aceleraciones, el pie de elefante y la compensación XY, el flujo de la primera capa, el ajuste de arcos y el nombre del archivo G-code del modelo se mantienen en lugar de los del perfil de tu impresora.",
+  "option.keep_designer_printer_settings.warning": "Estos valores se eligieron para la impresora de origen. En una impresora de varios cabezales, apagar la torre de purga puede causar hilos o falta de material después de cada cambio de color; los valores de calibración (pie de elefante, compensación XY) son de tu máquina."
 }

@@ -145,5 +145,10 @@
   "option.keep_designer_cooling.help": "Fan and cooling values set in the model are kept instead of your printer's profile values.",
   "option.keep_designer_cooling.warning": "Fan percentages are relative to each printer's fans. A printer with stronger or more fans can over-cool (weak layer adhesion, warping in PETG/ABS) or under-cool (sagging overhangs and bridges). Use it only when the model's cooling is essential.",
   "cli.help.designer_cooling": "keep the model's cooling values (fans differ between printers: check the result)",
-  "cli.help.map_mode": "filament assignment mode: {modes} (default: compatible)"
+  "cli.help.map_mode": "filament assignment mode: {modes} (default: compatible)",
+  "reason.printer_setting": "depends on the printer (purge tower, accelerations, calibration); the target profile applies",
+  "convert.warn.designer_printer_settings": "the model's printer-dependent settings were kept ({keys}): they were chosen for the source printer; check the purge tower and the first layer",
+  "option.keep_designer_printer_settings.label": "Also keep the model's printer settings",
+  "option.keep_designer_printer_settings.help": "Purge tower, accelerations, elephant foot and XY compensation, first-layer flow, arc fitting and the G-code file name set in the model are kept instead of your printer's profile values.",
+  "option.keep_designer_printer_settings.warning": "These values were chosen for the source printer. On a printer with several toolheads, turning the purge tower off can cause stringing or missing material after each color change; calibration values (elephant foot, XY compensation) belong to your machine."
 }

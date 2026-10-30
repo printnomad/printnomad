@@ -91,6 +91,7 @@ def convert(
     user_map: dict[int, int] | None = None,
     keep_designer_filament: bool = True,
     keep_designer_cooling: bool = False,
+    keep_designer_printer_settings: bool = False,
     map_mode: str = rules.MAP_COMPATIBLE,
 ) -> ConversionResult:
     """Convierte `project` para la impresora `target`.
@@ -102,13 +103,22 @@ def convert(
     `keep_designer_cooling`: conservar también el enfriamiento que cambió el diseñador
     (proceso y filamentos); por defecto manda el perfil destino porque los ventiladores
     cambian de una impresora a otra.
+    `keep_designer_printer_settings`: conservar también los ajustes de proceso que dependen
+    de la impresora (torre de purga, aceleraciones, calibración; ver rules.PRINTER_PROCESS_KEY).
     `map_mode`: rules.MAP_COMPATIBLE | MAP_EXACT | MAP_BY_SLICER (ver options.py).
     """
     if map_mode not in rules.MAP_MODES:
         raise ValueError(f"map_mode must be one of {rules.MAP_MODES}, not {map_mode!r}")
 
     def keep_process_key(k: str) -> bool:
-        return keep_designer_cooling or not rules.is_cooling_key(k)
+        if rules.is_cooling_key(k):
+            return keep_designer_cooling
+        if rules.is_printer_process_key(k):
+            return keep_designer_printer_settings
+        return True
+
+    def process_reason(k: str) -> str:
+        return t("reason.cooling") if rules.is_cooling_key(k) else t("reason.printer_setting")
 
     report = Report(source=str(project.path), target=target.display_name, profiles=target.lib.source)
     result = ConversionResult(report=report)
@@ -176,11 +186,16 @@ def convert(
             out[k] = src[k]
         else:
             if k in author_process and k in src and src[k] != v:
-                report.dropped.append(FieldChange(k, src[k], v, t("reason.cooling")))
+                report.dropped.append(FieldChange(k, src[k], v, process_reason(k)))
             put(k, v, t("reason.target_process"))
     for k in sorted(author_process - set(process_cfg)):
-        if k in src and keep_process_key(k):
+        if k not in src or k in reasons:
+            continue
+        if keep_process_key(k):
             report.kept_author.append(FieldChange(k, src[k], t("value.no_profile_value"), t("reason.author")))
+        elif rules.is_printer_process_key(k):
+            # The target profile does not set it: the slicer's default applies.
+            report.dropped.append(FieldChange(k, out.pop(k), None, process_reason(k)))
     _collapse_variants(src, out, set(machine_cfg), target, put)
     for c in report.kept_author:
         msg = rules.check_value(c.key, out.get(c.key, c.original), limits)
@@ -324,6 +339,9 @@ def convert(
                           | {k for ks in kept_filament.values() for k in ks if rules.is_cooling_key(k)})
     if kept_cooling:
         report.warnings.append(t("convert.warn.designer_cooling", keys=", ".join(kept_cooling)))
+    kept_printer = sorted(c.key for c in report.kept_author if c.key in out and rules.is_printer_process_key(c.key))
+    if kept_printer:
+        report.warnings.append(t("convert.warn.designer_printer_settings", keys=", ".join(kept_printer)))
     for k, fixes in rules.VALUE_FIXES.items():
         value = out.get(k)
         values = value if isinstance(value, list) else [value]
