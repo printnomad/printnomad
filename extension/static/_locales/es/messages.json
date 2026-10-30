@@ -9,7 +9,7 @@
     "message": "Ajustes de BetterBridge"
   },
   "options_subtitle": {
-    "message": "Convierte proyectos para tus impresoras conservando los ajustes del diseñador."
+    "message": "Convierte proyectos para tus impresoras manteniendo los valores del modelo."
   },
   "printers_title": {
     "message": "Mis impresoras"
@@ -120,7 +120,7 @@
     "message": "Conversión"
   },
   "conversion_basic": {
-    "message": "BetterBridge elige los ajustes más seguros: el proyecto abre y lamina en cualquier laminador, con el enfriamiento de tu impresora y los ajustes de impresión del diseñador."
+    "message": "BetterBridge elige los ajustes más seguros: el proyecto abre y lamina en cualquier laminador, con el enfriamiento de tu impresora y los valores de impresión del modelo."
   },
   "conversion_advanced": {
     "message": "Modo avanzado"

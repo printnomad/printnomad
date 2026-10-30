@@ -334,10 +334,10 @@ def test_designer_cooling_kept_on_request_with_warning(lib, tmp_path):
     })
     _, result, s = run(lib, path)
     assert "ironing_fan_speed" not in s and s.get("fan_max_speed") != ["60"]
-    assert not any("enfriamiento del diseñador" in w for w in result.report.warnings)
+    assert not any("enfriamiento del modelo" in w for w in result.report.warnings)
 
     _, result, s = run(lib, path, keep_designer_cooling=True)
     assert s["ironing_fan_speed"] == ["40"] and s["fan_max_speed"] == ["60"]
     assert s["different_settings_to_system"][1] == "fan_max_speed"
-    warning = next(w for w in result.report.warnings if "enfriamiento del diseñador" in w)
+    warning = next(w for w in result.report.warnings if "enfriamiento del modelo" in w)
     assert "fan_max_speed" in warning and "ironing_fan_speed" in warning

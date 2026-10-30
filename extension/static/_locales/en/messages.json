@@ -11,7 +11,7 @@
     "message": "BetterBridge settings"
   },
   "options_subtitle": {
-    "message": "Convert projects for your own printers, keeping the designer's settings."
+    "message": "Convert projects for your own printers, keeping the model's settings."
   },
   "printers_title": {
     "message": "My printers"
@@ -127,7 +127,7 @@
     "message": "Conversion"
   },
   "conversion_basic": {
-    "message": "BetterBridge picks the safest settings: the project opens and slices in any slicer, with your printer's cooling and the designer's print settings."
+    "message": "BetterBridge picks the safest settings: the project opens and slices in any slicer, with your printer's cooling and the model's print settings."
   },
   "conversion_advanced": {
     "message": "Advanced mode"
