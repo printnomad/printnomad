@@ -75,6 +75,7 @@
   "profiles.error.no_process": "no process profiles for '{machine}'",
   "report.source": "Source:  {path} ({kind})",
   "report.target": "Target:  {target}",
+  "report.profiles": "Profiles: {source}",
   "report.output": "Output:  {path}",
   "report.not_written": "(not written)",
   "report.presets": "Presets: {items}",

@@ -48,6 +48,7 @@ class Report:
     output: str = ""
     source_kind: str = ""
     target: str = ""
+    profiles: str = ""  # source of the target profiles (folders or repo@ref)
     presets: dict[str, object] = field(default_factory=dict)
     changed: list[FieldChange] = field(default_factory=list)
     kept_author: list[FieldChange] = field(default_factory=list)
@@ -82,6 +83,7 @@ class Report:
         lines = [
             t("report.source", path=self.source, kind=self.source_kind),
             t("report.target", target=self.target),
+            *([t("report.profiles", source=self.profiles)] if self.profiles else []),
             t("report.output", path=self.output or t("report.not_written")),
         ]
         if self.presets:

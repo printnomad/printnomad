@@ -27,9 +27,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "core" / "src"))
 
-from betterbridge.profiles import INDEXED_KINDS, KINDS, LIBRARY_VENDOR, ProfileError, ProfileLibrary  # noqa: E402
+from betterbridge.profiles import INDEXED_KINDS, KINDS, LIBRARY_VENDOR, ProfileLibrary  # noqa: E402
 from betterbridge.slicers import registry  # noqa: E402
-from betterbridge.target import Target  # noqa: E402
+from betterbridge.web import usable_printers  # noqa: E402
 
 SCHEMA = 1
 
@@ -60,24 +60,10 @@ def bundle_files(vendor_dir: Path) -> dict[str, dict]:
     return files
 
 
-def usable_printers(lib: ProfileLibrary) -> dict[str, list[dict]]:
-    """{vendor: [printer]} for instantiable system machine presets with complete profiles."""
+def printers_by_vendor(lib: ProfileLibrary) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
-    for name in lib.names("machine"):
-        if str(lib.raw[("machine", name)].get("instantiation", "true")).lower() != "true":
-            continue
-        try:
-            target = Target(lib, name)
-        except ProfileError:
-            continue
-        if not target.is_usable():
-            continue
-        out.setdefault(lib.vendors[("machine", name)], []).append({
-            "name": name,
-            "model": target.printer_model,
-            "nozzle": target.nozzle,
-            "extruders": target.extruders,
-        })
+    for printer in usable_printers(lib):
+        out.setdefault(printer.pop("vendor"), []).append(printer)
     return out
 
 
@@ -87,7 +73,7 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path) 
         raise SystemExit(f"unknown slicer {slicer!r}; known: {', '.join(known)}")
     repo = known[slicer].profile_repo.get("github")
     lib = ProfileLibrary.from_roots([profiles])
-    printers = usable_printers(lib)
+    printers = printers_by_vendor(lib)
     has_library = (profiles / LIBRARY_VENDOR).is_dir()
 
     vendors: dict[str, dict] = {}

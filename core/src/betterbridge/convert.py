@@ -98,7 +98,7 @@ def convert(
     `keep_designer_filament`: conservar las temperaturas y la densidad que el diseñador
     cambió en sus filamentos (ver rules.DESIGNER_FILAMENT_KEEP).
     """
-    report = Report(source=str(project.path), target=target.display_name)
+    report = Report(source=str(project.path), target=target.display_name, profiles=target.lib.source)
     result = ConversionResult(report=report)
     kind = detect_source(project)
     report.source_kind = kind

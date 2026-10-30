@@ -74,6 +74,7 @@
   "profiles.error.root_not_found": "no se encontró la carpeta de perfiles del laminador (probado: {tried}). Usa --profiles-dir o la variable {env}.",
   "profiles.error.no_process": "no hay perfiles de proceso para '{machine}'",
   "report.source": "Origen:  {path} ({kind})",
+  "report.profiles": "Perfiles: {source}",
   "report.target": "Destino: {target}",
   "report.output": "Salida:  {path}",
   "report.not_written": "(no escrita)",

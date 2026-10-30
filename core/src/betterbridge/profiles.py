@@ -48,6 +48,8 @@ class ProfileLibrary:
     """
 
     roots: list[Path] = field(default_factory=list)
+    # Where the profiles come from, for the report (folders, or repo@ref of the bundles).
+    source: str = ""
     raw: dict[tuple[str, str], dict] = field(default_factory=dict)
     vendors: dict[tuple[str, str], str] = field(default_factory=dict)
     # Mismo nombre en varios fabricantes (p. ej. fdm_filament_pla en Flashforge y en
@@ -64,6 +66,7 @@ class ProfileLibrary:
     @classmethod
     def from_roots(cls, system_roots: list[Path], user_dirs: list[Path] = ()) -> ProfileLibrary:
         lib = cls(roots=[*system_roots, *user_dirs])
+        lib.source = ", ".join(str(r) for r in lib.roots if Path(r).is_dir())
         for root in system_roots:
             if not root.is_dir():
                 continue
@@ -86,6 +89,8 @@ class ProfileLibrary:
         give the same library for the same profiles.
         """
         lib = cls()
+        sources = (b.get("source") or (f"{b['repo']}@{b['ref']}" if b.get("repo") else b["vendor"]) for b in bundles)
+        lib.source = ", ".join(dict.fromkeys(sources))
         for bundle in sorted(bundles, key=lambda b: b["vendor"]):
             for rel, data in sorted(bundle.get("files", {}).items()):
                 kind = rel.split("/", 1)[0]
