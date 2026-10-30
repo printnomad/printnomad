@@ -136,6 +136,11 @@ def _write(path: Path, data: dict) -> None:
 @pytest.fixture
 def profiles_root(tmp_path: Path) -> Path:
     """Árbol mínimo con la misma forma que el de Flash Studio (herencia incluida)."""
+    return build_profiles_tree(tmp_path)
+
+
+def build_profiles_tree(tmp_path: Path) -> Path:
+    """Crea el árbol de perfiles falso en `tmp_path/profiles` (también para pruebas fuera de pytest)."""
     root = tmp_path / "profiles"
     ff = root / "Flashforge"
     machine = "Flashforge Creator 5 Pro 0.4 nozzle"
