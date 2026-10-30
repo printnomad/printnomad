@@ -1,0 +1,18 @@
+[project]
+name = "betterbridge"
+version = "0.1.0"
+description = "Convert 3MF slicer projects between printers and Orca-based slicers, keeping the designer's settings"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.12"
+dependencies = []  # solo biblioteca estándar: debe funcionar en Pyodide y en el Python de OrcaSlicer
+
+[project.scripts]
+betterbridge = "betterbridge.cli:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
