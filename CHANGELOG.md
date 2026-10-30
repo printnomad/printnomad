@@ -8,6 +8,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - Internationalisation: all user-facing text in JSON catalogs (English and Spanish), `--lang` option, language detection (system or OrcaSlicer's), translation guide in `docs/translating.md` with automatic checks for translators.
 
 ### Changed
+- OrcaSlicer plugin panel rebuilt with Tailwind CSS v4 (only the classes in use are shipped, ~9 KiB), semantic light/dark theme tokens, translated text, separate `ui/` sources with a Node build; tested in jsdom with OrcaSlicer's real JS bridge.
 - The report flags `needs_map` when filaments must be assigned to extruders manually (the CLI and the plugin no longer parse error text).
 - The OrcaSlicer plugin capability is now named `BetterBridge` (re-enable it once in the Plugins dialog).
 - Repository reorganised as a monorepo (`core/`, `orca-plugin/`, `tools/`), licensed AGPL-3.0-or-later, with contribution guidelines and CI.
