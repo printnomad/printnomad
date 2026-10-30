@@ -99,8 +99,9 @@ try {
     return null;
   });
   if (item?.state !== "complete") throw new Error(`no converted file downloaded (status: ${status})\n${report}`);
+  // The status shows the saved file's name (a GUID under CDP); the report, the converted name.
   const expected = file.split("/").pop().replace(/\.3mf$/, "_");
-  if (!status.includes(expected)) throw new Error(`unexpected status: ${status}`);
+  if (!report.includes(expected)) throw new Error(`unexpected report (status: ${status}):\n${report}`);
   const bytes = readFileSync(item.filename);
   if (bytes.readUInt32LE(0) !== 0x04034b50) throw new Error(`${item.filename} is not a ZIP file`);
   if (!report.includes("Flashforge") && !process.env.BB_E2E_FILE) throw new Error(`unexpected report:\n${report}`);

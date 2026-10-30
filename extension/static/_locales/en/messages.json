@@ -109,5 +109,15 @@
   },
   "profiles_hint": {
     "message": "The official profiles of each slicer, updated automatically. Your own presets will be available with the BetterBridge helper app."
+  },
+  "convert_saving": {
+    "message": "Saving $1…",
+    "description": "$1 = file name"
+  },
+  "convert_not_saved": {
+    "message": "The converted file was not saved (download cancelled)."
+  },
+  "convert_tip": {
+    "message": "Open it as it is: your printer is already selected. If you pick the printer again in the slicer, choose “Transfer” to keep the model's values (“Discard” resets them to your printer's profile)."
   }
 }

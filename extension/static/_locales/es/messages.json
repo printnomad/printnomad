@@ -103,5 +103,14 @@
   },
   "profiles_hint": {
     "message": "Los perfiles oficiales de cada laminador, actualizados automáticamente. Tus propios presets estarán disponibles con la app auxiliar de BetterBridge."
+  },
+  "convert_saving": {
+    "message": "Guardando $1…"
+  },
+  "convert_not_saved": {
+    "message": "El archivo convertido no se guardó (descarga cancelada)."
+  },
+  "convert_tip": {
+    "message": "Ábrelo tal cual: tu impresora ya está seleccionada. Si vuelves a elegir la impresora en el laminador, pulsa «Transfer» (Transferir) para mantener los valores del modelo («Discard» los cambia por los del perfil de tu impresora)."
   }
 }

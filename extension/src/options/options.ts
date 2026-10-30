@@ -225,6 +225,8 @@ async function convertFile(event: SubmitEvent) {
   const file = $<HTMLInputElement>("convert-file").files?.[0];
   const printer = settings.printers.find((p) => p.id === $<HTMLSelectElement>("convert-printer").value);
   $("convert-show").hidden = true;
+  $("convert-tip").hidden = true;
+  lastDownload = null;
   $("convert-report").textContent = "";
   if (!printer) return showStatus("warn", t("convert_no_printers"));
   if (!file) return showStatus("warn", t("convert_no_file"));
@@ -242,11 +244,21 @@ async function convertFile(event: SubmitEvent) {
     $("convert-report").textContent = res.text;
     if (res.output) {
       const url = URL.createObjectURL(new Blob([res.output.data], { type: "model/3mf" }));
-      lastDownload = await chrome.downloads.download({ url, filename: res.output.name, conflictAction: "uniquify" });
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      showStatus(res.report && (res.report.warnings as unknown[]).length ? "warn" : "ok",
-        t("convert_ok", res.output.name, (res.ms / 1000).toFixed(1)));
-      $("convert-show").hidden = false;
+      const id = await chrome.downloads.download({ url, filename: res.output.name, conflictAction: "uniquify" });
+      showStatus("info", t("convert_saving", res.output.name));
+      // With "Ask where to save each file" the download only finishes once the user
+      // picks a folder; the blob must live until then and Finder has nothing to show before.
+      const item = await downloadFinished(id);
+      URL.revokeObjectURL(url);
+      if (item?.state === "complete") {
+        lastDownload = id;
+        showStatus(res.report && (res.report.warnings as unknown[]).length ? "warn" : "ok",
+          t("convert_ok", item.filename.split(/[\\/]/).pop() ?? res.output.name, (res.ms / 1000).toFixed(1)));
+        $("convert-show").hidden = false;
+        $("convert-tip").hidden = false;
+      } else {
+        showStatus("warn", t("convert_not_saved"));
+      }
     } else {
       showStatus("error", res.needsMap ? t("convert_needs_map") : t("convert_failed"));
       ($("convert-details") as HTMLDetailsElement).open = true;
@@ -256,6 +268,32 @@ async function convertFile(event: SubmitEvent) {
   } finally {
     button.disabled = false;
   }
+}
+
+/** Final state of a download (complete or interrupted, e.g. cancelled in the save dialog). */
+function downloadFinished(id: number): Promise<chrome.downloads.DownloadItem | undefined> {
+  return new Promise((resolve) => {
+    const check = async () => {
+      const [item] = await chrome.downloads.search({ id });
+      if (!item || item.state !== "in_progress") {
+        chrome.downloads.onChanged.removeListener(onChanged);
+        resolve(item);
+      }
+    };
+    const onChanged = (delta: chrome.downloads.DownloadDelta) => {
+      if (delta.id === id && delta.state) void check();
+    };
+    chrome.downloads.onChanged.addListener(onChanged);
+    void check();
+  });
+}
+
+async function showInFolder() {
+  if (lastDownload === null) return;
+  const [item] = await chrome.downloads.search({ id: lastDownload });
+  // The file may have been moved or deleted since: open the downloads folder instead.
+  if (item?.exists) chrome.downloads.show(lastDownload);
+  else chrome.downloads.showDefaultFolder();
 }
 
 // --- wiring -----------------------------------------------------------------
@@ -288,7 +326,7 @@ async function main() {
     renderOptions();
   };
   $<HTMLFormElement>("convert").onsubmit = (e) => void convertFile(e as SubmitEvent);
-  $("convert-show").onclick = () => lastDownload !== null && chrome.downloads.show(lastDownload);
+  $("convert-show").onclick = () => void showInFolder();
 }
 
 void main();
