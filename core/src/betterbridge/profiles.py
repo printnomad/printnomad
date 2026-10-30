@@ -11,6 +11,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .i18n import t
+
 ENV_PROFILES = "BETTERBRIDGE_PROFILES"
 
 DEFAULT_ROOTS = (
@@ -59,7 +61,7 @@ class ProfileLibrary:
                     if name and real_kind in KINDS:
                         lib.raw.setdefault((real_kind, name), data)
         if not lib.raw:
-            raise ProfileError(f"no se encontraron perfiles en {root}")
+            raise ProfileError(t("profiles.error.none_found", root=root))
         return lib
 
     def has(self, kind: str, name: str) -> bool:
@@ -75,11 +77,11 @@ class ProfileLibrary:
         current: str | None = name
         while current:
             if current in seen:
-                raise ProfileError(f"herencia circular en {kind} '{current}'")
+                raise ProfileError(t("profiles.error.circular", kind=kind, name=current))
             seen.add(current)
             data = self.raw.get((kind, current))
             if data is None:
-                raise ProfileError(f"perfil {kind} '{current}' no encontrado (heredado por '{name}')")
+                raise ProfileError(t("profiles.error.not_found", kind=kind, name=current, child=name))
             chain.append(data)
             current = data.get("inherits") or None
         merged: dict = {}
@@ -119,7 +121,4 @@ def find_root(explicit: str | Path | None = None) -> Path:
         if (c / "Flashforge").is_dir():
             return c
     tried = ", ".join(str(c) for c in candidates)
-    raise ProfileError(
-        f"no se encontró el directorio de perfiles de Flash Studio (probado: {tried}). "
-        f"Usa --profiles-dir o la variable {ENV_PROFILES}."
-    )
+    raise ProfileError(t("profiles.error.root_not_found", tried=tried, env=ENV_PROFILES))

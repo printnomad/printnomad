@@ -8,6 +8,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
+from .i18n import t
 from .read_3mf import Project3MF
 
 
@@ -36,9 +37,9 @@ def write(
 ) -> None:
     dest = Path(dest)
     if dest.resolve() == Path(project.path).resolve():
-        raise WriteError("la salida no puede ser el archivo original")
+        raise WriteError(t("write.error.same_as_source"))
     if dest.exists() and not force:
-        raise WriteError(f"{dest} ya existe (usa --force para sobrescribir)")
+        raise WriteError(t("write.error.exists", path=dest))
 
     # Escritura atómica: archivo temporal en la misma carpeta y rename.
     fd, tmp = tempfile.mkstemp(prefix=".betterbridge-", suffix=".3mf", dir=dest.parent)
@@ -78,16 +79,16 @@ def verify(source: Project3MF, dest: Path, replaced: dict[str, bytes]) -> list[s
         with zipfile.ZipFile(dest) as zf:
             bad = zf.testzip()
             if bad:
-                problems.append(f"entrada corrupta en la salida: {bad}")
+                problems.append(t("write.error.corrupt_entry", name=bad))
             names = set(zf.namelist())
             for name in source.geometry_names():
                 if name not in names:
-                    problems.append(f"falta geometría {name}")
+                    problems.append(t("write.error.missing_geometry", name=name))
                 elif hashlib.sha256(zf.read(name)).digest() != hashlib.sha256(source.read(name)).digest():
-                    problems.append(f"geometría modificada: {name}")
+                    problems.append(t("write.error.geometry_modified", name=name))
             for name, data in replaced.items():
                 if zf.read(name) != data:
-                    problems.append(f"contenido inesperado en {name}")
+                    problems.append(t("write.error.unexpected_content", name=name))
     except zipfile.BadZipFile as e:
-        problems.append(f"la salida no es un ZIP válido: {e}")
+        problems.append(t("write.error.not_zip", detail=e))
     return problems

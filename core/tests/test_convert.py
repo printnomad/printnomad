@@ -2,11 +2,11 @@ import json
 import xml.etree.ElementTree as ET
 
 import pytest
+
 from betterbridge import read_3mf
 from betterbridge.convert import convert
 from betterbridge.model_edit import meta
 from betterbridge.profiles import ProfileLibrary
-
 from conftest import make_bambu_3mf
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
@@ -138,7 +138,7 @@ def test_more_than_four_filaments(lib, tmp_path):
     # Pintura de color: uso desconocido, hace falta --map.
     painted = make_bambu_3mf(tmp_path / "b.3mf", fil, [["2"]], paint=True)
     _, result, _ = run(lib, painted)
-    assert not result.report.ok and any("--map" in e for e in result.report.errors)
+    assert not result.report.ok and result.report.needs_map
     _, result, s = run(lib, painted, user_map={1: 1, 2: 2, 3: 3, 4: 4, 5: 1})
     assert result.report.ok
     assert s["filament_map"] == ["1", "2", "3", "4", "1"]

@@ -1,4 +1,4 @@
-"""Uso: python cli.py entrada.3mf --target creator5pro [--map 1:1,2:2,5:1]"""
+"""Command line: `betterbridge entrada.3mf --target creator5pro [--map 1:1,2:2,5:1] [--lang es]`"""
 
 from __future__ import annotations
 
@@ -6,8 +6,9 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import read_3mf, write_3mf
+from . import i18n, read_3mf, write_3mf
 from .convert import convert
+from .i18n import t
 from .printer_profiles import creator5pro
 from .profiles import ProfileError, ProfileLibrary, find_root
 from .remap_filaments import MapError, parse_map
@@ -18,32 +19,45 @@ EXIT_OK, EXIT_ERROR, EXIT_NEEDS_INPUT = 0, 1, 2
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="betterbridge", description="Convierte un .3mf a otra impresora.")
-    p.add_argument("input", type=Path, help="proyecto .3mf de origen (no se modifica)")
+    p = argparse.ArgumentParser(prog="betterbridge", description=t("cli.description"))
+    p.add_argument("input", type=Path, help=t("cli.help.input"))
     p.add_argument("--target", default=creator5pro.KEY, choices=sorted(TARGETS))
-    p.add_argument("--map", help="filamento:extrusor separados por comas, p. ej. 1:1,2:2,5:1")
-    p.add_argument("--nozzle", help="diámetro de boquilla destino (por defecto, el del origen)")
-    p.add_argument("--out", type=Path, help="archivo o carpeta de salida (por defecto, junto al original)")
-    p.add_argument("--profiles-dir", help="carpeta 'profiles' de Flash Studio")
-    p.add_argument("--report", type=Path, help="ruta del reporte JSON (por defecto, junto a la salida)")
-    p.add_argument("--force", action="store_true", help="sobrescribir la salida si existe")
-    p.add_argument("-v", "--verbose", action="store_true", help="listar cada campo cambiado")
+    p.add_argument("--map", help=t("cli.help.map"))
+    p.add_argument("--nozzle", help=t("cli.help.nozzle"))
+    p.add_argument("--out", type=Path, help=t("cli.help.out"))
+    p.add_argument("--profiles-dir", help=t("cli.help.profiles_dir"))
+    p.add_argument("--report", type=Path, help=t("cli.help.report"))
+    p.add_argument("--force", action="store_true", help=t("cli.help.force"))
+    p.add_argument("-v", "--verbose", action="store_true", help=t("cli.help.verbose"))
+    p.add_argument("--lang", help=t("cli.help.lang", languages=", ".join(i18n.available_languages())))
     return p
 
 
+def _lang_from_argv(argv: list[str]) -> str | None:
+    """`--lang` se lee antes de construir el parser para que la ayuda salga en ese idioma."""
+    for i, arg in enumerate(argv):
+        if arg == "--lang" and i + 1 < len(argv):
+            return argv[i + 1]
+        if arg.startswith("--lang="):
+            return arg.split("=", 1)[1]
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    i18n.set_language(_lang_from_argv(argv))
     args = build_parser().parse_args(argv)
     target = TARGETS[args.target]
     src: Path = args.input
     if not src.is_file():
-        print(f"error: no existe {src}", file=sys.stderr)
+        print(t("cli.error", message=t("cli.error.no_such_file", path=src)), file=sys.stderr)
         return EXIT_ERROR
 
     try:
         user_map = parse_map(args.map) if args.map else None
         lib = ProfileLibrary.load(find_root(args.profiles_dir))
     except (MapError, ProfileError) as e:
-        print(f"error: {e}", file=sys.stderr)
+        print(t("cli.error", message=e), file=sys.stderr)
         return EXIT_ERROR
 
     before = write_3mf.sha256_file(src)
@@ -56,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
         dest = args.out / dest.name if args.out.is_dir() else args.out
     report_path = args.report or dest.with_suffix(".report.json")
 
+    if report.ok and dest.exists() and not args.force:
+        report.errors.append(t("cli.error.exists", path=dest))
     if report.ok:
         try:
             write_3mf.write(project, dest, result.files, result.removed, force=args.force)
@@ -65,15 +81,17 @@ def main(argv: list[str] | None = None) -> int:
             report.output = str(dest)
             report.errors.extend(write_3mf.verify(project, dest, result.files))
     if write_3mf.sha256_file(src) != before:
-        report.errors.append("el archivo original cambió durante la conversión")
+        report.errors.append(t("cli.error.original_changed"))
 
     report_path.write_text(report.to_json(), encoding="utf-8")
     print(report.to_text(verbose=args.verbose))
-    print(f"Reporte: {report_path}")
+    print(t("cli.report_path", path=report_path))
     if report.ok:
         return EXIT_OK
-    needs_map = any("--map" in e for e in report.errors)
-    return EXIT_NEEDS_INPUT if needs_map else EXIT_ERROR
+    if report.needs_map:
+        print(t("cli.hint_map"), file=sys.stderr)
+        return EXIT_NEEDS_INPUT
+    return EXIT_ERROR
 
 
 if __name__ == "__main__":

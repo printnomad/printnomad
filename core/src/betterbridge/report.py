@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 
+from .i18n import t
+
 
 def _short(value, limit: int = 80) -> str:
     text = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
@@ -58,6 +60,8 @@ class Report:
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)  # informativo: no requiere acción
     errors: list[str] = field(default_factory=list)
+    # Hace falta que el usuario asigne filamentos a extrusores (CLI --map o tabla del plugin).
+    needs_map: bool = False
 
     @property
     def ok(self) -> bool:
@@ -76,44 +80,47 @@ class Report:
 
     def to_text(self, verbose: bool = False) -> str:
         lines = [
-            f"Origen:  {self.source} ({self.source_kind})",
-            f"Destino: {self.target}",
-            f"Salida:  {self.output or '(no escrita)'}",
+            t("report.source", path=self.source, kind=self.source_kind),
+            t("report.target", target=self.target),
+            t("report.output", path=self.output or t("report.not_written")),
         ]
         if self.presets:
-            lines.append("Presets: " + ", ".join(f"{k}={_short(v, 120)}" for k, v in self.presets.items()))
+            items = ", ".join(f"{k}={_short(v, 120)}" for k, v in self.presets.items())
+            lines.append(t("report.presets", items=items))
         if self.filaments:
-            lines.append("Filamentos:")
+            lines.append(t("report.filaments"))
             for f in self.filaments:
-                ext = ", ".join(f"placa {p}→E{e}" for p, e in f.extruders.items()) or "sin uso"
+                ext = ", ".join(t("report.plate_extruder", plate=p, extruder=e) for p, e in f.extruders.items())
                 lines.append(f"  #{f.index} {f.source_type} {f.colour} '{f.source_profile}' → "
-                             f"'{f.target_profile or 'SIN EQUIVALENTE'}' ({ext})")
-        lines.append(f"Campos cambiados: {len(self.changed)}")
+                             f"'{f.target_profile or t('report.no_equivalent')}' ({ext or t('report.unused')})")
+        lines.append(t("report.changed", count=len(self.changed)))
         if verbose:
             lines += [f"  {c.key}: {_short(c.original)} → {_short(c.final)} [{c.reason}]" for c in self.changed]
         if self.kept_author:
-            lines.append(f"Ajustes del autor conservados: {len(self.kept_author)}")
-            lines += [f"  {c.key}: {_short(c.original)} (perfil C5P: {_short(c.final)})" for c in self.kept_author]
+            lines.append(t("report.kept_author", count=len(self.kept_author)))
+            lines += [f"  {c.key}: {_short(c.original)} " + t("report.kept_author_line", value=_short(c.final))
+                      for c in self.kept_author]
         if self.dropped:
-            lines.append(f"Descartados: {len(self.dropped)}")
+            lines.append(t("report.dropped", count=len(self.dropped)))
             lines += [f"  {c.key}: {_short(c.original)} [{c.reason}]" for c in self.dropped]
         if self.object_overrides:
-            lines.append(f"Overrides por objeto/pieza: {len(self.object_overrides)}")
+            lines.append(t("report.object_overrides", count=len(self.object_overrides)))
             for o in self.object_overrides:
                 where = o.object + (f" / {o.part}" if o.part else "")
                 lines.append(f"  {where}: {o.key} {o.original} → {o.final} [{o.reason}]")
-        sections = (("Posiciones en plato", self.positions), ("Placas", self.plates), ("Archivos", self.files))
+        sections = ((t("report.positions"), self.positions), (t("report.plates"), self.plates),
+                    (t("report.files"), self.files))
         for title, items in sections:
             if items:
                 lines.append(f"{title}: {len(items)}")
                 lines += [f"  {c.key}: {_short(c.original)} → {_short(c.final)} [{c.reason}]" for c in items]
         if self.notes:
-            lines.append("Notas:")
+            lines.append(t("report.notes"))
             lines += [f"  · {n}" for n in self.notes]
         if self.warnings:
-            lines.append(f"ADVERTENCIAS ({len(self.warnings)}):")
+            lines.append(t("report.warnings", count=len(self.warnings)))
             lines += [f"  ! {w}" for w in self.warnings]
         if self.errors:
-            lines.append(f"ERRORES ({len(self.errors)}):")
+            lines.append(t("report.errors", count=len(self.errors)))
             lines += [f"  ✗ {e}" for e in self.errors]
         return "\n".join(lines)

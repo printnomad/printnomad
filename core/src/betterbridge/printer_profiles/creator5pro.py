@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 
+from ..i18n import t
 from ..profiles import ProfileError, ProfileLibrary
 
 KEY = "creator5pro"
@@ -37,11 +38,11 @@ BAMBU_ONLY_KEYS = frozenset({
 })
 
 # Ajustes de proceso que se toman del proyecto original aunque el autor no los
-# haya cambiado, con el motivo que va al reporte.
+# haya cambiado, con la clave i18n del motivo que va al reporte.
 KEEP_SOURCE_PROCESS_KEYS = {
     # Orca corta la primera capa a media altura: con una primera capa más alta,
     # los objetos muy finos (logos de una capa) desaparecen.
-    "initial_layer_print_height": "altura de primera capa del proyecto (los objetos finos dependen de ella)",
+    "initial_layer_print_height": "reason.first_layer",  # clave del catálogo i18n
 }
 
 # Máscara de extrusores en los que puede imprimirse cada filamento (bit 0 = E1).
@@ -105,7 +106,7 @@ GENERIC_TOKENS = frozenset({"bambu", "lab", "generic", "basic", "flashforge", "p
 def pick_process(lib: ProfileLibrary, machine: str, layer_height: float) -> str:
     names = lib.instantiable("process", machine)
     if not names:
-        raise ProfileError(f"no hay perfiles de proceso para '{machine}'")
+        raise ProfileError(t("profiles.error.no_process", machine=machine))
     return min(names, key=lambda n: (abs(float(lib.resolve("process", n).get("layer_height", 0)) - layer_height), n))
 
 
@@ -180,13 +181,13 @@ def check_value(key: str, value, limits: dict[str, float]) -> str | None:
     except ValueError:
         return None
     if key == "travel_acceleration" and num > limits["travel_acceleration"]:
-        return f"{key}={text} supera aceleración máxima de viaje {limits['travel_acceleration']:g}"
+        return t("limit.travel_acceleration", key=key, value=text, max=f"{limits['travel_acceleration']:g}")
     if key.endswith("_acceleration") and key != "travel_acceleration" and num > limits["acceleration"]:
-        return f"{key}={text} supera aceleración máxima {limits['acceleration']:g}"
+        return t("limit.acceleration", key=key, value=text, max=f"{limits['acceleration']:g}")
     if key.endswith("_speed") and not key.startswith(("fan", "filament", "deretraction", "retraction", "z_hop")) \
             and "fan" not in key and num > limits["speed"]:
-        return f"{key}={text} supera velocidad máxima {limits['speed']:g} mm/s"
+        return t("limit.speed", key=key, value=text, max=f"{limits['speed']:g}")
     if key == "layer_height" and not (limits["min_layer_height"] <= num <= limits["max_layer_height"]):
-        return (f"layer_height={text} fuera de rango "
-                f"{limits['min_layer_height']:g}–{limits['max_layer_height']:g}")
+        return t("limit.layer_height", value=text, min=f"{limits['min_layer_height']:g}",
+                 max=f"{limits['max_layer_height']:g}")
     return None

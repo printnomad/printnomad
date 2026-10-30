@@ -1,4 +1,5 @@
 import pytest
+
 from betterbridge.printer_profiles import creator5pro as t
 from betterbridge.profiles import ProfileError, ProfileLibrary, find_root
 
