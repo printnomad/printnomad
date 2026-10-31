@@ -91,3 +91,15 @@ def test_cli_printers_lists_presets(tmp_path, monkeypatch, capsys):
     assert cli.main(["printers", "--json", "--all"]) == cli.EXIT_OK
     assert [r["printer"] for r in _json.loads(capsys.readouterr().out)] == ["Broken", "V Printer 0.4 nozzle"]
     assert cli.main(["printers", "--search", "nothing"]) == cli.EXIT_OK
+
+
+def test_verify_detects_changed_geometry_and_content(tmp_path):
+    src = make_bambu_3mf(tmp_path / "a.3mf", [("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")], [["2"]])
+    project = read_3mf.load(src)
+    geometry = project.geometry_names()[0]
+    dest = tmp_path / "out.3mf"
+    write_3mf.write(project, dest, {read_3mf.PROJECT_SETTINGS: b"{}", geometry: b"<changed/>"})
+    problems = write_3mf.verify(project, dest, {read_3mf.PROJECT_SETTINGS: b"{}"})
+    assert any(geometry in p for p in problems)
+    other = write_3mf.verify(project, dest, {read_3mf.PROJECT_SETTINGS: b"[]"})
+    assert any(read_3mf.PROJECT_SETTINGS in p for p in other)

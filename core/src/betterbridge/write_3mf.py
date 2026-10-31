@@ -6,6 +6,7 @@ import hashlib
 import os
 import tempfile
 import zipfile
+import zlib
 from pathlib import Path
 
 from .i18n import t
@@ -73,22 +74,33 @@ def write(
 
 
 def verify(source: Project3MF, dest: Path, replaced: dict[str, bytes]) -> list[str]:
-    """Comprueba ZIP válido y geometría byte-idéntica. Devuelve lista de problemas."""
+    """Comprueba ZIP válido, geometría byte-idéntica y contenido reemplazado. Devuelve problemas.
+
+    Sin descomprimir lo copiado: cada entrada del ZIP lleva el CRC-32 y el tamaño de sus
+    datos (calculados al escribir), así que una entrada copiada coincide con la original
+    si coinciden ambos. Solo se leen las entradas reemplazadas (pequeñas). Antes se
+    descomprimía todo y se calculaba sha256 de la geometría dos veces: en el navegador
+    era la mitad del tiempo de conversión.
+    """
     problems: list[str] = []
     try:
         with zipfile.ZipFile(dest) as zf:
-            bad = zf.testzip()
-            if bad:
-                problems.append(t("write.error.corrupt_entry", name=bad))
-            names = set(zf.namelist())
+            infos = {i.filename: i for i in zf.infolist()}
             for name in source.geometry_names():
-                if name not in names:
+                info, original = infos.get(name), source.entries[name].info
+                data = source.read(name)
+                # The source's own CRC when it has one; else computed (projects built in memory).
+                expected = (original.CRC if original.CRC else zlib.crc32(data), len(data))
+                if info is None:
                     problems.append(t("write.error.missing_geometry", name=name))
-                elif hashlib.sha256(zf.read(name)).digest() != hashlib.sha256(source.read(name)).digest():
+                elif (info.CRC, info.file_size) != expected:
                     problems.append(t("write.error.geometry_modified", name=name))
             for name, data in replaced.items():
-                if zf.read(name) != data:
-                    problems.append(t("write.error.unexpected_content", name=name))
+                try:
+                    if zf.read(name) != data:  # read() also checks the CRC
+                        problems.append(t("write.error.unexpected_content", name=name))
+                except zipfile.BadZipFile:
+                    problems.append(t("write.error.corrupt_entry", name=name))
     except zipfile.BadZipFile as e:
         problems.append(t("write.error.not_zip", detail=e))
     return problems
