@@ -229,5 +229,35 @@
   },
   "mw_error_menu": {
     "message": "No se encontró el menú de descarga de MakerWorld"
+  },
+  "convert_choose_extruders": {
+    "message": "Elige qué cabezal imprime cada color"
+  },
+  "convert_not_converted": {
+    "message": "No se convirtió"
+  },
+  "map_title": {
+    "message": "Asigna $1 colores a los $2 cabezales de $3"
+  },
+  "map_hint": {
+    "message": "Una placa usa más colores que cabezales tiene la impresora, así que algunos colores se imprimirán igual. Sugerencia: colores parecidos del mismo material comparten cabezal; cámbialo si quieres."
+  },
+  "map_extruder": {
+    "message": "Cabezal $1"
+  },
+  "map_plates": {
+    "message": "Placas $1"
+  },
+  "map_unused": {
+    "message": "$1 colores del proyecto no se usan y siguen a uno parecido."
+  },
+  "map_mixed": {
+    "message": "El cabezal $1 tiene materiales distintos: un material por cabezal."
+  },
+  "map_convert": {
+    "message": "Convertir"
+  },
+  "map_cancel": {
+    "message": "Cancelar"
   }
 }

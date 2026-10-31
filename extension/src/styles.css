@@ -32,7 +32,8 @@
   --color-err-soft: var(--bb-err-soft);
 }
 
-:root {
+:root,
+:host {
   --bb-bg: #f2f2f7;
   --bb-surface: #ffffff;
   --bb-sunken: #f2f2f7;
@@ -53,7 +54,8 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root,
+  :host {
     --bb-bg: #000000;
     --bb-surface: #1c1c1e;
     --bb-sunken: #2c2c2e;

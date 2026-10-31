@@ -35,10 +35,13 @@ from conftest import build_profiles_tree, make_bambu_3mf
 work = Path(${JSON.stringify(work)})
 build_profiles_tree(work)
 make_bambu_3mf(work / "boat.3mf", [("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")], [["2"]])
+# 5 colours painted on one plate: more than the 4 extruders, needs an assignment.
+colours = ["#000000", "#2A2E32", "#FFFFFF", "#FF6A13", "#136935"]
+make_bambu_3mf(work / "painted.3mf", [("PLA", "Bambu PLA Basic @BBL A1", c) for c in colours], [["2"]], paint=(1, 2, 3, 4, 5))
 `]);
   execFileSync(python, [join(repo, "tools/build_profile_catalog.py"), "--slicer", "flashstudio",
     "--profiles", join(work, "profiles"), "--ref", "test", "--out", join(work, "catalog")]);
-  return { project: join(work, "boat.3mf"), catalog: join(work, "catalog") };
+  return { project: join(work, "boat.3mf"), painted: join(work, "painted.3mf"), catalog: join(work, "catalog") };
 }
 
 export function buildExtension(env = {}) {

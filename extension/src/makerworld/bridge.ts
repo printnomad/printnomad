@@ -37,13 +37,20 @@ async function prepare(): Promise<null> {
   return null;
 }
 
-async function convert(printerId: string, name: string, data: ArrayBuffer): Promise<ConvertOutcome> {
+// The last project received: converting again with an assignment does not download it again.
+let lastProject: { name: string; data: ArrayBuffer } | null = null;
+
+async function convert(printerId: string, name?: string, data?: ArrayBuffer, map?: string): Promise<ConvertOutcome> {
+  if (name && data) lastProject = { name, data };
+  if (!lastProject) return { status: "error", message: "no project" };
   const settings = await loadSettings();
   const printer = settings.printers.find((p) => p.id === printerId);
   if (!printer) return { status: "error", message: "printer not found" };
-  const [platform, sourceBundles] = await Promise.all([platformKey(), converter.sourceProfiles(name, data)]);
-  const res = await converter.convert(printer, name, data, settings, platform, sourceBundles);
+  const project = lastProject;
+  const [platform, sourceBundles] = await Promise.all([platformKey(), converter.sourceProfiles(project.name, project.data)]);
+  const res = await converter.convert(printer, project.name, project.data, settings, platform, sourceBundles, map);
   if (res.alreadyTarget) return { status: "already" };
+  if (!res.output && res.needsMap && res.plan) return { status: "needs-map", plan: res.plan };
   if (!res.output) return { status: "error", message: res.text, needsMap: res.needsMap };
   const download = await saveOutput(res.output);
   if (!download.saved) return { status: "cancelled" };
@@ -58,7 +65,7 @@ window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
   try {
     const result = request.type === "printers" ? await printers()
       : request.type === "prepare" ? await prepare()
-      : await convert(request.printerId, request.name, request.data);
+      : await convert(request.printerId, request.name, request.data, request.map);
     reply({ source: BRIDGE, id: request.id, ok: true, result });
   } catch (err) {
     reply({ source: BRIDGE, id: request.id, ok: false, error: err instanceof Error ? err.message : String(err) });

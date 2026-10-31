@@ -4,6 +4,7 @@ import type { OptionInfo } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
 import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
+import { mapEditor } from "../lib/map-editor.ts";
 import type { Catalog } from "../profiles/catalog.ts";
 import {
   allNozzles,
@@ -449,19 +450,40 @@ function resultRow(printer: MyPrinter, fileName: string) {
     openDetails() {
       (field("details") as HTMLDetailsElement).open = true;
     },
+    /** Show (or hide, with null) the filament → extruder assignment screen. */
+    map(editor: HTMLElement | null) {
+      field("map").replaceChildren(...(editor ? [editor] : []));
+      field("map").hidden = !editor;
+    },
   };
 }
 
 type ResultRow = ReturnType<typeof resultRow>;
 
 async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: ArrayBuffer, platform: string,
-  sourceBundles: string[]): Promise<boolean> {
+  sourceBundles: string[], map?: string): Promise<boolean> {
   row.status("info", t("convert_busy"));
+  row.map(null);
   try {
-    const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles);
+    const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles, map);
     row.report(res.alreadyTarget ? "" : res.text, res.report);
     if (res.alreadyTarget) {
       row.status("info", t("convert_already"));
+      return false;
+    }
+    if (!res.output && res.needsMap && res.plan) {
+      // More filaments on a plate than extruders: let the user choose, then convert again.
+      row.status("warn", t("convert_choose_extruders"));
+      const label = modelOfPreset(models, printer.slicer, printer.printer)?.label ?? printer.printer;
+      row.map(mapEditor({
+        plan: res.plan,
+        printerLabel: label,
+        onConvert: (chosen) => void convertFor(printer, row, file, data, platform, sourceBundles, chosen),
+        onCancel: () => {
+          row.map(null);
+          row.status("info", t("convert_not_converted"));
+        },
+      }));
       return false;
     }
     if (!res.output) {

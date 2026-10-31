@@ -58,8 +58,9 @@ export class Converter {
   }
 
   /** `data` is copied: the same project can be converted for several printers. */
+  /** `map`: filament → extruder assignment chosen by the user ("1:1,2:2,…"). */
   async convert(printer: MyPrinter, name: string, data: ArrayBuffer, settings: Settings, platform: string,
-    sourceBundles: string[]): Promise<ConvertResult> {
+    sourceBundles: string[], map?: string): Promise<ConvertResult> {
     return this.engine.convert({
       name,
       data: data.slice(0),
@@ -71,6 +72,7 @@ export class Converter {
       // Basic mode: the core's defaults, whatever was chosen earlier in advanced mode.
       options: settings.advanced ? settings.options : {},
       sourceBundles,
+      map,
     });
   }
 }

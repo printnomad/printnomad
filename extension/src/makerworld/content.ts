@@ -7,6 +7,8 @@
 //
 // MakerWorld's class names are generated (mw-css-…): elements are found by structure
 // (span.primaryButton, .swiper-wrapper, MUI menus) and by "3MF" in menu texts.
+import type { AssignmentPlan } from "../engine/protocol.ts";
+import { mapEditor } from "../lib/map-editor.ts";
 import { BRIDGE, CONTENT, type BridgeMessage, type ConvertOutcome, type FromMain, type PagePrinter } from "./protocol.ts";
 
 const CAPTURE_TIMEOUT_MS = 30_000;
@@ -413,20 +415,67 @@ async function download() {
     const outcome = await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, name, data }, [data]);
     console.info(`[BetterBridge] 3MF from MakerWorld ${downloadMs} ms · total ${Math.round(performance.now() - started)} ms`
       + (outcome.status === "saved" ? ` · conversion ${outcome.convertMs} ms` : ""));
-    const messages: Record<ConvertOutcome["status"], string> = {
-      saved: t("mw_status_saved"),
-      cancelled: t("mw_status_cancelled"),
-      already: t("mw_status_already"),
-      error: t("mw_status_error"),
-    };
-    setStatus(messages[outcome.status], RESULT_VISIBLE_MS);
-    if (outcome.status === "error") console.warn("[BetterBridge]", outcome.message);
+    await showOutcome(printer, outcome);
   } catch (e) {
     console.warn("[BetterBridge]", e);
     setStatus(e instanceof Error ? e.message : t("mw_status_error"), RESULT_VISIBLE_MS);
   } finally {
     busy = false;
   }
+}
+
+const outcomeText = (status: Exclude<ConvertOutcome["status"], "needs-map">) => ({
+  saved: t("mw_status_saved"),
+  cancelled: t("mw_status_cancelled"),
+  already: t("mw_status_already"),
+  error: t("mw_status_error"),
+})[status];
+
+async function showOutcome(printer: PagePrinter, outcome: ConvertOutcome) {
+  if (outcome.status === "needs-map") {
+    setStatus(null);
+    const map = await askAssignment(printer, outcome.plan);
+    if (!map) return;
+    setStatus(t("mw_status_converting", printer.label));
+    // The bridge kept the project: converting again does not download it again.
+    await showOutcome(printer, await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, map }));
+    return;
+  }
+  setStatus(outcomeText(outcome.status), RESULT_VISIBLE_MS);
+  if (outcome.status === "error") console.warn("[BetterBridge]", outcome.message);
+}
+
+/**
+ * The assignment screen in a modal over MakerWorld, isolated in a shadow root with the
+ * extension's own styles. Resolves with the chosen map, or null when cancelled.
+ */
+function askAssignment(printer: PagePrinter, plan: AssignmentPlan): Promise<string | null> {
+  return new Promise((resolve) => {
+    const host = document.createElement("div");
+    host.dataset.bbModal = "1";
+    const shadow = host.attachShadow({ mode: "open" });
+    const style = document.createElement("link");
+    style.rel = "stylesheet";
+    style.href = chrome.runtime.getURL("styles.css");
+    const overlay = document.createElement("div");
+    overlay.className = "fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/50 p-4 font-sans text-fg";
+    const panel = document.createElement("div");
+    panel.className = "max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-bg p-2 shadow-2xl";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    const close = (map: string | null) => {
+      document.removeEventListener("keydown", onKey, true);
+      host.remove();
+      resolve(map);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close(null);
+    document.addEventListener("keydown", onKey, true);
+    panel.append(mapEditor({ plan, printerLabel: printer.label, onConvert: close, onCancel: () => close(null) }));
+    overlay.append(panel);
+    overlay.addEventListener("click", (e) => e.target === overlay && close(null));
+    shadow.append(style, overlay);
+    document.documentElement.append(host);
+  });
 }
 
 // --- wiring -------------------------------------------------------------------------

@@ -142,11 +142,25 @@ def _rgb(colour: str) -> tuple[int, int, int]:
         return 128, 128, 128
 
 
+def _lab(colour: str) -> tuple[float, float, float]:
+    """sRGB → CIELAB (D65)."""
+    def linear(c: int) -> float:
+        c /= 255
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (linear(c) for c in _rgb(colour))
+    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
+    y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
+
+    def f(v: float) -> float:
+        return v ** (1 / 3) if v > 0.008856 else 7.787 * v + 16 / 116
+    fx, fy, fz = f(x), f(y), f(z)
+    return 116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)
+
+
 def colour_distance(a: str, b: str) -> float:
-    """Perceptual-ish RGB distance ("redmean"), enough to tell which colours look alike."""
-    (r1, g1, b1), (r2, g2, b2) = _rgb(a), _rgb(b)
-    rm = (r1 + r2) / 2
-    return ((2 + rm / 256) * (r1 - r2) ** 2 + 4 * (g1 - g2) ** 2 + (2 + (255 - rm) / 256) * (b1 - b2) ** 2) ** 0.5
+    """How different two colours look: CIE76 ΔE in CIELAB (≈ 2.3 is just noticeable)."""
+    return sum((p - q) ** 2 for p, q in zip(_lab(a), _lab(b), strict=True)) ** 0.5
 
 
 def suggest_map(

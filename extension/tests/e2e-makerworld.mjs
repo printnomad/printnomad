@@ -17,11 +17,11 @@ if (!browserPath) {
 }
 
 const work = workDir();
-const { project, catalog } = buildFixtures(work);
+const { project, painted, catalog } = buildFixtures(work);
 buildExtension({ BB_PROFILES_DIR: catalog, BB_TEST_ORIGINS: ORIGIN });
 
 const page = readFileSync(join(ext, "tests/fixtures/makerworld.html"));
-const projectBytes = readFileSync(project);
+let projectBytes = readFileSync(project);
 const server = createServer((req, res) => {
   if (req.url === "/") return res.writeHead(200, { "content-type": "text/html" }).end(page);
   if (req.url.startsWith("/api/v1/design-service/instance/1/f3mf")) {
@@ -110,7 +110,22 @@ try {
   // 5. A native chip gives MakerWorld its button back.
   await mw.click(".section:not(.mobile-box) .swiper-slide:last-child .chip");
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Open in Bambu Studio", { timeout: 10_000 });
-  console.log("OK: chip, button, menu, capture, conversion and restore");
+  // 6. A project with more colours on a plate than extruders: the assignment screen over
+  //    MakerWorld (shadow root), then the conversion without downloading again.
+  projectBytes = readFileSync(painted);
+  await mw.click('.section:not(.mobile-box) [data-bb-printer="c5p"] .chip');
+  await mw.click(".section:not(.mobile-box) .primaryButton");
+  const modalButton = await mw.waitForFunction(
+    () => document.querySelector("[data-bb-modal]")?.shadowRoot?.querySelector(".btn-primary"), { timeout: 120_000 });
+  const title = await mw.evaluate(() => document.querySelector("[data-bb-modal]").shadowRoot.querySelector("h3").textContent);
+  if (!/5 colours to the 4 extruders of Creator 5 Pro/.test(title)) throw new Error(`modal: ${title}`);
+  await modalButton.asElement().click();
+  await mw.waitForFunction(() => /Saved|Could not|Not saved/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
+    { timeout: 120_000 });
+  if (await label() !== "Saved ✓") throw new Error(`after assignment: ${await label()}`);
+  const all = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
+  if (all.length !== 3) throw new Error(`${all.length} downloads after the assigned conversion`);
+  console.log("OK: chip, button, menu, capture, conversion, restore and assignment screen");
 } finally {
   await browser.close();
   server.close();

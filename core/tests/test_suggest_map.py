@@ -50,3 +50,10 @@ def test_conversion_offers_a_plan_and_accepts_it(profiles_root, tmp_path):
     again = web.convert_file(str(src), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root),
                              map_text=plan["suggestion"], lang="en")
     assert again["ok"], again["text"]
+
+
+def test_dark_grey_goes_with_black_not_with_green():
+    """Perceived difference (CIELAB): #2A2E32 looks like black, not like a dark green."""
+    colours = ["#000000", "#2A2E32", "#FFFFFF", "#FF6A13", "#136935"]
+    mapping = suggest_map(["PLA"] * 5, colours, {"1": {1, 2, 3, 4, 5}}, 4)
+    assert mapping[1] == mapping[2] and mapping[5] not in (mapping[1], mapping[3], mapping[4])

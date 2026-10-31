@@ -76,7 +76,8 @@ manifest.content_scripts = [
   { matches: sites, js: ["makerworld-main.js"], world: "MAIN", run_at: "document_start" },
   { matches: sites, js: ["makerworld-content.js"], run_at: "document_idle" },
 ];
-manifest.web_accessible_resources = [{ resources: ["bridge.html"], matches: sites }];
+// bridge.html: the engine iframe; styles.css: the assignment screen's shadow root.
+manifest.web_accessible_resources = [{ resources: ["bridge.html", "styles.css"], matches: sites }];
 writeFileSync(join(dist, "manifest.json"), JSON.stringify(manifest, null, 2));
 cpSync(join(here, "static", "_locales"), join(dist, "_locales"), { recursive: true });
 cpSync(join(here, "src", "options", "options.html"), join(dist, "options.html"));

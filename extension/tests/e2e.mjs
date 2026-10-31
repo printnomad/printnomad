@@ -22,7 +22,8 @@ const work = workDir();
 let file = process.env.BB_E2E_FILE;
 const printer = process.env.BB_E2E_PRINTER ?? "Flashforge Creator 5 Pro 0.4 nozzle";
 let catalog;
-if (!file) ({ project: file, catalog } = buildFixtures(work));
+let painted;
+if (!file) ({ project: file, painted, catalog } = buildFixtures(work));
 if (!process.env.BB_E2E_SKIP_BUILD) buildExtension({ BB_PROFILES_DIR: catalog ?? process.env.BB_PROFILES_DIR ?? "" });
 
 const downloads = join(work, "downloads");
@@ -90,6 +91,19 @@ try {
     if (readFileSync(d.filename).readUInt32LE(0) !== 0x04034b50) throw new Error(`${d.filename} is not a ZIP file`);
   }
   console.log(`OK: downloaded ${complete.length} file(s)`);
+
+  if (painted) {
+    // More colours on a plate than extruders: the assignment screen, then the conversion.
+    await (await page.$("#convert-file")).uploadFile(painted);
+    await page.click("#convert-button");
+    await page.waitForSelector('#convert-results [data-field="map"] .btn-primary', { timeout: 120_000 });
+    const groups = await page.$$eval('#convert-results [data-field="map"] [role="radio"][aria-checked="true"]', (c) => c.length);
+    if (groups !== 5) throw new Error(`assignment rows: ${groups}`);
+    await page.click('#convert-results [data-field="map"] .btn-primary');
+    await page.waitForFunction(() => /Saved/.test(document.querySelector('#convert-results [data-field="status"]').textContent),
+      { timeout: 120_000 });
+    console.log("OK: assignment screen and conversion with the chosen extruders");
+  }
 } finally {
   await browser.close();
 }
