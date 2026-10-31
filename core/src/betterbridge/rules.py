@@ -57,6 +57,19 @@ def is_cooling_key(key: str) -> bool:
     return key not in NOT_COOLING_KEYS and bool(COOLING_KEY.search(key))
 
 
+# Process settings that belong to the printer, not to the model: purge/prime tower
+# (a tool changer needs it to prime the next head; the C5P cools idle heads by 80 °C),
+# calibration (elephant foot, XY compensation, first-layer flow), kinematics
+# (accelerations), firmware support (arcs) and the user's G-code file naming. Taken
+# from the target profile unless the option keep_designer_printer_settings is on.
+# Tower positions (wipe_tower_x/y) are per project and stay.
+PRINTER_PROCESS_KEY = re.compile(
+    r"^(enable_prime_tower|prime_tower_\w+|prime_volume|wipe_tower_(?!x$|y$)\w+|"
+    r"flush_into_(infill|objects|support)|elefant_foot_compensation(_layers)?|"
+    r"\w*_acceleration|accel_to_decel_\w+|initial_layer_flow_ratio|xy_(contour|hole)_compensation|"
+    r"enable_arc_fitting|filename_format)$")
+
+
 # Project data, not preset values: kept from the source even when no profile sets them
 # and the designer did not "change" them (positions, purge table, print order, which
 # filament prints each feature, colours).
@@ -70,12 +83,7 @@ PROJECT_KEYS = frozenset({
 
 
 def is_printer_process_key(key: str) -> bool:
-    """Process settings that belong to the printer, not to the model: purge tower,
-    accelerations, calibration, firmware support, G-code naming. Groups and per-printer
-    policies live in data/printer_rules.json (see printer_rules.py)."""
-    from .printer_rules import group_of
-
-    return group_of(key) is not None
+    return bool(PRINTER_PROCESS_KEY.match(key))
 
 
 # Ajustes de filamento del diseñador que se conservan sobre el perfil de filamento

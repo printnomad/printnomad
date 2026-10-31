@@ -64,8 +64,6 @@ class Report:
     not_changed: list[str] = field(default_factory=list)
     # Source presets the designer's changes were compared with ("" = not available).
     source_presets: str = ""
-    # Machine rules used (printer_rules.py): printer, architecture, verified, issue_url.
-    printer_rules: dict = field(default_factory=dict)
     object_overrides: list[ObjectOverride] = field(default_factory=list)
     filaments: list[FilamentMapping] = field(default_factory=list)
     positions: list[FieldChange] = field(default_factory=list)
@@ -99,13 +97,6 @@ class Report:
             *([t("report.profiles", source=self.profiles)] if self.profiles else []),
             t("report.output", path=self.output or t("report.not_written")),
         ]
-        if self.printer_rules:
-            r = self.printer_rules
-            arch = t(f"architecture.{r['architecture']}")
-            if r.get("verified"):
-                lines.append(t("report.rules_verified", printer=r["printer"], architecture=arch))
-            else:
-                lines.append(t("report.rules_generic", printer=r["printer"], architecture=arch, url=r["issue_url"]))
         if self.presets:
             items = ", ".join(f"{k}={_short(v, 120)}" for k, v in self.presets.items())
             lines.append(t("report.presets", items=items))
