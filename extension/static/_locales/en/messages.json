@@ -198,5 +198,14 @@
   "result_stats": {
     "message": "$1 from the model · $2 from your printer · $3 warnings",
     "description": "$1, $2, $3 = numbers of settings and warnings"
+  },
+  "printers_change_slicer": {
+    "message": "Slicer this printer's projects are converted for"
+  },
+  "general_slicer_label": {
+    "message": "Use OrcaSlicer for every printer"
+  },
+  "general_slicer_help": {
+    "message": "By default each printer uses its brand's slicer (Flash Studio for Flashforge, Bambu Studio for Bambu Lab…) and OrcaSlicer for the rest. Turn it on if you open everything in OrcaSlicer. You can still change the slicer of a single printer on its card."
   }
 }

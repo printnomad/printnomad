@@ -32,6 +32,8 @@ export interface SlicerEntry {
   source?: string;
   /** Printer brands the slicer is made for (preferred for their printers). */
   makers?: string[];
+  /** Used for brands without a slicer of their own (OrcaSlicer). */
+  general?: boolean;
   vendors: Record<string, VendorEntry>;
 }
 

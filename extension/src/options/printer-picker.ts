@@ -75,18 +75,35 @@ export function matches(model: ModelChoice, query: string, brand: string | null)
   return words.every((w) => text.includes(w));
 }
 
-/** Slicers that have the model: the one made for its brand first, then catalog order. */
-export function slicersFor(model: ModelChoice, catalog: Catalog): { slicer: string; name: string }[] {
+/**
+ * Slicers that have the model, best first: the one made for its brand (Flash Studio for
+ * Flashforge…), then the general one (OrcaSlicer), then the rest in catalog order.
+ * `nozzle` keeps only slicers that offer that nozzle for the model.
+ */
+export function slicersFor(model: ModelChoice, catalog: Catalog, nozzle?: string): { slicer: string; name: string }[] {
   const seen = new Map<string, string>();
-  for (const v of model.variants) seen.set(v.slicer, v.slicerName);
-  const own = (s: string) => (catalog.slicers[s]?.makers ?? []).includes(model.brand);
-  return [...seen].map(([slicer, name]) => ({ slicer, name })).sort((a, b) => Number(own(b.slicer)) - Number(own(a.slicer)));
+  for (const v of model.variants) if (!nozzle || v.nozzle === nozzle) seen.set(v.slicer, v.slicerName);
+  const rank = (s: string) => ((catalog.slicers[s]?.makers ?? []).includes(model.brand) ? 2 : catalog.slicers[s]?.general ? 1 : 0);
+  return [...seen].map(([slicer, name]) => ({ slicer, name })).sort((a, b) => rank(b.slicer) - rank(a.slicer));
+}
+
+/** The slicer a new printer gets: its brand's, or the general one for every printer when asked. */
+export function pickSlicer(model: ModelChoice, catalog: Catalog, generalForAll: boolean, nozzle?: string): string {
+  const options = slicersFor(model, catalog, nozzle);
+  const general = options.find((o) => catalog.slicers[o.slicer]?.general);
+  return (generalForAll && general ? general : options[0]).slicer;
 }
 
 /** Nozzles available for the model in a slicer, smallest first; the default is 0.4 when offered. */
 export function nozzlesFor(model: ModelChoice, slicer: string): { nozzles: string[]; preferred: string } {
   const nozzles = [...new Set(model.variants.filter((v) => v.slicer === slicer).map((v) => v.nozzle))]
     .sort((a, b) => Number(a) - Number(b));
+  return { nozzles, preferred: nozzles.includes(DEFAULT_NOZZLE) ? DEFAULT_NOZZLE : nozzles[0] };
+}
+
+/** Every nozzle of the model in any slicer, smallest first; 0.4 preferred. */
+export function allNozzles(model: ModelChoice): { nozzles: string[]; preferred: string } {
+  const nozzles = [...new Set(model.variants.map((v) => v.nozzle))].sort((a, b) => Number(a) - Number(b));
   return { nozzles, preferred: nozzles.includes(DEFAULT_NOZZLE) ? DEFAULT_NOZZLE : nozzles[0] };
 }
 

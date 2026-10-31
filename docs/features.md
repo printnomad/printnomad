@@ -77,6 +77,21 @@ project slices in every Orca-based slicer (OrcaSlicer rejects a manual assignmen
 extruders 3–4). The planned assignment is kept as the suggestion. Advanced mode offers
 *Exact* (manual) for Flash Studio, and an assignment you choose by hand is always kept.
 
+## The right slicer for each printer
+
+A converted project is self-contained and prints the same wherever it is opened, but it
+is only *exact* for the slicer whose profiles it was converted with: same profile version,
+preset names that slicer knows, and no false "modified" values when the printer is
+selected again. Compared on a Creator 5 Pro, Flash Studio 1.7.20 and OrcaSlicer 2.4.2
+differ in 27 of 142 machine settings (end G-code included).
+
+So each printer uses its brand's own slicer when there is one (Flash Studio for
+Flashforge, Bambu Studio for Bambu Lab) and OrcaSlicer, which ships profiles for most
+brands, for the rest — nothing to choose. One switch uses OrcaSlicer for every printer,
+and a single printer's slicer can be changed on its card. Other converters made for one
+brand do the same implicitly (ForgeBridge targets Flash Studio; the Snapmaker U1
+converter targets Snapmaker Orca, with an OrcaSlicer compatibility switch).
+
 ## Current printer profiles
 
 Profiles come from the slicers' official releases, and the report names the source and

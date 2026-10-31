@@ -104,7 +104,7 @@
             </div>
             <div class="flex flex-col gap-1.5">
               <span class="eyebrow" data-i18n="printers_slicer"></span>
-              <div id="selection-slicers" class="flex flex-wrap gap-1.5" role="radiogroup"></div>
+              <span id="selection-slicer" class="chip self-start bg-surface px-3.5 py-1.5 text-sm ring-1 ring-line"></span>
             </div>
             <button id="picker-add" type="button" class="btn-primary lg:self-end" data-i18n="printers_add"></button>
           </div>
@@ -143,6 +143,13 @@
         </ul>
 
         <div id="conversion-advanced" class="flex flex-col gap-3" hidden>
+          <label class="card flex items-start justify-between gap-6">
+            <span class="flex flex-col gap-1">
+              <span class="font-bold" data-i18n="general_slicer_label"></span>
+              <span class="text-sm leading-relaxed text-muted" data-i18n="general_slicer_help"></span>
+            </span>
+            <input id="general-slicer" type="checkbox" class="switch mt-0.5" />
+          </label>
           <ul id="conversion-options" class="card flex flex-col divide-y divide-line p-0"></ul>
           <button id="conversion-reset" type="button" class="btn-ghost self-start" data-i18n="conversion_reset" hidden></button>
         </div>
@@ -169,6 +176,11 @@
           <span class="mt-1 flex flex-wrap gap-1.5">
             <span data-field="nozzle" class="chip bg-sunken px-2.5 py-0.5 text-muted"></span>
             <span data-field="slicer" class="chip bg-sunken px-2.5 py-0.5 text-muted"></span>
+            <label data-field="slicer-menu" class="relative" hidden>
+              <span class="sr-only" data-i18n="printers_slicer"></span>
+              <select data-field="slicer-select" class="chip cursor-pointer appearance-none bg-sunken py-0.5 pr-6 pl-2.5 text-muted hover:text-fg"></select>
+              <svg viewBox="0 0 24 24" class="pointer-events-none absolute top-1/2 right-1.5 size-3 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </label>
           </span>
         </span>
         <button data-action="remove" type="button" class="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-err-soft hover:text-err">

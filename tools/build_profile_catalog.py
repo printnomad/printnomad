@@ -156,6 +156,7 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path, 
         "name": known[slicer].name, "repo": repo, "ref": ref, "commit": commit, "source": source, "vendors": vendors,
         # Brands this slicer is made for: preferred for their printers when several slicers have them.
         "makers": known[slicer].makers,
+        "general": known[slicer].general,
     }
     catalog_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
     return catalog["slicers"][slicer]

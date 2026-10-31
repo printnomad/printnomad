@@ -18,6 +18,8 @@
   "orcaslicer": {
     "name": "OrcaSlicer",
     "url_scheme": "orcaslicer",
+    "general": true,
+    "_general": "Profiles for most brands: the slicer used for printers whose brand has no slicer of its own (makers), and for every printer when the user picks it for all.",
     "profile_repo": {"github": "OrcaSlicer/OrcaSlicer", "path": "resources/profiles"},
     "quirks": {
       "manual_map_max_extruder": 2,

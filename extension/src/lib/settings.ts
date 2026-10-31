@@ -6,6 +6,8 @@ export interface MyPrinter {
   slicer: string;
   /** Machine preset name, e.g. "Flashforge Creator 5 Pro 0.4 nozzle". */
   printer: string;
+  /** The slicer was picked by the rule (brand's own / general for all), not by the user. */
+  slicerAuto?: boolean;
 }
 
 export interface Settings {
@@ -14,9 +16,11 @@ export interface Settings {
   advanced: boolean;
   /** Values of the conversion options changed in advanced mode. */
   options: Record<string, boolean | string>;
+  /** Use the general slicer (OrcaSlicer) for every printer instead of each brand's own. */
+  generalSlicerForAll: boolean;
 }
 
-const DEFAULTS: Settings = { printers: [], advanced: false, options: {} };
+const DEFAULTS: Settings = { printers: [], advanced: false, options: {}, generalSlicerForAll: false };
 
 export async function loadSettings(): Promise<Settings> {
   // Passing the defaults returns them for the keys that were never saved.

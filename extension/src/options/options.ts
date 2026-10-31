@@ -6,11 +6,12 @@ import { localize, t, uiLanguage } from "../lib/i18n.ts";
 import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { cacheStorage, ProfileStore, type Catalog } from "../profiles/catalog.ts";
 import {
+  allNozzles,
   brands,
   buildModels,
   matches,
   modelOfPreset,
-  nozzlesFor,
+  pickSlicer,
   presetFor,
   slicersFor,
   type ModelChoice,
@@ -95,6 +96,19 @@ function renderPrinters() {
     field("name").textContent = model?.label ?? p.printer;
     field("nozzle").textContent = variant ? t("printer_nozzle", variant.nozzle) : p.printer;
     field("slicer").textContent = slicerName(p.slicer);
+    // Other slicers with the same printer and nozzle: change it from the card.
+    const others = model && variant ? slicersFor(model, catalog!, variant.nozzle) : [];
+    if (model && variant && others.length > 1) {
+      const select = field<HTMLSelectElement>("slicer-select");
+      select.replaceChildren(...others.map((o) => new Option(o.name, o.slicer, false, o.slicer === p.slicer)));
+      select.title = t("printers_change_slicer");
+      select.onchange = () => {
+        const preset = presetFor(model, select.value, variant.nozzle);
+        if (preset) void replacePrinter(p.id, { ...p, slicer: select.value, printer: preset, slicerAuto: false });
+      };
+      field("slicer").hidden = true;
+      field("slicer-menu").hidden = false;
+    }
     showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
     const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
     remove.title = remove.ariaLabel = t("printers_remove");
@@ -123,6 +137,25 @@ async function updatePrinters(printers: MyPrinter[]) {
   settings.printers = printers;
   await saveSettings({ printers });
   renderPrinters();
+}
+
+function replacePrinter(id: string, printer: MyPrinter) {
+  return updatePrinters(settings.printers.map((p) => (p.id === id ? printer : p)));
+}
+
+/** Re-pick the slicer of every printer whose slicer was chosen by the rule. */
+async function setGeneralSlicerForAll(on: boolean) {
+  settings.generalSlicerForAll = on;
+  await saveSettings({ generalSlicerForAll: on });
+  await updatePrinters(settings.printers.map((p) => {
+    if (p.slicerAuto === false) return p;
+    const model = modelOfPreset(models, p.slicer, p.printer);
+    const nozzle = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer)?.nozzle;
+    if (!model || !nozzle) return p;
+    const slicer = pickSlicer(model, catalog!, on, nozzle);
+    const preset = presetFor(model, slicer, nozzle);
+    return preset ? { ...p, slicer, printer: preset, slicerAuto: true } : p;
+  }));
 }
 
 // --- printer picker -----------------------------------------------------------
@@ -172,8 +205,8 @@ function choiceChip(label: string, checked: boolean, onClick: () => void): HTMLE
 
 function selectModel(model: ModelChoice) {
   picker.model = model;
-  picker.slicer = slicersFor(model, catalog!)[0].slicer;
-  picker.nozzle = nozzlesFor(model, picker.slicer).preferred;
+  picker.nozzle = allNozzles(model).preferred;
+  picker.slicer = pickSlicer(model, catalog!, settings.generalSlicerForAll, picker.nozzle);
   renderPicker();
 }
 
@@ -215,16 +248,12 @@ function renderPicker() {
   const cover = $<HTMLImageElement>("selection-cover");
   cover.hidden = !model.cover;
   if (model.cover) cover.src = model.cover;
-  $("selection-slicers").replaceChildren(...slicersFor(model, catalog!).map(({ slicer, name }) =>
-    choiceChip(name, slicer === picker.slicer, () => {
-      picker.slicer = slicer;
-      const { nozzles, preferred } = nozzlesFor(model, slicer);
-      if (!nozzles.includes(picker.nozzle)) picker.nozzle = preferred;
-      renderPicker();
-    })));
-  $("selection-nozzles").replaceChildren(...nozzlesFor(model, picker.slicer).nozzles.map((nozzle) =>
+  // The slicer is chosen by the rule; it can be changed afterwards on the printer's card.
+  $("selection-slicer").textContent = slicerName(picker.slicer);
+  $("selection-nozzles").replaceChildren(...allNozzles(model).nozzles.map((nozzle) =>
     choiceChip(t("printer_nozzle", nozzle), nozzle === picker.nozzle, () => {
       picker.nozzle = nozzle;
+      picker.slicer = pickSlicer(model, catalog!, settings.generalSlicerForAll, nozzle);
       renderPicker();
     })));
 }
@@ -234,7 +263,8 @@ function addPickedPrinter() {
   const preset = model && presetFor(model, picker.slicer, picker.nozzle);
   if (!preset) return;
   if (!settings.printers.some((p) => p.slicer === picker.slicer && p.printer === preset)) {
-    void updatePrinters([...settings.printers, { id: crypto.randomUUID(), slicer: picker.slicer, printer: preset }]);
+    void updatePrinters([...settings.printers,
+      { id: crypto.randomUUID(), slicer: picker.slicer, printer: preset, slicerAuto: true }]);
   }
   closePicker();
 }
@@ -530,6 +560,9 @@ async function main() {
   $<HTMLInputElement>("picker-search").oninput = renderPicker;
   $("picker-close").onclick = closePicker;
   $("picker-add").onclick = addPickedPrinter;
+  const general = $<HTMLInputElement>("general-slicer");
+  general.checked = settings.generalSlicerForAll;
+  general.onchange = () => void setGeneralSlicerForAll(general.checked);
   $("mode-basic").onclick = () => void setAdvanced(false);
   $("mode-advanced").onclick = () => void setAdvanced(true);
   $("conversion-reset").onclick = async () => {

@@ -2,7 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import type { Catalog } from "../src/profiles/catalog.ts";
-import { brands, buildModels, matches, modelOfPreset, nozzlesFor, presetFor, slicersFor } from "../src/options/printer-picker.ts";
+import {
+  brands,
+  buildModels,
+  matches,
+  modelOfPreset,
+  nozzlesFor,
+  pickSlicer,
+  presetFor,
+  slicersFor,
+} from "../src/options/printer-picker.ts";
 
 const printer = (name: string, model: string, nozzle: string) => ({ name, model, nozzle, extruders: 1 });
 const vendor = (name: string, printers: ReturnType<typeof printer>[], covers = {}) =>
@@ -13,7 +22,7 @@ const catalog: Catalog = {
   generated: "",
   slicers: {
     orcaslicer: {
-      name: "OrcaSlicer", repo: null, ref: "2", commit: null, makers: [],
+      name: "OrcaSlicer", repo: null, ref: "2", commit: null, makers: [], general: true,
       vendors: {
         Flashforge: vendor("Flashforge", [printer("Flashforge Creator 5 Pro 0.4 nozzle", "Flashforge Creator 5 Pro", "0.4")]),
         BBL: vendor("Bambu Lab", [printer("Bambu Lab P1S 0.4 nozzle", "Bambu Lab P1S", "0.4")], { "Bambu Lab P1S": "orca/covers/p1s.webp" }),
@@ -55,4 +64,13 @@ test("the brand's own slicer first, 0.4 nozzle by default", () => {
   assert.deepEqual(nozzlesFor(c5p, "flashstudio"), { nozzles: ["0.4", "0.6"], preferred: "0.4" });
   assert.equal(presetFor(c5p, "flashstudio", "0.6"), "Flashforge Creator 5 Pro 0.6 nozzle");
   assert.equal(modelOfPreset(models, "orcaslicer", "Bambu Lab P1S 0.4 nozzle")?.label, "P1S");
+});
+
+
+test("the brand's slicer by default, the general one for all on request", () => {
+  const [p1s, c5p] = models;
+  assert.equal(pickSlicer(c5p, catalog, false), "flashstudio");
+  assert.equal(pickSlicer(c5p, catalog, true), "orcaslicer");
+  assert.equal(pickSlicer(p1s, catalog, false), "orcaslicer");     // no Bambu Studio here: the general one
+  assert.deepEqual(slicersFor(c5p, catalog, "0.6").map((s) => s.slicer), ["flashstudio"]);
 });
