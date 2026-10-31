@@ -114,11 +114,11 @@ def _has_paint(data: bytes) -> bool:
 _PAINT_KEYS = (b'paint_color="', b'slic3rpe:mmu_segmentation="')
 
 
-def _paint_states(data: bytes) -> set[int]:
-    """Painted filaments (states ≥ 1) of every triangle in a mesh file.
+def paint_code_set(data: bytes) -> set[bytes]:
+    """The distinct paint codes of a mesh file.
 
     Meshes reach hundreds of MB: plain bytes.find is ~4× faster than a regex here, and
-    triangles share few distinct codes, so each code is decoded once.
+    triangles share few distinct codes.
     """
     codes: set[bytes] = set()
     for key in _PAINT_KEYS:
@@ -128,6 +128,16 @@ def _paint_states(data: bytes) -> set[int]:
             end = data.index(b'"', start)
             codes.add(data[start:end])
             start = data.find(key, end)
+    return codes
+
+
+def paint_count(data: bytes) -> int:
+    return sum(data.count(key) for key in _PAINT_KEYS)
+
+
+def _paint_states(data: bytes) -> set[int]:
+    """Painted filaments (states ≥ 1) of every triangle in a mesh file, each code decoded once."""
+    codes = paint_code_set(data)
     states: set[int] = set()
     for code in codes:
         states |= decode_paint(code.decode("ascii", "replace"))
@@ -173,6 +183,79 @@ def decode_paint(code: str) -> set[int]:
         else:
             states.add(c >> 2)
     return states
+
+
+def _leaf_codes(state: int) -> list[int]:
+    if state < 3:
+        return [state << 2]
+    if state <= 17:
+        return [0b1100, state - 3]
+    return [0b1100, 0b1111, state - 18]
+
+
+def remap_paint(code: str, mapping: dict[int, int]) -> str:
+    """The same paint code with its filaments renumbered (`mapping`: old → new state).
+
+    Split nodes are kept as they are, so the triangle's subdivision does not change; only
+    each leaf's state is rewritten (its encoding may grow or shrink: 2 → 3 is "8" → "0C").
+    A malformed code is returned unchanged.
+    """
+    try:
+        codes = [int(c, 16) for c in reversed(code)]
+    except ValueError:
+        return code
+    out: list[int] = []
+    i, pending = 0, 1
+    while pending and i < len(codes):
+        c = codes[i]
+        i += 1
+        pending -= 1
+        split_sides = c & 0b11
+        if split_sides:
+            out.append(c)
+            pending += split_sides + 1
+            continue
+        if c & 0b1100 == 0b1100:
+            if i >= len(codes):
+                return code
+            extra = codes[i]
+            i += 1
+            if extra == 0b1111:
+                if i >= len(codes):
+                    return code
+                state = codes[i] + 18
+                i += 1
+            else:
+                state = extra + 3
+        else:
+            state = c >> 2
+        out.extend(_leaf_codes(mapping.get(state, state)))
+    if pending:
+        return code  # truncated: leave it alone
+    out.extend(codes[i:])
+    return "".join(f"{n:X}" for n in reversed(out))
+
+
+def remap_paint_bytes(data: bytes, mapping: dict[int, int]) -> bytes:
+    """A mesh file with every paint code renumbered; everything else byte for byte."""
+    if not _has_paint(data):
+        return data
+    cache: dict[bytes, bytes] = {}
+    for key in _PAINT_KEYS:
+        parts, pos = [], 0
+        start = data.find(key)
+        while start != -1:
+            start += len(key)
+            end = data.index(b'"', start)
+            code = data[start:end]
+            if code not in cache:
+                cache[code] = remap_paint(code.decode("ascii", "replace"), mapping).encode()
+            parts += [data[pos:start], cache[code]]
+            pos = end
+            start = data.find(key, end)
+        parts.append(data[pos:])
+        data = b"".join(parts)
+    return data
 
 
 def layer_change_filaments(xml: bytes | None) -> dict[str, set[int]]:

@@ -57,6 +57,7 @@ def test_painted_project_uses_only_the_painted_filaments(profiles_root, tmp_path
     assert model_edit.painted_filaments(project.read(read_3mf.MODEL_FILE), geometry) == {"2": {2, 7, 12}}
     result = convert(project, Target(ProfileLibrary.load(profiles_root), FAKE_PRINTER))
     assert result.report.ok, result.report.errors
-    assert result.usage == {"1": {1, 2, 7, 12}}   # the object's own filament (1) + painted ones
+    # The object's own filament (1) + painted ones (2, 7, 12), renumbered 1–4; the other 8 dropped.
+    assert result.usage == {"1": {1, 2, 3, 4}}
     settings = json.loads(result.files[read_3mf.PROJECT_SETTINGS])
-    assert sorted(set(settings["filament_map"])) <= ["1", "2", "3", "4"]
+    assert len(settings["filament_colour"]) == 4 and settings["filament_map"] == ["1", "2", "3", "4"]

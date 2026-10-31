@@ -78,6 +78,17 @@ a few of them on each plate. BetterBridge decodes the colour painting of every t
 really needs, and assigns extruders plate by plate. A manual assignment is only needed
 when one plate truly uses more filaments than the printer has extruders.
 
+## The filaments it really prints
+
+The converted project lists only the filaments it uses: colours the project defines but
+never uses are removed, and when you send several colours to one extruder (a plate with
+more colours than extruders) they become one filament. A 12-colour project for a
+4-extruder printer opens with 4 filaments, not 12 — and the slicer does not keep 12
+filament slots after you close it. Every place that names a filament is renumbered:
+filament settings, the purge table, objects and parts, plates, per-layer colour changes
+and the colour painting of each triangle (the meshes themselves are untouched; each
+rewritten paint code is checked to keep its shape and its new colours).
+
 ## Opens in any slicer
 
 Filament-to-extruder assignment uses the slicer's *automatic* mode by default, so the
@@ -119,5 +130,5 @@ converted file.
 ## Nothing silent
 
 Every replaced, kept, removed or warned value is in the report (text and JSON), including
-per-object overrides one by one. Geometry, colour painting and the original file are never
-modified.
+per-object overrides one by one. The original file is never modified, and the meshes stay
+byte-identical; colour painting is only renumbered when filaments are (see below).

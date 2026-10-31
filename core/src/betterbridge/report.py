@@ -62,6 +62,8 @@ class Report:
     # Settings the project marks as changed although they equal the source preset
     # (common in MakerWorld "Shared" profiles): treated as not changed.
     not_changed: list[str] = field(default_factory=list)
+    # Filaments renumbered before converting: unused ones removed, merged ones (renumber.py).
+    filament_changes: list[str] = field(default_factory=list)
     # Source presets the designer's changes were compared with ("" = not available).
     source_presets: str = ""
     object_overrides: list[ObjectOverride] = field(default_factory=list)
@@ -106,6 +108,7 @@ class Report:
                 ext = ", ".join(t("report.plate_extruder", plate=p, extruder=e) for p, e in f.extruders.items())
                 lines.append(f"  #{f.index} {f.source_type} {f.colour} '{f.source_profile}' → "
                              f"'{f.target_profile or t('report.no_equivalent')}' ({ext or t('report.unused')})")
+        lines += [f"  · {c}" for c in self.filament_changes]
         lines.append(t("report.changed", count=len(self.changed)))
         if verbose:
             lines += [f"  {c.key}: {_short(c.original)} → {_short(c.final)} [{c.reason}]" for c in self.changed]

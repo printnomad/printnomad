@@ -86,7 +86,8 @@ def verify(source: Project3MF, dest: Path, replaced: dict[str, bytes]) -> list[s
     try:
         with zipfile.ZipFile(dest) as zf:
             infos = {i.filename: i for i in zf.infolist()}
-            for name in source.geometry_names():
+            # Geometry rewritten on purpose (paint renumbered) is checked with `replaced` below.
+            for name in (n for n in source.geometry_names() if n not in replaced):
                 info, original = infos.get(name), source.entries[name].info
                 data = source.read(name)
                 # The source's own CRC when it has one; else computed (projects built in memory).

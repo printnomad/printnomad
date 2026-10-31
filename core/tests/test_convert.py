@@ -93,7 +93,7 @@ def test_author_process_override_kept_and_limits_warned(lib, tmp_path):
 
 def test_filament_profiles_and_author_filament_overrides_reported(lib, tmp_path):
     _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]],
-                                           object_extruders={"2": 3}), map_mode=rules.MAP_BY_SLICER)
+                                           object_extruders={"2": 3}, paint=(1, 2)), map_mode=rules.MAP_BY_SLICER)
     assert s["filament_settings_id"] == [
         "Flashforge PLA Basic @FF C5P", "Flashforge PLA Matte @FF C5P", "Flashforge PETG Basic @FF C5P"]
     assert s["filament_max_volumetric_speed"] == ["18", "18", "18"]
@@ -116,11 +116,13 @@ def test_unknown_filament_used_is_error(lib, tmp_path):
     assert not result.files
 
 
-def test_unknown_filament_unused_is_warning(lib, tmp_path):
+def test_unused_filaments_are_removed(lib, tmp_path):
+    """A filament the project defines but never uses (here a PC with no equivalent) is dropped."""
     _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PC], [["2"]]))
     assert result.report.ok
-    assert s["filament_settings_id"][1] == "Bambu PC @BBL A1"
-    assert any("PC" in w for w in result.report.warnings)
+    assert s["filament_settings_id"] == ["Flashforge PLA Basic @FF C5P"] and s["filament_colour"] == ["#FF0000"]
+    assert any("#2" in c for c in result.report.filament_changes)
+    assert not any("PC" in w for w in result.report.warnings)
 
 
 def test_object_overrides_reported_one_by_one(lib, tmp_path):
@@ -141,11 +143,12 @@ def test_more_than_four_filaments(lib, tmp_path):
     fil = [PLA] * 5
     # Cada placa usa pocos: se asigna por placa sin --map.
     path = make_bambu_3mf(tmp_path / "a.3mf", fil, [["2"], ["3"]], object_extruders={"2": 5, "3": 4})
-    _, result, _ = run(lib, path)
+    _, result, s = run(lib, path)
     assert result.report.ok
+    # Only filaments 4 and 5 are used: they become 1 and 2, one extruder each.
+    assert len(s["filament_colour"]) == 2
     ms = ET.fromstring(result.files[read_3mf.MODEL_SETTINGS])
-    maps = [meta(p)["filament_maps"] for p in ms.findall("plate")]
-    assert maps[0].split()[4] == "1" and maps[1].split()[3] == "1"
+    assert [meta(p)["filament_maps"] for p in ms.findall("plate")] == ["1 2", "1 2"]
     # Compatible (por defecto): el reparto por placa queda como sugerencia, en automático.
     assert all(meta(p)["filament_map_mode"] == "Auto For Flush" for p in ms.findall("plate"))
 
@@ -155,9 +158,10 @@ def test_more_than_four_filaments(lib, tmp_path):
     assert not result.report.ok and result.report.needs_map
     _, result, s = run(lib, painted, user_map={1: 1, 2: 2, 3: 3, 4: 4, 5: 1})
     assert result.report.ok
-    assert s["filament_map"] == ["1", "2", "3", "4", "1"]
+    # 1 and 5 share extruder 1: merged into one filament, one per extruder.
+    assert s["filament_map"] == ["1", "2", "3", "4"] and len(s["filament_colour"]) == 4
     assert s["filament_map_mode"] == "Manual"         # --map explícito se respeta
-    assert any("comparten el extrusor 1" in w for w in result.report.warnings)
+    assert any("#1, #5" in c for c in result.report.filament_changes)
     assert any("Flash Studio lo acepta" in w for w in result.report.warnings)
 
 
@@ -278,8 +282,8 @@ def test_bambu_only_key_kept_when_target_defines_it(lib, tmp_path, profiles_root
 
 def test_manual_extruder_map_kept_when_slicer_has_no_limit(lib, tmp_path):
     """Flash Studio respeta la asignación manual en E3/E4: sin la particularidad de Orca, se queda manual."""
-    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]]), slicer=None,
-                       map_mode=rules.MAP_BY_SLICER)
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]], paint=(2, 3)),
+                       slicer=None, map_mode=rules.MAP_BY_SLICER)
     assert s["filament_map_mode"] == "Manual" and s["filament_map"] == ["1", "2", "3"]
     assert not any("modo automático" in w for w in result.report.warnings)
 
@@ -287,7 +291,7 @@ def test_manual_extruder_map_kept_when_slicer_has_no_limit(lib, tmp_path):
 
 def test_designer_filament_temperatures_kept_hardware_settings_not(lib, tmp_path):
     """Temperaturas y densidad del diseñador se conservan; caudal y enfriamiento, del destino."""
-    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA], [["2"]], object_extruders={"2": 2}, settings={
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA], [["2"]], object_extruders={"2": 2}, paint=(1,), settings={
         "nozzle_temperature": ["200", "230"],
         "filament_max_volumetric_speed": ["21", "50"],
         "fan_max_speed": ["100", "100"],
@@ -319,7 +323,7 @@ def test_bambu_gcode_from_target_profile_is_not_warned(lib, tmp_path, profiles_r
 
 
 def test_map_mode_compatible_by_default_and_exact_on_request(lib, tmp_path):
-    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]], object_extruders={"2": 3})
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]], object_extruders={"2": 3}, paint=(1, 2))
     _, result, s = run(lib, path)
     assert s["filament_map_mode"] == "Auto For Flush" and s["filament_map"] == ["1", "2", "3"]
     assert any("cualquier laminador" in n for n in result.report.notes)

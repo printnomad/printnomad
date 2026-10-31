@@ -152,5 +152,7 @@
   "option.keep_designer_printer_settings.help": "Las aceleraciones, el pie de elefante y la compensación XY, el flujo de la primera capa, el ajuste de arcos y el nombre del archivo G-code del modelo se mantienen en lugar de los del perfil de tu impresora.",
   "option.keep_designer_printer_settings.warning": "Estos valores se eligieron para la impresora de origen: las aceleraciones dependen de su sistema de movimiento y los valores de calibración (pie de elefante, compensación XY, flujo de primera capa) son de esa máquina, no de la tuya.",
   "report.source_defaults": "Valores por defecto del perfil de origen quitados (el laminador usa los suyos): {count}",
-  "report.not_changed": "Marcados como cambiados pero iguales al perfil de origen ({count}, no se tratan como del diseñador): {keys}"
+  "report.not_changed": "Marcados como cambiados pero iguales al perfil de origen ({count}, no se tratan como del diseñador): {keys}",
+  "report.filaments_removed": "Filamentos sin usar quitados: {filaments}",
+  "report.filaments_merged": "Filamentos {filaments} fusionados en el filamento {new} (cabezal {extruder})"
 }
