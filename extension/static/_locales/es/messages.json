@@ -1,0 +1,200 @@
+{
+  "ext_name": {
+    "message": "BetterBridge"
+  },
+  "ext_description": {
+    "message": "Abre modelos 3D de MakerWorld y otros sitios ya preparados para tu impresora y tu laminador."
+  },
+  "printers_title": {
+    "message": "Mis impresoras"
+  },
+  "printers_slicer": {
+    "message": "Laminador"
+  },
+  "printers_add": {
+    "message": "Añadir"
+  },
+  "printers_remove": {
+    "message": "Quitar"
+  },
+  "profiles_status_loading": {
+    "message": "Cargando el catálogo de perfiles…"
+  },
+  "profiles_status_ready": {
+    "message": "Perfiles: $1 (actualizados el $2)"
+  },
+  "profiles_status_fallback": {
+    "message": "Perfiles incluidos en la extensión: $1"
+  },
+  "profiles_status_error": {
+    "message": "Perfiles no disponibles: $1"
+  },
+  "convert_title": {
+    "message": "Convertir un archivo"
+  },
+  "convert_printer": {
+    "message": "Para"
+  },
+  "convert_button": {
+    "message": "Convertir"
+  },
+  "convert_busy": {
+    "message": "Convirtiendo…"
+  },
+  "convert_ok": {
+    "message": "Guardado $1 ($2 s)"
+  },
+  "convert_failed": {
+    "message": "No se pudo convertir el proyecto. Revisa el reporte."
+  },
+  "convert_needs_map": {
+    "message": "Este proyecto tiene más filamentos que extrusores la impresora; elegir la asignación llegará pronto."
+  },
+  "convert_show": {
+    "message": "Mostrar en Finder"
+  },
+  "convert_report": {
+    "message": "Reporte de la conversión"
+  },
+  "convert_no_printers": {
+    "message": "Primero añade una impresora."
+  },
+  "convert_no_file": {
+    "message": "Elige un archivo .3mf."
+  },
+  "conversion_title": {
+    "message": "Conversión"
+  },
+  "conversion_advanced": {
+    "message": "Avanzado"
+  },
+  "conversion_reset": {
+    "message": "Restablecer valores por defecto"
+  },
+  "conversion_loading": {
+    "message": "Cargando opciones…"
+  },
+  "profiles_hint": {
+    "message": "Los perfiles oficiales de cada laminador, actualizados automáticamente. Tus propios presets estarán disponibles con la app auxiliar de BetterBridge."
+  },
+  "convert_saving": {
+    "message": "Guardando $1…"
+  },
+  "convert_not_saved": {
+    "message": "El archivo convertido no se guardó (descarga cancelada)."
+  },
+  "convert_tip": {
+    "message": "Ábrelo tal cual: tu impresora ya está seleccionada. Si vuelves a elegir la impresora en el laminador, pulsa «Transfer» (Transferir) para mantener los valores del modelo («Discard» los cambia por los del perfil de tu impresora)."
+  },
+  "nav_printers": {
+    "message": "Mis impresoras"
+  },
+  "hero_eyebrow": {
+    "message": "Proyectos 3MF para tu impresora"
+  },
+  "hero_title": {
+    "message": "Cualquier modelo, listo para tu impresora."
+  },
+  "hero_text": {
+    "message": "BetterBridge convierte proyectos de MakerWorld y Bambu Studio para tu impresora y tu laminador, manteniendo lo que el diseñador ajustó."
+  },
+  "hero_step1": {
+    "message": "Añade tu impresora una sola vez."
+  },
+  "hero_step2": {
+    "message": "Suelta el .3mf del modelo."
+  },
+  "hero_step3": {
+    "message": "Ábrelo en tu laminador y lamina."
+  },
+  "convert_drop_label": {
+    "message": "Proyecto .3mf"
+  },
+  "convert_drop_title": {
+    "message": "Suelta aquí tu proyecto"
+  },
+  "convert_drop_hint": {
+    "message": "o haz clic para elegir un archivo"
+  },
+  "convert_file_ready": {
+    "message": "$1 · listo para convertir"
+  },
+  "printers_hint": {
+    "message": "Las impresoras para las que conviertes. Sus perfiles se descargan solos."
+  },
+  "printers_add_title": {
+    "message": "Añadir impresora"
+  },
+  "conversion_hint": {
+    "message": "Cómo decide BetterBridge qué valores usar."
+  },
+  "conversion_basic_tab": {
+    "message": "Básico"
+  },
+  "basic_model_title": {
+    "message": "Lo que ajustó el diseñador"
+  },
+  "basic_model_text": {
+    "message": "Soportes, relleno, velocidades, planchado, torre de purga… todo lo que el diseñador cambió se mantiene."
+  },
+  "basic_printer_title": {
+    "message": "Lo que es de tu máquina"
+  },
+  "basic_printer_text": {
+    "message": "Plato, G-code, enfriamiento, aceleraciones y calibración vienen del perfil de tu impresora."
+  },
+  "basic_slicer_title": {
+    "message": "Listo en cualquier laminador"
+  },
+  "basic_slicer_text": {
+    "message": "Los filamentos se asignan en modo automático: el proyecto abre y lamina en OrcaSlicer, Flash Studio y otros."
+  },
+  "picker_search_label": {
+    "message": "Buscar impresoras"
+  },
+  "picker_search": {
+    "message": "Busca tu impresora (p. ej. Creator 5 Pro, P1S…)"
+  },
+  "picker_close": {
+    "message": "Cerrar"
+  },
+  "picker_brands": {
+    "message": "Marcas"
+  },
+  "picker_empty": {
+    "message": "Ninguna impresora coincide. Prueba con otro nombre o marca."
+  },
+  "picker_nozzle": {
+    "message": "Boquilla"
+  },
+  "picker_featured": {
+    "message": "Populares"
+  },
+  "picker_all": {
+    "message": "Todas ($1)"
+  },
+  "printer_nozzle": {
+    "message": "$1 mm"
+  },
+  "convert_all_printers": {
+    "message": "Todas mis impresoras ($1)"
+  },
+  "convert_queued": {
+    "message": "En espera…"
+  },
+  "convert_already": {
+    "message": "Ya está lista para esta impresora"
+  },
+  "result_stats": {
+    "message": "$1 del modelo · $2 de tu impresora · $3 avisos"
+  },
+  "printers_change_slicer": {
+    "message": "Laminador para el que se convierten los proyectos de esta impresora"
+  },
+  "general_slicer_label": {
+    "message": "Usar OrcaSlicer para todas las impresoras"
+  },
+  "general_slicer_help": {
+    "message": "Por defecto cada impresora usa el laminador de su marca (Flash Studio para Flashforge, Bambu Studio para Bambu Lab…) y OrcaSlicer para las demás. Actívalo si abres todo en OrcaSlicer. Igual puedes cambiar el laminador de una impresora en su tarjeta."
+  }
+}

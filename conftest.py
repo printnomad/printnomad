@@ -136,6 +136,11 @@ def _write(path: Path, data: dict) -> None:
 @pytest.fixture
 def profiles_root(tmp_path: Path) -> Path:
     """Árbol mínimo con la misma forma que el de Flash Studio (herencia incluida)."""
+    return build_profiles_tree(tmp_path)
+
+
+def build_profiles_tree(tmp_path: Path) -> Path:
+    """Crea el árbol de perfiles falso en `tmp_path/profiles` (también para pruebas fuera de pytest)."""
     root = tmp_path / "profiles"
     ff = root / "Flashforge"
     machine = "Flashforge Creator 5 Pro 0.4 nozzle"
@@ -179,6 +184,7 @@ def profiles_root(tmp_path: Path) -> Path:
             "type": "process", "name": f"{lh}mm Standard @FF C5", "instantiation": "true",
             "compatible_printers": [machine], "layer_height": lh.rstrip("0") if lh != "0.20" else "0.2",
             "sparse_infill_speed": "230", "outer_wall_speed": "150", "initial_layer_print_height": "0.25",
+            "enable_prime_tower": "1", "default_acceleration": "8000", "elefant_foot_compensation": "0.1",
         })
     _write(root / "OrcaFilamentLibrary/filament/base_pla.json", {
         "type": "filament", "name": "Generic PLA @System", "instantiation": "false",

@@ -33,6 +33,12 @@ KEEP_SOURCE_PROCESS_KEYS = {
 }
 
 # Modos de asignación de filamentos a extrusores en project_settings (filament_map_mode).
+# How BetterBridge chooses the slicer's assignment mode (option `map_mode`):
+# compatible = automatic in the slicer (opens and slices in every Orca-based slicer),
+# exact = manual (the planned assignment is enforced), slicer = manual unless the
+# target slicer rejects it (data/slicers.json quirk manual_map_max_extruder).
+MAP_COMPATIBLE, MAP_EXACT, MAP_BY_SLICER = "compatible", "exact", "slicer"
+MAP_MODES = (MAP_COMPATIBLE, MAP_EXACT, MAP_BY_SLICER)
 MAP_MODE_MANUAL = "Manual"
 MAP_MODE_AUTO = "Auto For Flush"
 
@@ -51,6 +57,35 @@ def is_cooling_key(key: str) -> bool:
     return key not in NOT_COOLING_KEYS and bool(COOLING_KEY.search(key))
 
 
+# Process settings that belong to the printer, not to the model: calibration (elephant
+# foot, XY compensation, first-layer flow), kinematics (accelerations), firmware support
+# (arcs) and the user's G-code file naming. Taken from the target profile unless the
+# option keep_designer_printer_settings is on.
+# The purge tower is NOT here: it follows the model (decided 2026-10-30; the designer
+# knows whether the colour changes need it, and other converters do the same). When the
+# designer did not change it, the target profile's value applies like any other setting.
+PRINTER_PROCESS_KEY = re.compile(
+    r"^(elefant_foot_compensation(_layers)?|"
+    r"\w*_acceleration|accel_to_decel_\w+|initial_layer_flow_ratio|xy_(contour|hole)_compensation|"
+    r"enable_arc_fitting|filename_format)$")
+
+
+# Project data, not preset values: kept from the source even when no profile sets them
+# and the designer did not "change" them (positions, purge table, print order, which
+# filament prints each feature, colours).
+PROJECT_KEYS = frozenset({
+    "wipe_tower_x", "wipe_tower_y", "flush_volumes_matrix", "flush_volumes_vector", "flush_multiplier",
+    "first_layer_print_sequence", "other_layers_print_sequence", "other_layers_print_sequence_nums",
+    "filament_colour", "default_filament_colour", "curr_bed_type",
+    "wall_filament", "sparse_infill_filament", "solid_infill_filament",
+    "support_filament", "support_interface_filament", "version", "name", "from",
+})
+
+
+def is_printer_process_key(key: str) -> bool:
+    return bool(PRINTER_PROCESS_KEY.match(key))
+
+
 # Ajustes de filamento del diseñador que se conservan sobre el perfil de filamento
 # destino: decisiones sobre el material (temperaturas, densidad). Lo que depende del
 # hardware o de la calibración de cada máquina NO se conserva: caudal volumétrico
@@ -60,8 +95,15 @@ DESIGNER_FILAMENT_KEEP = re.compile(r"^(nozzle_temperature(_initial_layer|_range
                                     r"[a-z_]*plate_temp(_initial_layer)?|filament_density)$")
 
 
-def keep_designer_filament_key(key: str) -> bool:
-    return bool(DESIGNER_FILAMENT_KEEP.match(key)) and not is_cooling_key(key)
+def keep_designer_filament_key(key: str, filament: bool = True, cooling: bool = False) -> bool:
+    """Whether the designer's value of a filament setting is kept on the target profile.
+
+    `filament`: material choices (temperatures, density); `cooling`: fan settings, off
+    by default because fans differ between printers (see option keep_designer_cooling).
+    """
+    if is_cooling_key(key):
+        return cooling
+    return filament and bool(DESIGNER_FILAMENT_KEEP.match(key))
 
 
 # Valores que OrcaSlicer rechaza o reinterpreta: valor -> valor válido.

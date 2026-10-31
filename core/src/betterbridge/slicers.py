@@ -12,7 +12,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .profiles import ProfileLibrary
+from .profiles import ProfileError, ProfileLibrary
 
 DATA_FILE = Path(__file__).parent / "data" / "slicers.json"
 PLATFORMS = {"darwin": "macos", "win32": "windows"}  # el resto: "linux"
@@ -28,6 +28,8 @@ class Slicer:
     name: str
     url_scheme: str | None = None
     profile_repo: dict = field(default_factory=dict)
+    makers: list[str] = field(default_factory=list)  # printer brands the slicer is made for
+    general: bool = False  # used for brands without a slicer of their own
     quirks: dict = field(default_factory=dict)
     app: Path | None = None
     system_roots: list[Path] = field(default_factory=list)
@@ -75,6 +77,8 @@ def registry(data_file: Path = DATA_FILE, platform: str | None = None) -> dict[s
             name=spec["name"],
             url_scheme=spec.get("url_scheme"),
             profile_repo=spec.get("profile_repo", {}),
+            makers=spec.get("makers", []),
+            general=bool(spec.get("general", False)),
             quirks={k: v for k, v in spec.get("quirks", {}).items() if not k.startswith("_")},
             app=app,
             system_roots=[_expand(p, app) for p in paths.get("system", [])],
@@ -85,3 +89,22 @@ def registry(data_file: Path = DATA_FILE, platform: str | None = None) -> dict[s
 
 def installed_slicers(data_file: Path = DATA_FILE) -> list[Slicer]:
     return [s for s in registry(data_file).values() if s.installed]
+
+
+def source_slicer(kind: str, data_file: Path = DATA_FILE) -> str | None:
+    """Slicer whose system presets projects of `kind` start from (e.g. "bambu" → "bambustudio")."""
+    data = json.loads(Path(data_file).read_text(encoding="utf-8"))
+    return next((key for key, spec in data.items()
+                 if not key.startswith("_") and kind in spec.get("source_of", ())), None)
+
+
+def source_library(kind: str, data_file: Path = DATA_FILE) -> ProfileLibrary | None:
+    """System presets of the installed source slicer, or None (not installed or unreadable)."""
+    key = source_slicer(kind, data_file)
+    slicer = registry(data_file).get(key) if key else None
+    if slicer is None or not slicer.installed:
+        return None
+    try:
+        return slicer.library(include_user=False)
+    except ProfileError:
+        return None

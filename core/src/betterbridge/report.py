@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 
+from . import rules
 from .i18n import t
 
 
@@ -20,6 +21,9 @@ class FieldChange:
     original: object
     final: object
     reason: str
+    # Value in the source preset the designer started from (when its profiles are
+    # available): shows how much the designer changed it.
+    source_preset: object = None
 
 
 @dataclass
@@ -48,10 +52,18 @@ class Report:
     output: str = ""
     source_kind: str = ""
     target: str = ""
+    profiles: str = ""  # source of the target profiles (folders or repo@ref)
     presets: dict[str, object] = field(default_factory=dict)
     changed: list[FieldChange] = field(default_factory=list)
     kept_author: list[FieldChange] = field(default_factory=list)
     dropped: list[FieldChange] = field(default_factory=list)
+    # Source preset defaults removed so the target slicer's own defaults apply.
+    source_defaults: list[str] = field(default_factory=list)
+    # Settings the project marks as changed although they equal the source preset
+    # (common in MakerWorld "Shared" profiles): treated as not changed.
+    not_changed: list[str] = field(default_factory=list)
+    # Source presets the designer's changes were compared with ("" = not available).
+    source_presets: str = ""
     object_overrides: list[ObjectOverride] = field(default_factory=list)
     filaments: list[FilamentMapping] = field(default_factory=list)
     positions: list[FieldChange] = field(default_factory=list)
@@ -82,6 +94,7 @@ class Report:
         lines = [
             t("report.source", path=self.source, kind=self.source_kind),
             t("report.target", target=self.target),
+            *([t("report.profiles", source=self.profiles)] if self.profiles else []),
             t("report.output", path=self.output or t("report.not_written")),
         ]
         if self.presets:
@@ -98,11 +111,21 @@ class Report:
             lines += [f"  {c.key}: {_short(c.original)} → {_short(c.final)} [{c.reason}]" for c in self.changed]
         if self.kept_author:
             lines.append(t("report.kept_author", count=len(self.kept_author)))
-            lines += [f"  {c.key}: {_short(c.original)} " + t("report.kept_author_line", value=_short(c.final))
-                      for c in self.kept_author]
+            for c in self.kept_author:
+                was = "" if c.source_preset is None else _short(c.source_preset) + " → "
+                target = t("report.kept_author_line", value=_short(c.final))
+                # Rule-kept values (not the designer's) say why.
+                why = f" [{c.reason}]" if c.key in rules.KEEP_SOURCE_PROCESS_KEYS else ""
+                lines.append(f"  {c.key}: {was}{_short(c.original)} {target}{why}")
         if self.dropped:
             lines.append(t("report.dropped", count=len(self.dropped)))
             lines += [f"  {c.key}: {_short(c.original)} [{c.reason}]" for c in self.dropped]
+        if self.not_changed:
+            lines.append(t("report.not_changed", count=len(self.not_changed), keys=", ".join(self.not_changed)))
+        if self.source_defaults:
+            lines.append(t("report.source_defaults", count=len(self.source_defaults)))
+            if verbose:
+                lines.append("  " + ", ".join(self.source_defaults))
         if self.object_overrides:
             lines.append(t("report.object_overrides", count=len(self.object_overrides)))
             for o in self.object_overrides:

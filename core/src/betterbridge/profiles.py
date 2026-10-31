@@ -48,6 +48,8 @@ class ProfileLibrary:
     """
 
     roots: list[Path] = field(default_factory=list)
+    # Where the profiles come from, for the report (folders, or repo@ref of the bundles).
+    source: str = ""
     raw: dict[tuple[str, str], dict] = field(default_factory=dict)
     vendors: dict[tuple[str, str], str] = field(default_factory=dict)
     # Mismo nombre en varios fabricantes (p. ej. fdm_filament_pla en Flashforge y en
@@ -64,6 +66,7 @@ class ProfileLibrary:
     @classmethod
     def from_roots(cls, system_roots: list[Path], user_dirs: list[Path] = ()) -> ProfileLibrary:
         lib = cls(roots=[*system_roots, *user_dirs])
+        lib.source = ", ".join(str(r) for r in lib.roots if Path(r).is_dir())
         for root in system_roots:
             if not root.is_dir():
                 continue
@@ -77,6 +80,26 @@ class ProfileLibrary:
             raise ProfileError(t("profiles.error.none_found", root=", ".join(map(str, lib.roots))))
         return lib
 
+    @classmethod
+    def from_bundles(cls, bundles: list[dict]) -> ProfileLibrary:
+        """Library from profile bundles (tools/build_profile_catalog.py), without touching disk.
+
+        Each bundle is {"vendor": name, "files": {"<kind>/<path>.json": data}}. Vendors
+        are indexed in name order, as `from_roots` does with vendor folders, so both
+        give the same library for the same profiles.
+        """
+        lib = cls()
+        sources = (b.get("source") or (f"{b['repo']}@{b['ref']}" if b.get("repo") else b["vendor"]) for b in bundles)
+        lib.source = ", ".join(dict.fromkeys(sources))
+        for bundle in sorted(bundles, key=lambda b: b["vendor"]):
+            for rel, data in sorted(bundle.get("files", {}).items()):
+                kind = rel.split("/", 1)[0]
+                if kind in KINDS:
+                    lib._add(data, kind, bundle["vendor"], Path(rel).stem)
+        if not lib.raw:
+            raise ProfileError(t("profiles.error.none_found", root=", ".join(b.get("vendor", "?") for b in bundles)))
+        return lib
+
     def _scan(self, folder: Path, kind: str, vendor: str) -> None:
         if not folder.is_dir():
             return
@@ -85,17 +108,20 @@ class ProfileLibrary:
                 data = json.loads(f.read_text(encoding="utf-8"))
             except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 continue
-            if not isinstance(data, dict):
-                continue
-            name = data.get("name") or (f.stem if vendor == USER_VENDOR else None)
-            # Hay archivos guardados en la carpeta equivocada: manda el campo "type".
-            real_kind = data.get("type", kind)
-            if not name or real_kind not in INDEXED_KINDS:
-                continue
-            self.by_vendor.setdefault(vendor, {}).setdefault((real_kind, name), data)
-            if (real_kind, name) not in self.raw:
-                self.raw[(real_kind, name)] = data
-                self.vendors[(real_kind, name)] = vendor
+            self._add(data, kind, vendor, f.stem)
+
+    def _add(self, data, kind: str, vendor: str, stem: str) -> None:
+        if not isinstance(data, dict):
+            return
+        name = data.get("name") or (stem if vendor == USER_VENDOR else None)
+        # Hay archivos guardados en la carpeta equivocada: manda el campo "type".
+        real_kind = data.get("type", kind)
+        if not name or real_kind not in INDEXED_KINDS:
+            return
+        self.by_vendor.setdefault(vendor, {}).setdefault((real_kind, name), data)
+        if (real_kind, name) not in self.raw:
+            self.raw[(real_kind, name)] = data
+            self.vendors[(real_kind, name)] = vendor
 
     def has(self, kind: str, name: str) -> bool:
         return (kind, name) in self.raw

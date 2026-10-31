@@ -3,7 +3,7 @@
 
 [tool.pytest.ini_options]
 pythonpath = ["core/src"]
-testpaths = ["core/tests", "orca-plugin/tests"]
+testpaths = ["core/tests", "orca-plugin/tests", "tools/tests"]
 
 [tool.ruff]
 line-length = 120

@@ -18,7 +18,7 @@ BetterBridge converts 3MF projects made in Bambu Studio (and PrusaSlicer, basic 
 | `helper/` | Optional local helper to open the converted project directly in the chosen slicer. | Planned (experimental) |
 | [`tools/`](tools/) | Developer tools, e.g. validating converted files by slicing them with the OrcaSlicer CLI. | — |
 
-See [docs/architecture.md](docs/architecture.md) for how the pieces fit together.
+See [docs/features.md](docs/features.md) for how a project is converted and why, and [docs/architecture.md](docs/architecture.md) for how the pieces fit together.
 
 ## Quick start (CLI)
 

@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from betterbridge import read_3mf
+from betterbridge import read_3mf, rules
 from betterbridge.convert import convert
 from betterbridge.model_edit import meta
 from betterbridge.profiles import ProfileLibrary
@@ -63,7 +63,10 @@ def test_value_fixes_for_orca(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"raft_first_layer_expansion": "-1",
                                     "ensure_vertical_shell_thickness": "enabled",
-                                    "retraction_distances_when_cut": ["0"]},
+                                    "retraction_distances_when_cut": ["0"],
+                                    "different_settings_to_system": [
+                                        "raft_first_layer_expansion;ensure_vertical_shell_thickness",
+                                        "retraction_distances_when_cut", ""]},
                           part_overrides={"2": {"ensure_vertical_shell_thickness": "enabled"}})
     _, result, s = run(lib, path)
     assert "raft_first_layer_expansion" not in s
@@ -90,7 +93,7 @@ def test_author_process_override_kept_and_limits_warned(lib, tmp_path):
 
 def test_filament_profiles_and_author_filament_overrides_reported(lib, tmp_path):
     _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]],
-                                           object_extruders={"2": 3}))
+                                           object_extruders={"2": 3}), map_mode=rules.MAP_BY_SLICER)
     assert s["filament_settings_id"] == [
         "Flashforge PLA Basic @FF C5P", "Flashforge PLA Matte @FF C5P", "Flashforge PETG Basic @FF C5P"]
     assert s["filament_max_volumetric_speed"] == ["18", "18", "18"]
@@ -98,7 +101,7 @@ def test_filament_profiles_and_author_filament_overrides_reported(lib, tmp_path)
     assert s["filament_map"] == ["1", "2", "3"]
     assert s["extruder_colour"][:3] == ["#FF0000", "#00FF00", "#0000FF"]
     assert s["filament_printable"] == ["15"] * 3
-    # E3 en uso sin --map: modo automático (Orca rechaza el manual en E3/E4).
+    # Modo "según laminador", E3 en uso sin --map: automático (Orca rechaza el manual en E3/E4).
     assert s["filament_map_mode"] == "Auto For Flush"
     assert any("modo automático" in w for w in result.report.warnings)
     dropped = [d for d in result.report.dropped if d.key.startswith("filament_max_volumetric_speed")]
@@ -143,7 +146,8 @@ def test_more_than_four_filaments(lib, tmp_path):
     ms = ET.fromstring(result.files[read_3mf.MODEL_SETTINGS])
     maps = [meta(p)["filament_maps"] for p in ms.findall("plate")]
     assert maps[0].split()[4] == "1" and maps[1].split()[3] == "1"
-    assert all(meta(p)["filament_map_mode"] == "Manual" for p in ms.findall("plate"))
+    # Compatible (por defecto): el reparto por placa queda como sugerencia, en automático.
+    assert all(meta(p)["filament_map_mode"] == "Auto For Flush" for p in ms.findall("plate"))
 
     # Pintura de color: uso desconocido, hace falta --map.
     painted = make_bambu_3mf(tmp_path / "b.3mf", fil, [["2"]], paint=True)
@@ -235,7 +239,9 @@ def test_bambu2_per_variant_values_collapsed(lib, tmp_path):
     })
     _, result, s = run(lib, path)
     assert s["sparse_infill_speed"] == "300"   # ajuste del autor, variante estándar
-    assert s["inner_wall_speed"] == "250"
+    # No lo cambió el diseñador ni lo define el perfil destino: valor de fábrica del
+    # perfil Bambu, se quita para que el laminador aplique el suyo.
+    assert "inner_wall_speed" not in s and "inner_wall_speed" in result.report.source_defaults
     assert s["print_extruder_variant"] == ["Direct Drive Standard"]
     assert s["print_extruder_id"] == ["1"]
 
@@ -245,14 +251,15 @@ def test_cooling_always_from_target(lib, tmp_path):
         "fan_direction": "left",                      # Bambu, sin equivalente C5P
         "close_additional_fan_first_x_layers": ["1"],
         "ironing_fan_speed": ["-1"],
-        "cooling_tube_length": "5",                   # no es ventilación: se queda
+        "cooling_tube_length": "5",                   # no es ventilación: no se quita como enfriamiento
         "different_settings_to_system": ["sparse_infill_speed;ironing_fan_speed", "", ""],
     })
     _, result, s = run(lib, path)
     for k in ("fan_direction", "close_additional_fan_first_x_layers", "ironing_fan_speed"):
         assert k not in s
         assert any(d.key == k and "enfriamiento" in d.reason for d in result.report.dropped)
-    assert s["cooling_tube_length"] == "5"
+    assert "cooling_tube_length" in result.report.source_defaults  # valor de fábrica de Bambu
+    assert not any(d.key == "cooling_tube_length" for d in result.report.dropped)
     assert not any(c.key == "ironing_fan_speed" for c in result.report.kept_author)
 
 
@@ -271,7 +278,8 @@ def test_bambu_only_key_kept_when_target_defines_it(lib, tmp_path, profiles_root
 
 def test_manual_extruder_map_kept_when_slicer_has_no_limit(lib, tmp_path):
     """Flash Studio respeta la asignación manual en E3/E4: sin la particularidad de Orca, se queda manual."""
-    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]]), slicer=None)
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]]), slicer=None,
+                       map_mode=rules.MAP_BY_SLICER)
     assert s["filament_map_mode"] == "Manual" and s["filament_map"] == ["1", "2", "3"]
     assert not any("modo automático" in w for w in result.report.warnings)
 
@@ -308,3 +316,115 @@ def test_bambu_gcode_from_target_profile_is_not_warned(lib, tmp_path, profiles_r
     f.write_text(_json.dumps(d))
     _, result, _ = run(ProfileLibrary.load(profiles_root), make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
     assert not any("machine_end_gcode" in w for w in result.report.warnings)
+
+
+def test_map_mode_compatible_by_default_and_exact_on_request(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA_MATTE, PETG], [["2"]], object_extruders={"2": 3})
+    _, result, s = run(lib, path)
+    assert s["filament_map_mode"] == "Auto For Flush" and s["filament_map"] == ["1", "2", "3"]
+    assert any("cualquier laminador" in n for n in result.report.notes)
+    _, result, s = run(lib, path, map_mode=rules.MAP_EXACT)
+    assert s["filament_map_mode"] == "Manual"
+    assert any("OrcaSlicer 2.5 lo rechaza" in w for w in result.report.warnings)
+    _, result, s = run(lib, path, user_map={1: 1, 2: 2, 3: 3})
+    assert s["filament_map_mode"] == "Manual"  # elegida a mano: siempre se impone
+    with pytest.raises(ValueError):
+        run(lib, path, map_mode="nope")
+
+
+def test_designer_cooling_kept_on_request_with_warning(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "ironing_fan_speed": ["40"],
+        "fan_max_speed": ["60"],
+        "different_settings_to_system": ["ironing_fan_speed", "fan_max_speed", ""],
+    })
+    _, result, s = run(lib, path)
+    assert "ironing_fan_speed" not in s and s.get("fan_max_speed") != ["60"]
+    assert not any("enfriamiento del modelo" in w for w in result.report.warnings)
+
+    _, result, s = run(lib, path, keep_designer_cooling=True)
+    assert s["ironing_fan_speed"] == ["40"] and s["fan_max_speed"] == ["60"]
+    assert s["different_settings_to_system"][1] == "fan_max_speed"
+    warning = next(w for w in result.report.warnings if "enfriamiento del modelo" in w)
+    assert "fan_max_speed" in warning and "ironing_fan_speed" in warning
+
+
+def test_printer_dependent_process_settings_come_from_the_target(lib, tmp_path):
+    """Accelerations, calibration and file naming belong to the printer; the purge tower, to the model."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PETG], [["2"]], object_extruders={"2": 2}, settings={
+        "enable_prime_tower": "0", "default_acceleration": "12000", "elefant_foot_compensation": "0",
+        "xy_hole_compensation": "0.05", "filename_format": "{input_filename_base}.gcode", "wall_loops": "4",
+        "different_settings_to_system": [
+            "enable_prime_tower;default_acceleration;elefant_foot_compensation;xy_hole_compensation;"
+            "filename_format;wall_loops", "", "", ""],
+    })
+    _, result, s = run(lib, path)
+    assert s["enable_prime_tower"] == "0"                                  # torre: la del modelo
+    assert s["default_acceleration"] == "8000"
+    assert s["elefant_foot_compensation"] == "0.1"
+    assert "xy_hole_compensation" not in s and "filename_format" not in s  # sin valor en el perfil: el del laminador
+    assert s["wall_loops"] == "4"                                          # del modelo
+    assert s["different_settings_to_system"][0].split(";") == [
+        "enable_prime_tower", "initial_layer_print_height", "wall_loops"]
+    dropped = {d.key: d.reason for d in result.report.dropped}
+    assert "impresora" in dropped["default_acceleration"] and "xy_hole_compensation" in dropped
+    assert "enable_prime_tower" not in dropped
+    assert not any("ajustes de impresora del modelo" in w for w in result.report.warnings)
+
+    _, result, s = run(lib, path, keep_designer_printer_settings=True)
+    assert s["default_acceleration"] == "12000" and s["xy_hole_compensation"] == "0.05"
+    warning = next(w for w in result.report.warnings if "ajustes de impresora del modelo" in w)
+    assert "default_acceleration" in warning
+
+
+def test_source_preset_defaults_removed_designer_and_project_values_kept(lib, tmp_path):
+    """Lo que solo trae el perfil Bambu de origen se quita; lo del diseñador y del proyecto, no."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "skeleton_infill_density": "15%",          # valor de fábrica de Bambu
+        "ironing_inset": "0.21",                   # cambiado por el diseñador
+        "wipe_tower_x": ["15"],                    # posición: dato del proyecto
+        "different_settings_to_system": ["ironing_inset", "", ""],
+    })
+    _, result, s = run(lib, path)
+    assert "skeleton_infill_density" not in s and "skeleton_infill_density" in result.report.source_defaults
+    assert s["ironing_inset"] == "0.21" and s["wipe_tower_x"] == ["15"]
+    assert "Valores por defecto del perfil de origen quitados" in result.report.to_text()
+
+
+def test_designer_changes_compared_with_the_source_preset(lib, tmp_path):
+    """Con los perfiles de origen: valor original en el reporte; 'cambios' iguales al original se ignoran."""
+    source = ProfileLibrary.from_bundles([{"vendor": "BBL", "files": {
+        "process/a1.json": {"type": "process", "name": "0.20mm Standard @BBL A1", "bridge_speed": ["50"],
+                            "wall_loops": "2", "layer_height": "0.2"},
+        "filament/pla.json": {"type": "filament", "name": "Bambu PLA Basic @BBL A1", "nozzle_temperature": ["220"]},
+    }}])
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "bridge_speed": ["10"],                     # cambiado de verdad (50 → 10)
+        "wall_loops": "2",                          # marcado como cambiado, pero igual al original
+        "nozzle_temperature": ["230"],
+        "inherits_group": ["0.20mm Standard @BBL A1", "Bambu PLA Basic @BBL A1", ""],
+        "different_settings_to_system": ["bridge_speed;wall_loops", "nozzle_temperature", ""],
+    })
+    _, result, s = run(lib, path, source_lib=source)
+    rep = result.report
+    assert rep.source_presets == "0.20mm Standard @BBL A1"
+    kept = {c.key: c for c in rep.kept_author}
+    assert kept["bridge_speed"].source_preset == ["50"] and kept["bridge_speed"].original == ["10"]
+    assert kept["nozzle_temperature[filamento 1]"].source_preset == "220"
+    assert "wall_loops" in rep.not_changed and "wall_loops" not in kept
+    assert "wall_loops" not in s["different_settings_to_system"][0].split(";")
+    assert '["50"] → ["10"]' in rep.to_text()
+
+    _, result, _ = run(lib, path)  # sin perfiles de origen: como antes
+    assert "wall_loops" in {c.key for c in result.report.kept_author} and not result.report.not_changed
+
+
+def test_rule_kept_first_layer_has_no_original_value_and_says_why(lib, tmp_path):
+    source = ProfileLibrary.from_bundles([{"vendor": "BBL", "files": {
+        "process/a1.json": {"type": "process", "name": "0.20mm Standard @BBL A1", "initial_layer_print_height": "0.2"},
+    }}])
+    _, result, _ = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]), source_lib=source)
+    first = next(c for c in result.report.kept_author if c.key == "initial_layer_print_height")
+    assert first.source_preset is None
+    line = next(x for x in result.report.to_text().splitlines() if "initial_layer_print_height" in x)
+    assert "→" not in line and "[" in line

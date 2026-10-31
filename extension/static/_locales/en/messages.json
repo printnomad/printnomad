@@ -1,0 +1,211 @@
+{
+  "ext_name": {
+    "message": "BetterBridge",
+    "description": "Extension name"
+  },
+  "ext_description": {
+    "message": "Open 3D models from MakerWorld and other sites already set up for your printer and slicer.",
+    "description": "Store description"
+  },
+  "printers_title": {
+    "message": "My printers"
+  },
+  "printers_slicer": {
+    "message": "Slicer"
+  },
+  "printers_add": {
+    "message": "Add"
+  },
+  "printers_remove": {
+    "message": "Remove"
+  },
+  "profiles_status_loading": {
+    "message": "Loading profile catalog…"
+  },
+  "profiles_status_ready": {
+    "message": "Profiles: $1 (updated $2)",
+    "description": "$1 = sources, $2 = date"
+  },
+  "profiles_status_fallback": {
+    "message": "Profiles included with the extension: $1",
+    "description": "$1 = sources"
+  },
+  "profiles_status_error": {
+    "message": "Profiles unavailable: $1"
+  },
+  "convert_title": {
+    "message": "Convert a file"
+  },
+  "convert_printer": {
+    "message": "For"
+  },
+  "convert_button": {
+    "message": "Convert"
+  },
+  "convert_busy": {
+    "message": "Converting…"
+  },
+  "convert_ok": {
+    "message": "Saved $1 ($2 s)",
+    "description": "$1 = file name, $2 = seconds"
+  },
+  "convert_failed": {
+    "message": "The project could not be converted. See the report."
+  },
+  "convert_needs_map": {
+    "message": "This project has more filaments than the printer has extruders; choosing the assignment is coming soon."
+  },
+  "convert_show": {
+    "message": "Show in Finder"
+  },
+  "convert_report": {
+    "message": "Conversion report"
+  },
+  "convert_no_printers": {
+    "message": "Add a printer first."
+  },
+  "convert_no_file": {
+    "message": "Choose a .3mf file."
+  },
+  "conversion_title": {
+    "message": "Conversion"
+  },
+  "conversion_advanced": {
+    "message": "Advanced"
+  },
+  "conversion_reset": {
+    "message": "Restore defaults"
+  },
+  "conversion_loading": {
+    "message": "Loading options…"
+  },
+  "profiles_hint": {
+    "message": "The official profiles of each slicer, updated automatically. Your own presets will be available with the BetterBridge helper app."
+  },
+  "convert_saving": {
+    "message": "Saving $1…",
+    "description": "$1 = file name"
+  },
+  "convert_not_saved": {
+    "message": "The converted file was not saved (download cancelled)."
+  },
+  "convert_tip": {
+    "message": "Open it as it is: your printer is already selected. If you pick the printer again in the slicer, choose “Transfer” to keep the model's values (“Discard” resets them to your printer's profile)."
+  },
+  "nav_printers": {
+    "message": "My printers"
+  },
+  "hero_eyebrow": {
+    "message": "3MF projects for your printer"
+  },
+  "hero_title": {
+    "message": "Any model, ready for your printer."
+  },
+  "hero_text": {
+    "message": "BetterBridge converts MakerWorld and Bambu Studio projects for your printer and slicer, keeping what the designer tuned."
+  },
+  "hero_step1": {
+    "message": "Add your printer once."
+  },
+  "hero_step2": {
+    "message": "Drop the model's .3mf."
+  },
+  "hero_step3": {
+    "message": "Open it in your slicer and slice."
+  },
+  "convert_drop_label": {
+    "message": ".3mf project"
+  },
+  "convert_drop_title": {
+    "message": "Drop your project here"
+  },
+  "convert_drop_hint": {
+    "message": "or click to choose a file"
+  },
+  "convert_file_ready": {
+    "message": "$1 · ready to convert",
+    "description": "$1 = file size"
+  },
+  "printers_hint": {
+    "message": "The printers you convert for. Their profiles download by themselves."
+  },
+  "printers_add_title": {
+    "message": "Add a printer"
+  },
+  "conversion_hint": {
+    "message": "How BetterBridge decides which values to use."
+  },
+  "conversion_basic_tab": {
+    "message": "Basic"
+  },
+  "basic_model_title": {
+    "message": "What the designer tuned"
+  },
+  "basic_model_text": {
+    "message": "Supports, infill, speeds, ironing, purge tower… everything the designer changed is kept."
+  },
+  "basic_printer_title": {
+    "message": "What belongs to your machine"
+  },
+  "basic_printer_text": {
+    "message": "Bed, G-code, cooling, accelerations and calibration come from your printer's profile."
+  },
+  "basic_slicer_title": {
+    "message": "Ready in any slicer"
+  },
+  "basic_slicer_text": {
+    "message": "Filaments are assigned in automatic mode, so the project opens and slices in OrcaSlicer, Flash Studio and others."
+  },
+  "picker_search_label": {
+    "message": "Search printers"
+  },
+  "picker_search": {
+    "message": "Search your printer (e.g. Creator 5 Pro, P1S…)"
+  },
+  "picker_close": {
+    "message": "Close"
+  },
+  "picker_brands": {
+    "message": "Brands"
+  },
+  "picker_empty": {
+    "message": "No printer matches. Try another name or brand."
+  },
+  "picker_nozzle": {
+    "message": "Nozzle"
+  },
+  "picker_featured": {
+    "message": "Popular"
+  },
+  "picker_all": {
+    "message": "All ($1)",
+    "description": "$1 = number of printer models"
+  },
+  "printer_nozzle": {
+    "message": "$1 mm",
+    "description": "$1 = nozzle diameter"
+  },
+  "convert_all_printers": {
+    "message": "All my printers ($1)",
+    "description": "$1 = number of printers"
+  },
+  "convert_queued": {
+    "message": "Waiting…"
+  },
+  "convert_already": {
+    "message": "Already set up for this printer"
+  },
+  "result_stats": {
+    "message": "$1 from the model · $2 from your printer · $3 warnings",
+    "description": "$1, $2, $3 = numbers of settings and warnings"
+  },
+  "printers_change_slicer": {
+    "message": "Slicer this printer's projects are converted for"
+  },
+  "general_slicer_label": {
+    "message": "Use OrcaSlicer for every printer"
+  },
+  "general_slicer_help": {
+    "message": "By default each printer uses its brand's slicer (Flash Studio for Flashforge, Bambu Studio for Bambu Lab…) and OrcaSlicer for the rest. Turn it on if you open everything in OrcaSlicer. You can still change the slicer of a single printer on its card."
+  }
+}

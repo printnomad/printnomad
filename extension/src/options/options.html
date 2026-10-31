@@ -1,0 +1,278 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BetterBridge</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="options.js"></script>
+  </head>
+  <body class="min-h-screen text-[15px]">
+    <header class="sticky top-0 z-10 border-b border-line bg-bg/85 backdrop-blur">
+      <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
+        <div class="flex items-center gap-2.5">
+          <span class="grid size-8 place-items-center rounded-lg bg-[#1c1c1e] ring-1 ring-line" aria-hidden="true">
+            <svg viewBox="0 0 24 24" class="size-5 text-accent" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h18M5 17V12a7 7 0 0 1 14 0v5M9 17v-3M15 17v-3" /></svg>
+          </span>
+          <span class="font-display text-lg font-extrabold tracking-tight">Better<span class="text-accent">Bridge</span></span>
+        </div>
+        <a href="#printers-section" class="btn-ghost hidden sm:inline-flex" data-i18n="nav_printers"></a>
+      </div>
+    </header>
+
+    <main class="mx-auto flex max-w-5xl flex-col gap-20 px-5 pt-12 pb-16">
+      <!-- Hero: what it does + convert a file -->
+      <section class="grid items-start gap-10 lg:grid-cols-[1fr_1.05fr]">
+        <div class="flex min-w-0 flex-col gap-5 lg:pt-6">
+          <p class="eyebrow" data-i18n="hero_eyebrow"></p>
+          <h1 class="text-4xl leading-[1.05] sm:text-5xl" data-i18n="hero_title"></h1>
+          <p class="max-w-md text-lg leading-relaxed text-muted" data-i18n="hero_text"></p>
+          <ol class="mt-2 flex flex-col gap-3">
+            <li class="flex items-center gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-surface text-xs font-extrabold">1</span><span data-i18n="hero_step1"></span></li>
+            <li class="flex items-center gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-surface text-xs font-extrabold">2</span><span data-i18n="hero_step2"></span></li>
+            <li class="flex items-center gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-surface text-xs font-extrabold">3</span><span data-i18n="hero_step3"></span></li>
+          </ol>
+        </div>
+
+        <form id="convert" class="flex min-w-0 flex-col gap-3" novalidate>
+          <p class="eyebrow" data-i18n="convert_title"></p>
+          <label id="dropzone" class="group relative flex min-h-56 cursor-pointer flex-col justify-between gap-6 rounded-3xl bg-accent p-6 text-on-accent transition data-[drag=true]:scale-[1.01] data-[drag=true]:bg-accent-strong">
+            <input id="convert-file" type="file" accept=".3mf" class="sr-only" />
+            <span class="flex items-start justify-between gap-4">
+              <span class="text-[11px] font-bold tracking-[0.08em] uppercase opacity-90" data-i18n="convert_drop_label"></span>
+              <svg viewBox="0 0 24 24" class="size-6 opacity-90" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" /></svg>
+            </span>
+            <span class="flex flex-col gap-2">
+              <span id="file-name" class="line-clamp-3 font-display text-3xl leading-tight font-extrabold tracking-tight [overflow-wrap:anywhere] sm:text-4xl" data-i18n="convert_drop_title"></span>
+              <span id="file-detail" class="text-sm opacity-90" data-i18n="convert_drop_hint"></span>
+            </span>
+          </label>
+
+          <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <label class="card flex min-w-0 items-center gap-3 px-4 py-3">
+              <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+              <span class="sr-only" data-i18n="convert_printer"></span>
+              <select id="convert-printer" class="w-full min-w-0 truncate bg-transparent text-sm font-semibold"></select>
+            </label>
+            <button id="convert-button" type="submit" class="btn-primary px-7 py-3 text-base" data-i18n="convert_button"></button>
+          </div>
+
+          <div id="convert-result" class="flex flex-col gap-3" hidden>
+            <p id="convert-status" class="chip self-start" role="status" hidden></p>
+            <ul id="convert-results" class="flex flex-col gap-3" aria-live="polite"></ul>
+            <p id="convert-tip" class="rounded-2xl bg-accent-soft px-4 py-3 text-sm" data-i18n="convert_tip" hidden></p>
+          </div>
+        </form>
+      </section>
+
+      <!-- My printers -->
+      <section id="printers-section" class="flex flex-col gap-5" aria-labelledby="printers-title">
+        <div>
+          <h2 id="printers-title" class="text-3xl" data-i18n="printers_title"></h2>
+          <p class="mt-1 text-muted" data-i18n="printers_hint"></p>
+        </div>
+        <ul id="printers" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></ul>
+
+        <div id="add-panel" class="card flex flex-col gap-4 p-4 sm:p-5" hidden>
+          <div class="flex items-center gap-2">
+            <label class="relative flex-1">
+              <span class="sr-only" data-i18n="picker_search_label"></span>
+              <svg viewBox="0 0 24 24" class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <input id="picker-search" type="search" autocomplete="off" class="field rounded-full bg-sunken py-2.5 pl-10 border-transparent" data-i18n-placeholder="picker_search" />
+            </label>
+            <button id="picker-close" type="button" class="grid size-10 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken hover:text-fg" data-i18n-title="picker_close">
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div id="picker-brands" class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" data-i18n-title="picker_brands"></div>
+          <ul id="picker-models" class="grid max-h-[26rem] grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-5"></ul>
+          <p id="picker-empty" class="py-6 text-center text-muted" data-i18n="picker_empty" hidden></p>
+
+          <div id="picker-selection" class="flex flex-col gap-4 rounded-2xl bg-sunken p-4 lg:flex-row lg:items-center" hidden>
+            <div class="flex min-w-0 items-center gap-3 lg:flex-1">
+              <span class="grid size-14 shrink-0 place-items-center rounded-xl bg-white p-1">
+                <img id="selection-cover" class="size-full object-contain" alt="" />
+              </span>
+              <span class="min-w-0">
+                <span id="selection-brand" class="eyebrow block"></span>
+                <span id="selection-label" class="block truncate font-display text-lg font-extrabold"></span>
+              </span>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <span class="eyebrow" data-i18n="picker_nozzle"></span>
+              <div id="selection-nozzles" class="flex flex-wrap gap-1.5" role="radiogroup"></div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <span class="eyebrow" data-i18n="printers_slicer"></span>
+              <span id="selection-slicer" class="chip self-start bg-surface px-3.5 py-1.5 text-sm ring-1 ring-line"></span>
+            </div>
+            <button id="picker-add" type="button" class="btn-primary lg:self-end" data-i18n="printers_add"></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Conversion: basic / advanced -->
+      <section class="flex flex-col gap-5" aria-labelledby="conversion-title">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 id="conversion-title" class="text-3xl" data-i18n="conversion_title"></h2>
+            <p class="mt-1 text-muted" data-i18n="conversion_hint"></p>
+          </div>
+          <div class="flex rounded-full bg-surface p-1" role="radiogroup" aria-labelledby="conversion-title">
+            <button id="mode-basic" type="button" role="radio" class="rounded-full px-4 py-1.5 text-sm font-semibold text-muted aria-checked:bg-accent aria-checked:text-on-accent" data-i18n="conversion_basic_tab"></button>
+            <button id="mode-advanced" type="button" role="radio" class="rounded-full px-4 py-1.5 text-sm font-semibold text-muted aria-checked:bg-accent aria-checked:text-on-accent" data-i18n="conversion_advanced"></button>
+          </div>
+        </div>
+
+        <ul id="conversion-basic" class="grid gap-3 md:grid-cols-3">
+          <li class="card flex flex-col gap-2">
+            <span class="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent"><svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8l-9-5-9 5v8l9 5 9-5zM3.3 7 12 12l8.7-5M12 22V12" /></svg></span>
+            <h3 class="font-bold" data-i18n="basic_model_title"></h3>
+            <p class="text-sm leading-relaxed text-muted" data-i18n="basic_model_text"></p>
+          </li>
+          <li class="card flex flex-col gap-2">
+            <span class="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent"><svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg></span>
+            <h3 class="font-bold" data-i18n="basic_printer_title"></h3>
+            <p class="text-sm leading-relaxed text-muted" data-i18n="basic_printer_text"></p>
+          </li>
+          <li class="card flex flex-col gap-2">
+            <span class="grid size-9 place-items-center rounded-xl bg-accent-soft text-accent"><svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg></span>
+            <h3 class="font-bold" data-i18n="basic_slicer_title"></h3>
+            <p class="text-sm leading-relaxed text-muted" data-i18n="basic_slicer_text"></p>
+          </li>
+        </ul>
+
+        <div id="conversion-advanced" class="flex flex-col gap-3" hidden>
+          <label class="card flex items-start justify-between gap-6">
+            <span class="flex flex-col gap-1">
+              <span class="font-bold" data-i18n="general_slicer_label"></span>
+              <span class="text-sm leading-relaxed text-muted" data-i18n="general_slicer_help"></span>
+            </span>
+            <input id="general-slicer" type="checkbox" class="switch mt-0.5" />
+          </label>
+          <ul id="conversion-options" class="card flex flex-col divide-y divide-line p-0"></ul>
+          <button id="conversion-reset" type="button" class="btn-ghost self-start" data-i18n="conversion_reset" hidden></button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-line">
+      <div class="mx-auto flex max-w-5xl flex-col gap-2 px-5 py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+        <p id="profiles-status" role="status"></p>
+        <p data-i18n="profiles_hint"></p>
+      </div>
+    </footer>
+
+    <!-- Templates (cloned by options.ts) -->
+    <template id="tpl-printer">
+      <li class="card flex items-start gap-3">
+        <span class="grid size-16 shrink-0 place-items-center rounded-xl bg-white p-1.5">
+          <img data-field="cover" class="size-full object-contain" alt="" />
+          <svg data-field="placeholder" viewBox="0 0 24 24" class="size-7 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+        </span>
+        <span class="flex min-w-0 flex-1 flex-col gap-1">
+          <span data-field="brand" class="eyebrow"></span>
+          <span data-field="name" class="font-bold leading-snug"></span>
+          <span class="mt-1 flex flex-wrap gap-1.5">
+            <span data-field="nozzle" class="chip bg-sunken px-2.5 py-0.5 text-muted"></span>
+            <span data-field="slicer" class="chip bg-sunken px-2.5 py-0.5 text-muted"></span>
+            <label data-field="slicer-menu" class="relative" hidden>
+              <span class="sr-only" data-i18n="printers_slicer"></span>
+              <select data-field="slicer-select" class="chip cursor-pointer appearance-none bg-sunken py-0.5 pr-6 pl-2.5 text-muted hover:text-fg"></select>
+              <svg viewBox="0 0 24 24" class="pointer-events-none absolute top-1/2 right-1.5 size-3 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+            </label>
+          </span>
+        </span>
+        <button data-action="remove" type="button" class="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-err-soft hover:text-err">
+          <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      </li>
+    </template>
+
+    <template id="tpl-result">
+      <li class="card flex flex-col gap-3 p-4">
+        <div class="flex items-start gap-3">
+          <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-white p-1">
+            <img data-field="cover" class="size-full object-contain" alt="" />
+            <svg data-field="placeholder" viewBox="0 0 24 24" class="size-6 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+          </span>
+          <span class="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+            <span data-field="printer" class="max-w-full truncate font-bold"></span>
+            <span data-field="status" class="chip max-w-full bg-sunken text-muted" role="status"></span>
+            <span data-field="stats" class="text-xs text-muted" hidden></span>
+          </span>
+          <button data-field="show" type="button" class="btn shrink-0 rounded-full bg-sunken px-4 py-1.5 text-xs hover:bg-line" data-i18n="convert_show" hidden></button>
+        </div>
+        <details data-field="details" class="border-t border-line pt-2" hidden>
+          <summary class="cursor-pointer py-1 text-xs font-semibold text-muted" data-i18n="convert_report"></summary>
+          <pre data-field="report" class="mt-2 max-h-80 overflow-auto rounded-xl bg-sunken p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap"></pre>
+        </details>
+      </li>
+    </template>
+
+    <template id="tpl-add-card">
+      <li>
+        <button type="button" class="flex h-full min-h-24 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line px-5 py-4 text-left font-semibold hover:border-accent hover:text-accent">
+          <span class="grid size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
+            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          </span>
+          <span data-i18n="printers_add_title"></span>
+        </button>
+      </li>
+    </template>
+
+    <template id="tpl-model">
+      <li>
+        <button type="button" aria-pressed="false" class="flex h-full w-full flex-col items-center gap-2 rounded-2xl border-2 border-transparent bg-sunken p-3 text-center transition hover:border-line aria-pressed:border-accent aria-pressed:bg-accent-soft">
+          <span class="grid aspect-square w-full max-w-28 place-items-center rounded-xl bg-white p-1.5">
+            <img data-field="cover" class="size-full object-contain" loading="lazy" alt="" />
+            <svg data-field="placeholder" viewBox="0 0 24 24" class="size-10 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+          </span>
+          <span data-field="label" class="text-sm leading-tight font-bold"></span>
+          <span data-field="brand" class="text-xs text-muted"></span>
+        </button>
+      </li>
+    </template>
+
+    <template id="tpl-filter-chip">
+      <button type="button" aria-pressed="false" class="chip shrink-0 bg-surface px-3.5 py-1.5 text-sm text-muted ring-1 ring-line hover:text-fg aria-pressed:bg-fg aria-pressed:text-bg aria-pressed:ring-fg"></button>
+    </template>
+
+    <template id="tpl-choice-chip">
+      <button type="button" role="radio" aria-checked="false" class="chip bg-surface px-3.5 py-1.5 text-sm ring-1 ring-line aria-checked:bg-accent aria-checked:text-on-accent aria-checked:ring-accent"></button>
+    </template>
+
+    <template id="tpl-option-bool">
+      <li class="flex flex-col gap-3 p-5">
+        <label class="flex items-start justify-between gap-6">
+          <span class="flex flex-col gap-1">
+            <span data-field="label" class="font-bold"></span>
+            <span data-field="help" class="text-sm leading-relaxed text-muted"></span>
+          </span>
+          <input data-field="input" type="checkbox" class="switch mt-0.5" />
+        </label>
+        <p data-field="warning" class="rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn" role="alert" hidden></p>
+      </li>
+    </template>
+
+    <template id="tpl-option-choice">
+      <li class="flex flex-col gap-3 p-5">
+        <fieldset class="flex flex-col gap-3">
+          <legend class="flex flex-col gap-1">
+            <span data-field="label" class="font-bold"></span>
+            <span data-field="help" class="text-sm leading-relaxed text-muted"></span>
+          </legend>
+          <div data-field="choices" class="mt-3 grid gap-2"></div>
+        </fieldset>
+        <p data-field="warning" class="rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn" role="alert" hidden></p>
+      </li>
+    </template>
+
+    <template id="tpl-choice">
+      <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-line px-4 py-3 has-checked:border-accent has-checked:bg-accent-soft">
+        <input data-field="input" type="radio" class="mt-1 accent-accent" />
+        <span data-field="label" class="text-sm"></span>
+      </label>
+    </template>
+  </body>
+</html>

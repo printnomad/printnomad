@@ -8,6 +8,7 @@ BetterBridge's user-facing text lives in JSON catalogs, one file per language. Y
 |---|---|
 | Core (conversion report, CLI) | `core/src/betterbridge/locales/` |
 | OrcaSlicer plugin (notifications, panel) | `orca-plugin/betterbridge_orca/locales/` |
+| Browser extension (settings page, store listing) | `extension/static/_locales/<code>/messages.json` |
 
 `en.json` is the reference. Each language is `<code>.json`, using the two-letter [ISO 639-1](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) code (`es`, `fr`, `pt`, `de`…).
 
@@ -20,6 +21,10 @@ BetterBridge's user-facing text lives in JSON catalogs, one file per language. Y
 5. Run the tests: `.venv/bin/pytest core/tests/test_i18n.py`. They check that your file has the same keys and placeholders as English.
 6. Open a pull request (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
 
+### Browser extension
+
+The extension uses the browser's own format ([chrome.i18n](https://developer.chrome.com/docs/extensions/reference/api/i18n)): copy `extension/static/_locales/en/` to `extension/static/_locales/<code>/` and translate each `"message"`. Placeholders are `$1`, `$2`…; keep them (the `"description"` next to a message explains them). Language codes may include a region (`pt_BR`). The conversion report shown by the extension comes from the core catalogs above.
+
 ## Fix or complete a translation
 
 Edit the value in `<code>.json`. If a key is missing, the English text is shown until it is translated (the tests will report it as untranslated).
@@ -28,6 +33,7 @@ Edit the value in `<code>.json`. If a key is missing, the English text is shown 
 
 - CLI: `--lang <code>`, else the `BETTERBRIDGE_LANG` environment variable, else the system language, else English.
 - OrcaSlicer plugin: OrcaSlicer's interface language.
+- Browser extension: the browser's language.
 
 ## For developers
 

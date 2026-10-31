@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from . import model_edit, rules
 from .i18n import t
-from .profiles import ProfileError
+from .profiles import ProfileError, ProfileLibrary
 from .read_3mf import (
     MODEL_FILE,
     MODEL_SETTINGS,
@@ -90,6 +90,10 @@ def convert(
     nozzle: str | None = None,
     user_map: dict[int, int] | None = None,
     keep_designer_filament: bool = True,
+    keep_designer_cooling: bool = False,
+    keep_designer_printer_settings: bool = False,
+    map_mode: str = rules.MAP_COMPATIBLE,
+    source_lib: ProfileLibrary | None = None,
 ) -> ConversionResult:
     """Convierte `project` para la impresora `target`.
 
@@ -97,8 +101,30 @@ def convert(
     destino tiene esa variante, si no la del preset elegido.
     `keep_designer_filament`: conservar las temperaturas y la densidad que el diseñador
     cambió en sus filamentos (ver rules.DESIGNER_FILAMENT_KEEP).
+    `keep_designer_cooling`: conservar también el enfriamiento que cambió el diseñador
+    (proceso y filamentos); por defecto manda el perfil destino porque los ventiladores
+    cambian de una impresora a otra.
+    `keep_designer_printer_settings`: conservar también los ajustes de proceso que dependen
+    de la impresora (torre de purga, aceleraciones, calibración; ver rules.PRINTER_PROCESS_KEY).
+    `map_mode`: rules.MAP_COMPATIBLE | MAP_EXACT | MAP_BY_SLICER (ver options.py).
+    `source_lib`: perfiles del laminador de origen (p. ej. Bambu Studio). Con ellos el
+    reporte muestra el valor original de cada cambio del diseñador, y los "cambios" que
+    en realidad tienen el valor original se tratan como no cambiados.
     """
-    report = Report(source=str(project.path), target=target.display_name)
+    if map_mode not in rules.MAP_MODES:
+        raise ValueError(f"map_mode must be one of {rules.MAP_MODES}, not {map_mode!r}")
+
+    def keep_process_key(k: str) -> bool:
+        if rules.is_cooling_key(k):
+            return keep_designer_cooling
+        if rules.is_printer_process_key(k):
+            return keep_designer_printer_settings
+        return True
+
+    def process_reason(k: str) -> str:
+        return t("reason.cooling") if rules.is_cooling_key(k) else t("reason.printer_setting")
+
+    report = Report(source=str(project.path), target=target.display_name, profiles=target.lib.source)
     result = ConversionResult(report=report)
     kind = detect_source(project)
     report.source_kind = kind
@@ -144,6 +170,9 @@ def convert(
     # --- Proceso ---------------------------------------------------------
     diffs = _split_diff(src.get("different_settings_to_system"))
     author_process = diffs[0] if diffs else set()
+    source_process = _source_settings(source_lib, src, report)
+    if source_process is not None:
+        _drop_unchanged(author_process, src, source_process, report)
     try:
         layer_height = float(_first(src.get("layer_height"), 0.2))
     except (TypeError, ValueError):
@@ -157,19 +186,27 @@ def convert(
         return result
     for k, v in process_cfg.items():
         if k in rules.KEEP_SOURCE_PROCESS_KEYS and k in src and src[k] != v and k not in author_process:
+            # Kept by a BetterBridge rule, not changed by the designer: no original value.
             report.kept_author.append(FieldChange(k, src[k], v, t(rules.KEEP_SOURCE_PROCESS_KEYS[k])))
             out[k] = src[k]
-        elif k in author_process and k in src and not rules.is_cooling_key(k):
-            report.kept_author.append(FieldChange(k, src[k], v, t("reason.author_on_process")))
+        elif k in author_process and k in src and keep_process_key(k):
+            report.kept_author.append(FieldChange(k, src[k], v, t("reason.author_on_process"),
+                                                  _preset_value(source_process, k)))
             out[k] = src[k]
         else:
             if k in author_process and k in src and src[k] != v:
-                report.dropped.append(FieldChange(k, src[k], v, t("reason.cooling")))
+                report.dropped.append(FieldChange(k, src[k], v, process_reason(k)))
             put(k, v, t("reason.target_process"))
     for k in sorted(author_process - set(process_cfg)):
-        if k in src and not rules.is_cooling_key(k):
-            report.kept_author.append(FieldChange(k, src[k], t("value.no_profile_value"), t("reason.author")))
-    _collapse_variants(src, out, set(machine_cfg), target, put)
+        if k not in src or k in reasons:
+            continue
+        if keep_process_key(k):
+            report.kept_author.append(FieldChange(k, src[k], t("value.no_profile_value"), t("reason.author"),
+                                                  _preset_value(source_process, k)))
+        elif rules.is_printer_process_key(k):
+            # The target profile does not set it: the slicer's default applies.
+            report.dropped.append(FieldChange(k, out.pop(k), None, process_reason(k)))
+    collapsed = _collapse_variants(src, out, set(machine_cfg), target, put)
     for c in report.kept_author:
         msg = rules.check_value(c.key, out.get(c.key, c.original), limits)
         if msg:
@@ -247,16 +284,20 @@ def convert(
     kept_filament: dict[int, set[str]] = {}  # filamento -> claves del diseñador conservadas
     for i in range(n):
         author_f = diffs[i + 1] if len(diffs) > i + 1 else set()
+        source_filament = _source_filament(source_lib, src, i)
+        if source_filament is not None:
+            _drop_unchanged(author_f, src, source_filament, report, index=i)
         for k in sorted(author_f):
             if fcfgs[i] is None or not isinstance(src.get(k), list) or i >= len(src[k]):
                 continue
-            if keep_designer_filament and rules.keep_designer_filament_key(k) and isinstance(out.get(k), list):
+            if rules.keep_designer_filament_key(k, keep_designer_filament, keep_designer_cooling) \
+                    and isinstance(out.get(k), list):
                 target_value = out[k][i] if i < len(out[k]) else None
                 out[k][i] = src[k][i]
                 kept_filament.setdefault(i, set()).add(k)
                 report.kept_author.append(FieldChange(
                     t("report.filament_key", key=k, index=i + 1), src[k][i], target_value,
-                    t("reason.author_filament_kept")))
+                    t("reason.author_filament_kept"), _first(_preset_value(source_filament, k))))
             elif k in fcfgs[i]:
                 report.dropped.append(FieldChange(
                     t("report.filament_key", key=k, index=i + 1), src[k][i],
@@ -276,14 +317,8 @@ def convert(
     # (OrcaSlicer 2.5: E1–E2); se lee del registro de laminadores (quirk).
     manual_limit = target.manual_map_max_extruder
     over_limit = manual_limit is not None and highest > manual_limit
-    if user_map is None and over_limit:
-        map_mode = rules.MAP_MODE_AUTO
-        report.warnings.append(t("convert.warn.map_auto_e34"))
-    else:
-        map_mode = rules.MAP_MODE_MANUAL
-        if over_limit:
-            report.warnings.append(t("convert.warn.map_manual_e34"))
-    put("filament_map_mode", map_mode, t("reason.filament_map_mode"))
+    slicer_map_mode = _slicer_map_mode(map_mode, user_map, over_limit, target.extruders, report)
+    put("filament_map_mode", slicer_map_mode, t("reason.filament_map_mode"))
     put("filament_printable", [target.filament_printable_all] * n,
         t("reason.filament_printable", count=target.extruders))
     ext_colours = list(machine_cfg.get("extruder_colour") or [])
@@ -310,8 +345,28 @@ def convert(
     for k in sorted(k for k in rules.BAMBU_ONLY_KEYS & set(out) if k not in reasons):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.bambu_hardware")))
     # Enfriamiento del origen que el perfil C5P no define: fuera, Orca usa su valor por defecto.
-    for k in sorted(k for k in out if k not in reasons and rules.is_cooling_key(k)):
+    kept_keys = {c.key for c in report.kept_author}.union(*kept_filament.values())
+    for k in sorted(k for k in out if k not in reasons and k not in kept_keys and rules.is_cooling_key(k)):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.cooling_no_value")))
+    kept_cooling = sorted({c.key for c in report.kept_author if c.key in out and rules.is_cooling_key(c.key)}
+                          | {k for ks in kept_filament.values() for k in ks if rules.is_cooling_key(k)})
+    if kept_cooling:
+        report.warnings.append(t("convert.warn.designer_cooling", keys=", ".join(kept_cooling)))
+    # Values the source project only has because its Bambu presets set them: the
+    # designer did not choose them (they are not in different_settings_to_system) and
+    # the target profile does not define them. Removing them lets the target slicer
+    # apply its own defaults, as when the printer is picked from scratch; otherwise
+    # re-selecting the printer lists them as "modified" (Transfer/Discard dialog).
+    # Projects without that list (PrusaSlicer) keep everything: nothing to tell apart.
+    if any(diffs):
+        designer = set().union(*diffs)
+        keep = (set(reasons) - collapsed) | kept_keys | designer | rules.PROJECT_KEYS
+        for k in sorted(set(out) - keep):
+            report.source_defaults.append(k)
+            out.pop(k)
+    kept_printer = sorted(c.key for c in report.kept_author if c.key in out and rules.is_printer_process_key(c.key))
+    if kept_printer:
+        report.warnings.append(t("convert.warn.designer_printer_settings", keys=", ".join(kept_printer)))
     for k, fixes in rules.VALUE_FIXES.items():
         value = out.get(k)
         values = value if isinstance(value, list) else [value]
@@ -338,7 +393,7 @@ def convert(
 
     # --- model_settings.config ------------------------------------------
     if ms_root is not None:
-        _edit_model_settings(ms_root, info, assignment.per_plate, map_mode, target, limits, report)
+        _edit_model_settings(ms_root, info, assignment.per_plate, slicer_map_mode, target, limits, report)
         result.files[MODEL_SETTINGS] = model_edit.serialize(ms_root)
 
     # --- Posición en plato ------------------------------------------------
@@ -357,21 +412,86 @@ def convert(
     return result
 
 
-def _collapse_variants(src: dict, out: dict, machine_keys: set[str], target, put) -> None:
+def _source_settings(source_lib: ProfileLibrary | None, src: dict, report: Report) -> dict | None:
+    """Resolved process preset the designer started from, if the source profiles have it.
+
+    Bambu projects name it in `inherits_group[0]` (also for MakerWorld "Shared" user
+    presets) and otherwise in `print_settings_id`.
+    """
+    if source_lib is None:
+        return None
+    name = (src.get("inherits_group") or [""])[0] or src.get("print_settings_id") or ""
+    try:
+        settings = source_lib.settings("process", name)
+    except ProfileError:
+        return None
+    report.source_presets = name
+    return settings
+
+
+def _source_filament(source_lib: ProfileLibrary | None, src: dict, i: int) -> dict | None:
+    if source_lib is None:
+        return None
+    group = src.get("inherits_group") or []
+    ids = src.get("filament_settings_id") or []
+    name = (group[i + 1] if len(group) > i + 1 else "") or (ids[i] if len(ids) > i else "")
+    try:
+        return source_lib.settings("filament", name)
+    except ProfileError:
+        return None
+
+
+def _preset_value(preset: dict | None, key: str):
+    return None if preset is None else preset.get(key)
+
+
+def _same_value(a, b) -> bool:
+    def norm(v):
+        return [str(x) for x in v] if isinstance(v, list) else [str(v)]
+    return norm(a) == norm(b)
+
+
+def _drop_unchanged(author: set[str], src: dict, preset: dict, report: Report, index: int | None = None) -> None:
+    """Remove from `author` the keys whose project value equals the source preset's.
+
+    MakerWorld "Shared" presets often list settings as changed that keep the original
+    value; treating them as the designer's choice would override the target printer
+    for nothing. `index`: filament position, for per-filament lists.
+    """
+    for k in sorted(author):
+        if k not in src or k not in preset:
+            continue
+        value = src[k]
+        if index is not None:
+            if not isinstance(value, list) or index >= len(value):
+                continue
+            value = value[index]
+            same = _same_value(value, _first(preset[k]) if isinstance(preset[k], list) else preset[k])
+        else:
+            same = _same_value(value, preset[k])
+        if same:
+            author.discard(k)
+            report.not_changed.append(k if index is None else t("report.filament_key", key=k, index=index + 1))
+
+
+def _collapse_variants(src: dict, out: dict, machine_keys: set[str], target, put) -> set[str]:
     """Bambu Studio 2.x guarda velocidades por variante de extrusor
     (`print_extruder_variant`, p. ej. [Standard, High Flow]). El destino tiene una
     sola variante: se toma el valor de la variante estándar."""
     variants = src.get("print_extruder_variant")
     if not isinstance(variants, list) or len(variants) < 2:
-        return
+        return set()
     idx = variants.index(target.extruder_variant) if target.extruder_variant in variants else 0
+    collapsed = set()
     for k, v in list(out.items()):
         if (k in machine_keys or not k.endswith(rules.VARIANT_KEY_SUFFIXES)
                 or k.startswith("filament_") or not isinstance(v, list) or len(v) != len(variants)):
             continue
         put(k, v[idx], t("reason.variant_value", variant=variants[idx]))
+        collapsed.add(k)
     put("print_extruder_variant", [target.extruder_variant], t("reason.target_variant"))
     put("print_extruder_id", ["1"], t("reason.target_variant"))
+    return collapsed
 
 
 def _num(value) -> float | None:
@@ -405,6 +525,24 @@ def _note_volumetric(out: dict, report: Report, used: list[int]) -> None:
             capped.append(t("convert.note.volumetric_item", key=c.key, speed=f"{speed:g}", actual=f"{cap / area:.0f}"))
     if capped:
         report.notes.append(t("convert.note.volumetric", cap=f"{cap:g}", items=", ".join(capped)))
+
+
+def _slicer_map_mode(map_mode: str, user_map, over_limit: bool, extruders: int, report: Report) -> str:
+    """Slicer's `filament_map_mode` for the `map_mode` option.
+
+    An assignment the user chose by hand (`user_map`) is always enforced (manual).
+    Otherwise: compatible → automatic; exact → manual; slicer → manual unless the
+    target slicer rejects manual mode on the extruders in use.
+    """
+    if user_map is not None or map_mode == rules.MAP_EXACT or (map_mode == rules.MAP_BY_SLICER and not over_limit):
+        if over_limit:
+            report.warnings.append(t("convert.warn.map_manual_e34"))
+        return rules.MAP_MODE_MANUAL
+    if map_mode == rules.MAP_BY_SLICER:
+        report.warnings.append(t("convert.warn.map_auto_e34"))
+    elif extruders > 1:
+        report.notes.append(t("convert.note.map_compatible"))
+    return rules.MAP_MODE_AUTO
 
 
 def _edit_model_settings(root, info, per_plate, map_mode, target, limits, report: Report) -> None:

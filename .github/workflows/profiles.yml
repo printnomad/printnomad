@@ -1,0 +1,62 @@
+name: Profile catalog
+
+# Builds the printer profile catalog the browser extension downloads, from the
+# latest release of every slicer listed in core/src/betterbridge/data/slicers.json,
+# and publishes it to GitHub Pages.
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: profiles
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install pillow  # printer thumbnails
+      - name: Build catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p site repos
+          python - <<'EOF' > slicers.tsv
+          import json
+          for key, s in json.load(open("core/src/betterbridge/data/slicers.json")).items():
+              repo = isinstance(s, dict) and s.get("profile_repo")
+              if repo:
+                  print(key, repo["github"], repo["path"], sep="\t")
+          EOF
+          while IFS=$'\t' read -r key repo path; do
+            tag=$(gh api "repos/$repo/releases/latest" --jq .tag_name)
+            git clone -q --depth 1 --filter=blob:none --sparse --branch "$tag" "https://github.com/$repo.git" "repos/$key"
+            git -C "repos/$key" sparse-checkout set "$path"
+            python tools/build_profile_catalog.py --slicer "$key" --profiles "repos/$key/$path" \
+              --ref "$tag" --commit "$(git -C "repos/$key" rev-parse HEAD)" --out site
+          done < slicers.tsv
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
