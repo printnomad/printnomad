@@ -6,8 +6,8 @@ intended **on your printer**, and every change is written in the conversion repo
 
 | Kind | Examples | Comes from |
 |---|---|---|
-| **The printer** | bed, start/end G-code, extruders, limits, purge tower, accelerations, calibration (elephant foot, XY compensation), cooling | your printer's profile |
-| **The model** | supports, infill, walls, layer height, seam, ironing, fuzzy skin, speeds — whatever the designer changed | the project |
+| **The printer** | bed, start/end G-code, extruders, limits, accelerations, calibration (elephant foot, XY compensation), cooling | your printer's profile |
+| **The model** | supports, infill, walls, layer height, seam, ironing, fuzzy skin, speeds, purge tower — whatever the designer changed | the project |
 | **Slicer factory defaults** | everything else (hundreds of settings) | your slicer's own defaults |
 
 ## The model's values, and only those
@@ -47,16 +47,18 @@ choice; your printer's value applies.
 Some process settings describe the machine, not the model, and are taken from your
 printer's profile even when the designer changed them:
 
-- **Purge tower** (and purging into infill/objects). How a printer changes colour
-  decides whether it needs one: a single nozzle with a filament changer purges the old
-  colour; a tool changer such as the Flashforge Creator 5 Pro cools idle heads by 100 °C
-  and primes the next one on the tower. The printer maker's profile knows; MakerWorld
-  projects often turn the tower off for Bambu printers, which purge through a chute.
 - **Accelerations** — the machine's kinematics.
 - **Calibration** — elephant foot and XY compensation, first-layer flow.
 - **Arc fitting** (firmware support) and the **G-code file name** (your preference).
 - **Cooling** — fan percentages refer to each printer's own fans, which differ in power,
   number and numbering.
+
+The **purge tower** stays the model's: whether the colour changes of a design need it is
+the designer's call. If the designer did not change it, your printer's profile decides.
+Keep in mind that a model made for a Bambu printer (which purges through a chute) may
+turn it off; on a tool changer such as the Flashforge Creator 5 Pro (idle heads cooled by
+100 °C) you can turn it back on in the slicer if the first lines after a head change
+come out thin.
 
 Speeds stay the model's: your slicer caps every move at the filament's maximum
 volumetric speed when slicing, so a faster filament still benefits.
