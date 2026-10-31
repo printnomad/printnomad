@@ -220,20 +220,18 @@ def convert(
 
     ms_root = project.model_settings()
     info = model_edit.read_model_info(ms_root)
-    painted = set()
+    painted: dict[str, set[int]] = {}
     if project.has(MODEL_FILE):
         geometry = {name: project.read(name) for name in project.geometry_names()}
-        painted = model_edit.painted_objects(project.read(MODEL_FILE), geometry)
+        # The filaments really painted on each object (not every filament of the project).
+        painted = model_edit.painted_filaments(project.read(MODEL_FILE), geometry)
     per_layer = model_edit.layer_change_filaments(
         project.read(CUSTOM_GCODE_PER_LAYER) if project.has(CUSTOM_GCODE_PER_LAYER) else None)
     usage: dict[str, set[int] | None] = {}
     for pid, objects in (info.plates or {"1": list(info.object_names)}).items():
-        if "*" in painted or any(o in painted for o in objects):
-            usage[pid] = None
-            continue
         used: set[int] = set(per_layer.get(pid, set()))
         for o in objects:
-            used |= info.object_filaments.get(o, {1})
+            used |= info.object_filaments.get(o, {1}) | painted.get(o, set())
         usage[pid] = {f for f in used if 1 <= f <= n} or {1}
 
     result.usage = usage

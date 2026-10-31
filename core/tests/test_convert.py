@@ -150,7 +150,7 @@ def test_more_than_four_filaments(lib, tmp_path):
     assert all(meta(p)["filament_map_mode"] == "Auto For Flush" for p in ms.findall("plate"))
 
     # Pintura de color: uso desconocido, hace falta --map.
-    painted = make_bambu_3mf(tmp_path / "b.3mf", fil, [["2"]], paint=True)
+    painted = make_bambu_3mf(tmp_path / "b.3mf", fil, [["2"]], paint=(1, 2, 3, 4, 5))
     _, result, _ = run(lib, painted)
     assert not result.report.ok and result.report.needs_map
     _, result, s = run(lib, painted, user_map={1: 1, 2: 2, 3: 3, 4: 4, 5: 1})

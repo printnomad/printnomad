@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -36,6 +37,15 @@ def _model_xml(items: list[tuple[str, float, float]]) -> str:
             f"<resources>{objs}</resources><build>{build}</build></model>\n")
 
 
+def paint_code(state: int) -> str:
+    """Paint code of a whole triangle painted with filament `state` (TriangleSelector format)."""
+    if state < 3:
+        return f"{state << 2:X}"
+    if state <= 17:
+        return f"{state - 3:X}C"
+    return f"{state - 18:X}FC"
+
+
 def make_bambu_3mf(
     path: Path,
     filaments: list[tuple[str, str, str]],
@@ -44,7 +54,7 @@ def make_bambu_3mf(
     part_overrides: dict[str, dict[str, str]] | None = None,
     bed: int = 256,
     settings: dict | None = None,
-    paint: bool = False,
+    paint: tuple[int, ...] = (),
 ) -> Path:
     """filaments: [(tipo, id de perfil, color)]; plates: ids de objeto por placa."""
     object_extruders = object_extruders or {}
@@ -107,9 +117,11 @@ def make_bambu_3mf(
         for oid in plate:
             items.append((oid, col * bed * 1.2 + bed / 2, -row * bed * 1.2 + bed / 2))
 
+    # Colour painting: one triangle per filament in `paint`, encoded like Bambu Studio.
     cube = CUBE
-    if paint:
-        cube = cube.replace('v3="1"/>', 'v3="1" paint_color="4"/>', 1)
+    for state in paint:  # the next unpainted triangle
+        cube = re.sub(r'<triangle (v1="\d+" v2="\d+" v3="\d+")/>',
+                      rf'<triangle \1 paint_color="{paint_code(state)}"/>', cube, count=1)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("[Content_Types].xml", "<Types/>")
         zf.writestr("3D/3dmodel.model", _model_xml(items))

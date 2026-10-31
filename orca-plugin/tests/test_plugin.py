@@ -202,7 +202,7 @@ def test_notification_panel_preview_and_convert(plugin, tmp_path, monkeypatch):
 
 def test_panel_map_from_table(plugin, tmp_path):
     module, orca, state = plugin
-    src = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=True)
+    src = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=(1, 2, 3, 4, 5))
     cap = open_project(module, orca, state, src)
     state["notifications"][0][3]()
     panel = state["panels"][0]

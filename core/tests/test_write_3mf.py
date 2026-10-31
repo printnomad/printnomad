@@ -36,7 +36,7 @@ def test_cli_refuses_overwrite_and_needs_map_exit_code(profiles_root, tmp_path):
     assert cli.main([str(src), *cli_target(profiles_root)]) == cli.EXIT_ERROR
     assert cli.main([str(src), *cli_target(profiles_root), "--force"]) == cli.EXIT_OK
 
-    painted = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=True)
+    painted = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=(1, 2, 3, 4, 5))
     assert cli.main([str(painted), *cli_target(profiles_root)]) == cli.EXIT_NEEDS_INPUT
     assert not (tmp_path / "m_CREATOR5_PRO.3mf").exists()
     assert cli.main([str(painted), *cli_target(profiles_root),

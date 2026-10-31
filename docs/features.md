@@ -70,6 +70,14 @@ is the reference, and you decide when the model's values should win.
 Advanced mode can keep the model's cooling or printer settings anyway; each option
 explains its risk.
 
+## Painted colours are read, not guessed
+
+Many MakerWorld projects define more colours than a printer has extruders but paint only
+a few of them on each plate. BetterBridge decodes the colour painting of every triangle
+(the same format OrcaSlicer and Bambu Studio use) to know which filaments each plate
+really needs, and assigns extruders plate by plate. A manual assignment is only needed
+when one plate truly uses more filaments than the printer has extruders.
+
 ## Opens in any slicer
 
 Filament-to-extruder assignment uses the slicer's *automatic* mode by default, so the
