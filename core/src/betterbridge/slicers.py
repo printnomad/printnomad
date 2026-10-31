@@ -28,6 +28,7 @@ class Slicer:
     name: str
     url_scheme: str | None = None
     profile_repo: dict = field(default_factory=dict)
+    makers: list[str] = field(default_factory=list)  # printer brands the slicer is made for
     quirks: dict = field(default_factory=dict)
     app: Path | None = None
     system_roots: list[Path] = field(default_factory=list)
@@ -75,6 +76,7 @@ def registry(data_file: Path = DATA_FILE, platform: str | None = None) -> dict[s
             name=spec["name"],
             url_scheme=spec.get("url_scheme"),
             profile_repo=spec.get("profile_repo", {}),
+            makers=spec.get("makers", []),
             quirks={k: v for k, v in spec.get("quirks", {}).items() if not k.startswith("_")},
             app=app,
             system_roots=[_expand(p, app) for p in paths.get("system", [])],

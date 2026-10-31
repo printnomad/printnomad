@@ -53,3 +53,15 @@ def test_catalog_from_an_installed_app(profiles_root, tmp_path):
     assert entry["repo"] is None and entry["source"] == "Flash Studio 1.7.20"
     bundles = [json.loads((tmp_path / "out" / v["bundle"]).read_bytes()) for v in entry["vendors"].values()]
     assert ProfileLibrary.from_bundles(bundles).source == "Flash Studio 1.7.20"
+
+
+def test_vendor_display_name_and_covers(profiles_root, tmp_path):
+    (profiles_root / "Flashforge.json").write_text(json.dumps({"name": "Flashforge", "version": "1"}))
+    from PIL import Image
+
+    Image.new("RGBA", (500, 500), "teal").save(profiles_root / "Flashforge" / "Flashforge Creator 5 Pro_cover.png")
+    out = tmp_path / "out"
+    ff = catalog_tool.build("flashstudio", profiles_root, "1.0.0", None, out)["vendors"]["Flashforge"]
+    assert ff["name"] == "Flashforge"
+    cover = out / ff["covers"]["Flashforge Creator 5 Pro"]
+    assert cover.suffix == ".webp" and Image.open(cover).size == (192, 192)

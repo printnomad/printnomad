@@ -26,6 +26,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+      - run: pip install pillow  # printer thumbnails
       - name: Build catalog
         env:
           GH_TOKEN: ${{ github.token }}

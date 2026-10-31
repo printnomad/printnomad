@@ -32,7 +32,13 @@ await build({
   target: "chrome120",
   minify: true,
   sourcemap: true,
-  define: { __BB_CONFIG__: JSON.stringify({ catalogUrl: config.catalogUrl, version: pkg.version ?? "0.0.0" }) },
+  define: {
+    __BB_CONFIG__: JSON.stringify({
+      catalogUrl: config.catalogUrl,
+      featuredModels: config.featuredModels ?? [],
+      version: pkg.version ?? "0.0.0",
+    }),
+  },
   logLevel: "warning",
 });
 
@@ -76,6 +82,10 @@ if (profilesDir) {
       const src = join(profilesDir, kept[v].bundle);
       mkdirSync(dirname(join(dist, "profiles", kept[v].bundle)), { recursive: true });
       cpSync(src, join(dist, "profiles", kept[v].bundle));
+      for (const cover of Object.values(kept[v].covers ?? {})) {
+        mkdirSync(dirname(join(dist, "profiles", cover)), { recursive: true });
+        cpSync(join(profilesDir, cover), join(dist, "profiles", cover));
+      }
     }
     slicers[slicer] = { ...entry, vendors: kept };
   }

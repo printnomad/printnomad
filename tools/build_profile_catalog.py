@@ -12,8 +12,12 @@ The command writes into `OUT`:
 
 - `<slicer>/<ref>/<Vendor>.json`: one bundle per vendor with every machine,
   process and filament JSON, minified, keyed by its path inside the vendor folder.
-- `catalog.json`: merged across runs; per slicer the repository, ref, vendors,
-  bundle paths, sha256 and the usable printers (name, model, nozzle, extruders).
+- `<slicer>/<ref>/covers/<model>.webp`: the slicer's picture of each printer model
+  (`<model>_cover.png`), shrunk to a thumbnail when Pillow is installed (`pip install
+  pillow`; otherwise copied as is).
+- `catalog.json`: merged across runs; per slicer the repository, ref, vendors (with
+  a display name and the covers), bundle paths, sha256 and the usable printers (name,
+  model, nozzle, extruders).
 
 Only data from the slicer repositories is redistributed (AGPL-3.0, like this
 project); the source and version travel with every bundle so reports can name them.
@@ -24,6 +28,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
+import shutil
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -35,6 +41,45 @@ from betterbridge.slicers import registry  # noqa: E402
 from betterbridge.web import usable_printers  # noqa: E402
 
 SCHEMA = 1
+COVER_SIZE = 192  # px; shown at 64–96 px, sharp on high-DPI screens
+# Vendor names as written in some profile folders, fixed for display.
+DISPLAY_NAMES = {"Bambulab": "Bambu Lab"}
+
+
+def vendor_display_name(root: Path, vendor: str) -> str:
+    try:
+        name = json.loads((root / f"{vendor}.json").read_text(encoding="utf-8")).get("name") or vendor
+    except (OSError, ValueError):
+        name = vendor
+    return DISPLAY_NAMES.get(name, name)
+
+
+def write_cover(src: Path, dest_base: Path) -> Path:
+    """Thumbnail of a printer cover: WebP with Pillow, else the PNG unchanged."""
+    try:
+        from PIL import Image
+    except ImportError:
+        dest = dest_base.with_suffix(".png")
+        shutil.copyfile(src, dest)
+        return dest
+    dest = dest_base.with_suffix(".webp")
+    with Image.open(src) as image:
+        image.thumbnail((COVER_SIZE, COVER_SIZE))
+        image.save(dest, "WEBP", quality=82, method=6)
+    return dest
+
+
+def covers_for(vendor_dir: Path, models: set[str], out: Path, rel_dir: str) -> dict[str, str]:
+    """{printer model: cover path relative to the catalog} for the models that have one."""
+    covers = {}
+    for model in sorted(models):
+        src = vendor_dir / f"{model}_cover.png"
+        if not src.is_file():
+            continue
+        slug = re.sub(r"[^A-Za-z0-9]+", "-", model).strip("-").lower()
+        (out / rel_dir).mkdir(parents=True, exist_ok=True)
+        covers[model] = write_cover(src, out / rel_dir / slug).relative_to(out).as_posix()
+    return covers
 
 
 def vendor_dirs(root: Path) -> list[Path]:
@@ -93,6 +138,9 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path, 
         (out / rel).parent.mkdir(parents=True, exist_ok=True)
         (out / rel).write_bytes(blob)
         vendors[vendor] = {
+            "name": vendor_display_name(profiles, vendor),
+            "covers": covers_for(vendor_dir, {p["model"] for p in printers.get(vendor, [])}, out,
+                                 f"{slicer}/{ref}/covers"),
             "version": payload["version"],
             "bundle": rel,
             "sha256": hashlib.sha256(blob).hexdigest(),
@@ -106,6 +154,8 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path, 
     catalog.update(schema=SCHEMA, generated=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))
     catalog.setdefault("slicers", {})[slicer] = {
         "name": known[slicer].name, "repo": repo, "ref": ref, "commit": commit, "source": source, "vendors": vendors,
+        # Brands this slicer is made for: preferred for their printers when several slicers have them.
+        "makers": known[slicer].makers,
     }
     catalog_path.write_text(json.dumps(catalog, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
     return catalog["slicers"][slicer]

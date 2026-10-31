@@ -5,6 +5,16 @@ import type { OptionInfo } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
 import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { cacheStorage, ProfileStore, type Catalog } from "../profiles/catalog.ts";
+import {
+  brands,
+  buildModels,
+  matches,
+  modelOfPreset,
+  nozzlesFor,
+  presetFor,
+  slicersFor,
+  type ModelChoice,
+} from "./printer-picker.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const STATUS_CLASSES = {
@@ -28,11 +38,10 @@ const store = new ProfileStore(
   cacheStorage(),
 );
 const engine = new Engine();
-// Slicer preselected when adding the first printer.
-const DEFAULT_SLICER = "flashstudio";
 
 let settings: Settings;
 let catalog: Catalog | null = null;
+let models: ModelChoice[] = [];
 let lastDownload: number | null = null;
 
 // --- profiles ---------------------------------------------------------------
@@ -50,6 +59,7 @@ async function loadCatalog() {
   try {
     const { catalog: c, url } = await store.catalog();
     catalog = c;
+    models = buildModels(c, url);
     const sources = Object.values(c.slicers).map((s) => s.source ?? s.name).join(", ");
     status.textContent = url === CONFIG.catalogUrl
       ? t("profiles_status_ready", sources, new Date(c.generated).toLocaleDateString())
@@ -64,25 +74,46 @@ function slicerName(key: string): string {
 }
 
 // --- My printers ------------------------------------------------------------
+function showCover(img: HTMLImageElement, placeholder: HTMLElement, url: string | undefined) {
+  if (url) {
+    img.src = url;
+    img.onerror = () => {
+      img.hidden = true;
+      placeholder.hidden = false;
+    };
+  } else {
+    img.hidden = true;
+    placeholder.hidden = false;
+  }
+}
+
 function renderPrinters() {
   const items = settings.printers.map((p) => {
     const { node, field } = fromTemplate("tpl-printer");
-    field("name").textContent = p.printer;
+    const model = modelOfPreset(models, p.slicer, p.printer);
+    const variant = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer);
+    field("brand").textContent = model?.brand ?? "";
+    field("name").textContent = model?.label ?? p.printer;
+    field("nozzle").textContent = variant ? t("printer_nozzle", variant.nozzle) : p.printer;
     field("slicer").textContent = slicerName(p.slicer);
+    showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
     const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
     remove.title = remove.ariaLabel = t("printers_remove");
     remove.onclick = () => updatePrinters(settings.printers.filter((x) => x.id !== p.id));
     return node;
   });
-  $("printers").replaceChildren(...(items.length ? items : [fromTemplate("tpl-printers-empty").node]));
-  // No printer yet: open the add panel so the first step is obvious.
-  ($("add-panel") as HTMLDetailsElement).open ||= settings.printers.length === 0;
+  const add = fromTemplate("tpl-add-card");
+  add.node.querySelector("button")!.onclick = () => openPicker();
+  $("printers").replaceChildren(...items, add.node);
 
   const select = $<HTMLSelectElement>("convert-printer");
   const selected = select.value;
   select.replaceChildren(
     ...(settings.printers.length
-      ? settings.printers.map((p) => new Option(`${p.printer} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected))
+      ? settings.printers.map((p) => {
+          const label = modelOfPreset(models, p.slicer, p.printer)?.label ?? p.printer;
+          return new Option(`${label} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected);
+        })
       : [new Option(t("convert_no_printers"), "")]),
   );
 }
@@ -93,31 +124,118 @@ async function updatePrinters(printers: MyPrinter[]) {
   renderPrinters();
 }
 
-function fillSlicerSelect(select: HTMLSelectElement, selected: string) {
-  const keys = Object.keys(catalog?.slicers ?? {});
-  if (!keys.includes(selected)) keys.push(selected);
-  select.replaceChildren(...keys.map((k) => new Option(slicerName(k), k, false, k === selected)));
+// --- printer picker -----------------------------------------------------------
+type BrandFilter = { kind: "featured" } | { kind: "all" } | { kind: "brand"; brand: string };
+const picker: { filter: BrandFilter; model: ModelChoice | null; slicer: string; nozzle: string } = {
+  filter: { kind: "featured" },
+  model: null,
+  slicer: "",
+  nozzle: "",
+};
+
+function featuredModels(): ModelChoice[] {
+  const featured = new Set(CONFIG.featuredModels);
+  return models.filter((m) => featured.has(m.model));
 }
 
-function printerChoices(slicer: string): { vendor: string; name: string }[] {
-  const vendors = catalog?.slicers[slicer]?.vendors ?? {};
-  return Object.entries(vendors).flatMap(([vendor, v]) => v.printers.map((p) => ({ vendor, name: p.name })));
+function openPicker(focus = true) {
+  // With nothing featured in this catalog, start with every model.
+  picker.filter = featuredModels().length ? { kind: "featured" } : { kind: "all" };
+  picker.model = null;
+  $<HTMLInputElement>("picker-search").value = "";
+  $("add-panel").hidden = false;
+  renderPicker();
+  // Opened by itself on load: do not scroll the page to it.
+  if (focus) $("picker-search").focus();
 }
 
-function renderPrinterChoices() {
-  const slicer = $<HTMLSelectElement>("add-slicer").value;
-  const filter = $<HTMLInputElement>("add-filter").value.trim().toLowerCase();
-  const choices = printerChoices(slicer).filter((p) => !filter || p.name.toLowerCase().includes(filter));
-  const groups = new Map<string, HTMLOptGroupElement>();
-  for (const p of choices) {
-    if (!groups.has(p.vendor)) {
-      const g = document.createElement("optgroup");
-      g.label = p.vendor;
-      groups.set(p.vendor, g);
-    }
-    groups.get(p.vendor)!.append(new Option(p.name, p.name));
+function closePicker() {
+  $("add-panel").hidden = true;
+}
+
+function filterChip(label: string, pressed: boolean, onClick: () => void): HTMLElement {
+  const { node } = fromTemplate("tpl-filter-chip");
+  node.textContent = label;
+  node.ariaPressed = String(pressed);
+  node.onclick = onClick;
+  return node;
+}
+
+function choiceChip(label: string, checked: boolean, onClick: () => void): HTMLElement {
+  const { node } = fromTemplate("tpl-choice-chip");
+  node.textContent = label;
+  node.ariaChecked = String(checked);
+  node.onclick = onClick;
+  return node;
+}
+
+function selectModel(model: ModelChoice) {
+  picker.model = model;
+  picker.slicer = slicersFor(model, catalog!)[0].slicer;
+  picker.nozzle = nozzlesFor(model, picker.slicer).preferred;
+  renderPicker();
+}
+
+function renderPicker() {
+  const query = $<HTMLInputElement>("picker-search").value.trim();
+  const f = picker.filter;
+  const setFilter = (filter: BrandFilter) => () => {
+    picker.filter = filter;
+    renderPicker();
+  };
+  const chips = [];
+  if (featuredModels().length) chips.push(filterChip(t("picker_featured"), f.kind === "featured" && !query, setFilter({ kind: "featured" })));
+  chips.push(filterChip(t("picker_all", models.length), f.kind === "all" || (f.kind === "featured" && !!query), setFilter({ kind: "all" })));
+  for (const { brand } of brands(models)) {
+    chips.push(filterChip(brand, f.kind === "brand" && f.brand === brand, setFilter({ kind: "brand", brand })));
   }
-  $<HTMLSelectElement>("add-printer-name").replaceChildren(...groups.values());
+  $("picker-brands").replaceChildren(...chips);
+
+  // Typing searches every model, unless a brand is chosen.
+  const pool = f.kind === "featured" && !query ? featuredModels() : models;
+  const shown = pool.filter((m) => matches(m, query, f.kind === "brand" ? f.brand : null));
+  $("picker-models").replaceChildren(...shown.map((m) => {
+    const { node, field } = fromTemplate("tpl-model");
+    const button = node.querySelector("button")!;
+    button.ariaPressed = String(picker.model?.key === m.key);
+    button.onclick = () => selectModel(m);
+    field("label").textContent = m.label;
+    field("brand").textContent = m.brand;
+    showCover(field<HTMLImageElement>("cover"), field("placeholder"), m.cover);
+    return node;
+  }));
+  $("picker-empty").hidden = shown.length > 0;
+
+  const model = picker.model;
+  $("picker-selection").hidden = !model;
+  if (!model) return;
+  $("selection-brand").textContent = model.brand;
+  $("selection-label").textContent = model.label;
+  const cover = $<HTMLImageElement>("selection-cover");
+  cover.hidden = !model.cover;
+  if (model.cover) cover.src = model.cover;
+  $("selection-slicers").replaceChildren(...slicersFor(model, catalog!).map(({ slicer, name }) =>
+    choiceChip(name, slicer === picker.slicer, () => {
+      picker.slicer = slicer;
+      const { nozzles, preferred } = nozzlesFor(model, slicer);
+      if (!nozzles.includes(picker.nozzle)) picker.nozzle = preferred;
+      renderPicker();
+    })));
+  $("selection-nozzles").replaceChildren(...nozzlesFor(model, picker.slicer).nozzles.map((nozzle) =>
+    choiceChip(t("printer_nozzle", nozzle), nozzle === picker.nozzle, () => {
+      picker.nozzle = nozzle;
+      renderPicker();
+    })));
+}
+
+function addPickedPrinter() {
+  const model = picker.model;
+  const preset = model && presetFor(model, picker.slicer, picker.nozzle);
+  if (!preset) return;
+  if (!settings.printers.some((p) => p.slicer === picker.slicer && p.printer === preset)) {
+    void updatePrinters([...settings.printers, { id: crypto.randomUUID(), slicer: picker.slicer, printer: preset }]);
+  }
+  closePicker();
 }
 
 /** Profiles of the slicer the project was made with, if the catalog has them (optional). */
@@ -353,21 +471,13 @@ async function main() {
   settings = await loadSettings();
   await loadCatalog();
   wireDropzone();
-  fillSlicerSelect($<HTMLSelectElement>("add-slicer"), settings.printers.at(-1)?.slicer ?? DEFAULT_SLICER);
   renderPrinters();
   void loadOptions();
-  renderPrinterChoices();
+  if (!settings.printers.length) openPicker(false);
 
-  $<HTMLSelectElement>("add-slicer").onchange = renderPrinterChoices;
-  $<HTMLInputElement>("add-filter").oninput = renderPrinterChoices;
-  $<HTMLFormElement>("add-printer").onsubmit = (e) => {
-    e.preventDefault();
-    const slicer = $<HTMLSelectElement>("add-slicer").value;
-    const printer = $<HTMLSelectElement>("add-printer-name").value;
-    if (!printer || settings.printers.some((p) => p.slicer === slicer && p.printer === printer)) return;
-    void updatePrinters([...settings.printers, { id: crypto.randomUUID(), slicer, printer }]);
-    ($("add-panel") as HTMLDetailsElement).open = false;
-  };
+  $<HTMLInputElement>("picker-search").oninput = renderPicker;
+  $("picker-close").onclick = closePicker;
+  $("picker-add").onclick = addPickedPrinter;
   $("mode-basic").onclick = () => void setAdvanced(false);
   $("mode-advanced").onclick = () => void setAdvanced(true);
   $("conversion-reset").onclick = async () => {

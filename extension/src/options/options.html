@@ -84,28 +84,42 @@
         </div>
         <ul id="printers" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></ul>
 
-        <details id="add-panel" class="group rounded-2xl border-2 border-dashed border-line open:border-solid open:bg-surface">
-          <summary class="flex cursor-pointer list-none items-center gap-3 px-5 py-4 font-semibold">
-            <span class="grid size-8 place-items-center rounded-full bg-accent-soft text-accent">
-              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-            </span>
-            <span data-i18n="printers_add_title"></span>
-          </summary>
-          <form id="add-printer" class="grid gap-3 px-5 pb-5 sm:grid-cols-[12rem_minmax(0,1fr)]">
-            <label class="flex flex-col gap-1.5">
-              <span class="eyebrow" data-i18n="printers_slicer"></span>
-              <select id="add-slicer" class="field"></select>
+        <div id="add-panel" class="card flex flex-col gap-4 p-4 sm:p-5" hidden>
+          <div class="flex items-center gap-2">
+            <label class="relative flex-1">
+              <span class="sr-only" data-i18n="picker_search_label"></span>
+              <svg viewBox="0 0 24 24" class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <input id="picker-search" type="search" autocomplete="off" class="field rounded-full bg-sunken py-2.5 pl-10 border-transparent" data-i18n-placeholder="picker_search" />
             </label>
+            <button id="picker-close" type="button" class="grid size-10 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken hover:text-fg" data-i18n-title="picker_close">
+              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+          <div id="picker-brands" class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" data-i18n-title="picker_brands"></div>
+          <ul id="picker-models" class="grid max-h-[26rem] grid-cols-2 gap-2.5 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-5"></ul>
+          <p id="picker-empty" class="py-6 text-center text-muted" data-i18n="picker_empty" hidden></p>
+
+          <div id="picker-selection" class="flex flex-col gap-4 rounded-2xl bg-sunken p-4 lg:flex-row lg:items-center" hidden>
+            <div class="flex min-w-0 items-center gap-3 lg:flex-1">
+              <span class="grid size-14 shrink-0 place-items-center rounded-xl bg-white p-1">
+                <img id="selection-cover" class="size-full object-contain" alt="" />
+              </span>
+              <span class="min-w-0">
+                <span id="selection-brand" class="eyebrow block"></span>
+                <span id="selection-label" class="block truncate font-display text-lg font-extrabold"></span>
+              </span>
+            </div>
             <div class="flex flex-col gap-1.5">
-              <span class="eyebrow" data-i18n="printers_pick"></span>
-              <input id="add-filter" type="search" class="field" data-i18n-placeholder="printers_search" />
-              <select id="add-printer-name" size="7" class="field py-1" required></select>
+              <span class="eyebrow" data-i18n="picker_nozzle"></span>
+              <div id="selection-nozzles" class="flex flex-wrap gap-1.5" role="radiogroup"></div>
             </div>
-            <div class="flex justify-end sm:col-span-2">
-              <button type="submit" class="btn-primary" data-i18n="printers_add"></button>
+            <div class="flex flex-col gap-1.5">
+              <span class="eyebrow" data-i18n="printers_slicer"></span>
+              <div id="selection-slicers" class="flex flex-wrap gap-1.5" role="radiogroup"></div>
             </div>
-          </form>
-        </details>
+            <button id="picker-add" type="button" class="btn-primary lg:self-end" data-i18n="printers_add"></button>
+          </div>
+        </div>
       </section>
 
       <!-- Conversion: basic / advanced -->
@@ -156,10 +170,17 @@
     <!-- Templates (cloned by options.ts) -->
     <template id="tpl-printer">
       <li class="card flex items-start gap-3">
-        <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent"><svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg></span>
-        <span class="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span class="grid size-16 shrink-0 place-items-center rounded-xl bg-white p-1.5">
+          <img data-field="cover" class="size-full object-contain" alt="" />
+          <svg data-field="placeholder" viewBox="0 0 24 24" class="size-7 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+        </span>
+        <span class="flex min-w-0 flex-1 flex-col gap-1">
+          <span data-field="brand" class="eyebrow"></span>
           <span data-field="name" class="font-bold leading-snug"></span>
-          <span data-field="slicer" class="chip self-start bg-sunken px-2.5 py-0.5 text-muted"></span>
+          <span class="mt-1 flex flex-wrap gap-1.5">
+            <span data-field="nozzle" class="chip bg-sunken px-2.5 py-0.5 text-muted"></span>
+            <span data-field="slicer" class="chip bg-sunken px-2.5 py-0.5 text-muted"></span>
+          </span>
         </span>
         <button data-action="remove" type="button" class="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-err-soft hover:text-err">
           <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
@@ -167,8 +188,36 @@
       </li>
     </template>
 
-    <template id="tpl-printers-empty">
-      <li class="card text-muted sm:col-span-2 lg:col-span-3" data-i18n="printers_empty"></li>
+    <template id="tpl-add-card">
+      <li>
+        <button type="button" class="flex h-full min-h-24 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line px-5 py-4 text-left font-semibold hover:border-accent hover:text-accent">
+          <span class="grid size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
+            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          </span>
+          <span data-i18n="printers_add_title"></span>
+        </button>
+      </li>
+    </template>
+
+    <template id="tpl-model">
+      <li>
+        <button type="button" aria-pressed="false" class="flex h-full w-full flex-col items-center gap-2 rounded-2xl border-2 border-transparent bg-sunken p-3 text-center transition hover:border-line aria-pressed:border-accent aria-pressed:bg-accent-soft">
+          <span class="grid aspect-square w-full max-w-28 place-items-center rounded-xl bg-white p-1.5">
+            <img data-field="cover" class="size-full object-contain" loading="lazy" alt="" />
+            <svg data-field="placeholder" viewBox="0 0 24 24" class="size-10 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+          </span>
+          <span data-field="label" class="text-sm leading-tight font-bold"></span>
+          <span data-field="brand" class="text-xs text-muted"></span>
+        </button>
+      </li>
+    </template>
+
+    <template id="tpl-filter-chip">
+      <button type="button" aria-pressed="false" class="chip shrink-0 bg-surface px-3.5 py-1.5 text-sm text-muted ring-1 ring-line hover:text-fg aria-pressed:bg-fg aria-pressed:text-bg aria-pressed:ring-fg"></button>
+    </template>
+
+    <template id="tpl-choice-chip">
+      <button type="button" role="radio" aria-checked="false" class="chip bg-surface px-3.5 py-1.5 text-sm ring-1 ring-line aria-checked:bg-accent aria-checked:text-on-accent aria-checked:ring-accent"></button>
     </template>
 
     <template id="tpl-option-bool">

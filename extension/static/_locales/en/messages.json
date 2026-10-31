@@ -10,18 +10,8 @@
   "printers_title": {
     "message": "My printers"
   },
-  "printers_empty": {
-    "message": "No printers yet. Add the ones you print with."
-  },
   "printers_slicer": {
     "message": "Slicer"
-  },
-  "printers_search": {
-    "message": "Filter printers…",
-    "description": "Placeholder of the printer filter"
-  },
-  "printers_pick": {
-    "message": "Printer"
   },
   "printers_add": {
     "message": "Add"
@@ -174,5 +164,34 @@
   },
   "basic_slicer_text": {
     "message": "Filaments are assigned in automatic mode, so the project opens and slices in OrcaSlicer, Flash Studio and others."
+  },
+  "picker_search_label": {
+    "message": "Search printers"
+  },
+  "picker_search": {
+    "message": "Search your printer (e.g. Creator 5 Pro, P1S…)"
+  },
+  "picker_close": {
+    "message": "Close"
+  },
+  "picker_brands": {
+    "message": "Brands"
+  },
+  "picker_empty": {
+    "message": "No printer matches. Try another name or brand."
+  },
+  "picker_nozzle": {
+    "message": "Nozzle"
+  },
+  "picker_featured": {
+    "message": "Popular"
+  },
+  "picker_all": {
+    "message": "All ($1)",
+    "description": "$1 = number of printer models"
+  },
+  "printer_nozzle": {
+    "message": "$1 mm",
+    "description": "$1 = nozzle diameter"
   }
 }

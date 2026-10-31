@@ -8,17 +8,8 @@
   "printers_title": {
     "message": "Mis impresoras"
   },
-  "printers_empty": {
-    "message": "Aún no hay impresoras. Añade aquellas con las que imprimes."
-  },
   "printers_slicer": {
     "message": "Laminador"
-  },
-  "printers_search": {
-    "message": "Filtrar impresoras…"
-  },
-  "printers_pick": {
-    "message": "Impresora"
   },
   "printers_add": {
     "message": "Añadir"
@@ -166,5 +157,32 @@
   },
   "basic_slicer_text": {
     "message": "Los filamentos se asignan en modo automático: el proyecto abre y lamina en OrcaSlicer, Flash Studio y otros."
+  },
+  "picker_search_label": {
+    "message": "Buscar impresoras"
+  },
+  "picker_search": {
+    "message": "Busca tu impresora (p. ej. Creator 5 Pro, P1S…)"
+  },
+  "picker_close": {
+    "message": "Cerrar"
+  },
+  "picker_brands": {
+    "message": "Marcas"
+  },
+  "picker_empty": {
+    "message": "Ninguna impresora coincide. Prueba con otro nombre o marca."
+  },
+  "picker_nozzle": {
+    "message": "Boquilla"
+  },
+  "picker_featured": {
+    "message": "Populares"
+  },
+  "picker_all": {
+    "message": "Todas ($1)"
+  },
+  "printer_nozzle": {
+    "message": "$1 mm"
   }
 }

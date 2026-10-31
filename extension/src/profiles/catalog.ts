@@ -11,6 +11,10 @@ export interface Printer {
 }
 
 export interface VendorEntry {
+  /** Brand as shown to users, e.g. "Bambu Lab" for the BBL folder. */
+  name?: string;
+  /** {printer model: thumbnail path relative to the catalog}. */
+  covers?: Record<string, string>;
   version: string | null;
   bundle: string;
   sha256: string;
@@ -26,6 +30,8 @@ export interface SlicerEntry {
   commit: string | null;
   /** Shown in reports, e.g. "FlashForge/Orca-Flashforge@1.7.15" or "Flash Studio 1.7.20". */
   source?: string;
+  /** Printer brands the slicer is made for (preferred for their printers). */
+  makers?: string[];
   vendors: Record<string, VendorEntry>;
 }
 

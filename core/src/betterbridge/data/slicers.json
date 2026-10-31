@@ -4,6 +4,7 @@
   "flashstudio": {
     "name": "Flash Studio",
     "url_scheme": "orcaflashforge",
+    "makers": ["Flashforge"],
     "profile_repo": {"github": "FlashForge/Orca-Flashforge", "path": "resources/profiles"},
     "quirks": {},
     "macos": {
@@ -34,6 +35,7 @@
   "bambustudio": {
     "name": "Bambu Studio",
     "url_scheme": "bambustudioopen",
+    "makers": ["Bambu Lab"],
     "source_of": ["bambu"],
     "_source_of": "Projects of these kinds (read_3mf.detect_source) start from this slicer's system presets: used to show the original value of each designer change.",
     "profile_repo": {"github": "bambulab/BambuStudio", "path": "resources/profiles"},
