@@ -21,18 +21,37 @@ function post(message: FromMain) {
   window.postMessage(message, location.origin);
 }
 
-function captured(body: unknown) {
+/** MakerWorld's /f3mf answer, in whatever form the request read it. */
+async function captured(body: unknown, fileName: string | null = null) {
   if (!armed) return;
   armed = false;
   blockUntil = Date.now() + BLOCK_AFTER_CAPTURE_MS;
-  const json = (typeof body === "string" ? safeParse(body) : body) as Record<string, unknown> | null;
-  const url = json && [json.url, json.downloadUrl, json.download_url, json.fileUrl].find((v) => typeof v === "string");
-  // The CDN is https; same-origin URLs serve the local test page (tests/e2e-makerworld.mjs).
-  if (typeof url === "string" && (/^https:\/\//.test(url) || url.startsWith(location.origin))) {
-    post({ source: MAIN, type: "f3mf", url, name: typeof json?.name === "string" ? json.name : null });
-  } else {
-    post({ source: MAIN, type: "f3mf-error", status: 0 });
+  try {
+    const bytes = body instanceof ArrayBuffer ? body : body instanceof Blob ? await body.arrayBuffer() : null;
+    // A ZIP ("PK"): the 3MF itself.
+    if (bytes && new Uint8Array(bytes, 0, 2).every((b, i) => b === [0x50, 0x4b][i])) {
+      window.postMessage({ source: MAIN, type: "f3mf-file", data: bytes, name: fileName } satisfies FromMain,
+        location.origin, [bytes]);
+      return;
+    }
+    const json = (bytes ? safeParse(new TextDecoder().decode(bytes))
+      : typeof body === "string" ? safeParse(body) : body) as Record<string, unknown> | null;
+    const url = json && [json.url, json.downloadUrl, json.download_url, json.fileUrl].find((v) => typeof v === "string");
+    // The CDN is https; same-origin URLs serve the local test page (tests/e2e-makerworld.mjs).
+    if (typeof url === "string" && (/^https:\/\//.test(url) || url.startsWith(location.origin))) {
+      post({ source: MAIN, type: "f3mf", url, name: typeof json?.name === "string" ? json.name : fileName });
+      return;
+    }
+  } catch {
+    // reported below
   }
+  post({ source: MAIN, type: "f3mf-error", status: 0 });
+}
+
+/** File name from a Content-Disposition header, if any. */
+function dispositionName(header: string | null): string | null {
+  const match = header?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 function safeParse(text: string): unknown {
@@ -54,7 +73,7 @@ window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {
         post({ source: MAIN, type: "f3mf-error", status: res.status });
         return;
       }
-      captured(await res.clone().json().catch(() => null));
+      void captured(await res.clone().arrayBuffer(), dispositionName(res.headers.get("content-disposition")));
     }).catch(() => post({ source: MAIN, type: "f3mf-error", status: 0 }));
   }
   return promise;
@@ -76,7 +95,9 @@ XMLHttpRequest.prototype.send = function (this: XMLHttpRequest, body?: XMLHttpRe
         post({ source: MAIN, type: "f3mf-error", status: this.status });
         return;
       }
-      captured(this.responseType === "json" ? this.response : this.responseText);
+      // responseText throws unless responseType is "" or "text" (MakerWorld uses "arraybuffer").
+      const body = this.responseType === "" || this.responseType === "text" ? this.responseText : this.response;
+      void captured(body, dispositionName(this.getResponseHeader("content-disposition")));
     });
   }
   return nativeSend.call(this, body);

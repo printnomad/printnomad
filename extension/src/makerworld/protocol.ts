@@ -16,6 +16,8 @@ export type ToMain =
 export type FromMain =
   | { source: typeof MAIN; type: "armed" }
   | { source: typeof MAIN; type: "f3mf"; url: string; name: string | null }
+  /** The /f3mf answer was the 3MF file itself (not JSON with a CDN URL). */
+  | { source: typeof MAIN; type: "f3mf-file"; data: ArrayBuffer; name: string | null }
   | { source: typeof MAIN; type: "f3mf-error"; status: number };
 
 /** A printer from My printers as the MakerWorld page shows it. */

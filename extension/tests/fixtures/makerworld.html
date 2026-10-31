@@ -32,9 +32,16 @@
       // In-memory action, like MakerWorld's React state; persisted in localStorage.
       let action = localStorage.getItem("model_operate_last_key") || "open_in_studio";
       const label = document.querySelector(".primaryButton span");
+      // Like MakerWorld: XHR with responseType "arraybuffer" for the /f3mf JSON.
       const download = async () => {
-        const res = await fetch("/api/v1/design-service/instance/1/f3mf?type=download");
-        const json = await res.json();
+        const json = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("GET", "/api/v1/design-service/instance/1/f3mf?type=download");
+          xhr.responseType = "arraybuffer";
+          xhr.onload = () => resolve(JSON.parse(new TextDecoder().decode(xhr.response)));
+          xhr.onerror = reject;
+          xhr.send();
+        });
         const a = document.createElement("a");
         a.href = json.url;
         a.download = json.name;

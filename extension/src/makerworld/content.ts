@@ -289,15 +289,15 @@ const visibleSection = () => sections().find((s) => isVisible(s.button)) ?? sect
 function captureF3mf() {
   let markArmed: () => void;
   const armed = new Promise<void>((resolve) => (markArmed = resolve));
-  const file = new Promise<{ url: string; name: string | null }>((resolve, reject) => {
+  const file = new Promise<{ url?: string; data?: ArrayBuffer; name: string | null }>((resolve, reject) => {
     const timer = setTimeout(() => finish(new Error(t("mw_error_timeout"))), CAPTURE_TIMEOUT_MS);
     function onMessage(e: MessageEvent<FromMain>) {
       if (e.source !== window || e.data?.source !== "betterbridge:main") return;
       if (e.data.type === "armed") markArmed();
-      else if (e.data.type === "f3mf") finish(null, e.data);
+      else if (e.data.type === "f3mf" || e.data.type === "f3mf-file") finish(null, e.data);
       else finish(new Error(t("mw_error_download", e.data.status)));
     }
-    function finish(error: Error | null, value?: { url: string; name: string | null }) {
+    function finish(error: Error | null, value?: { url?: string; data?: ArrayBuffer; name: string | null }) {
       clearTimeout(timer);
       window.removeEventListener("message", onMessage);
       window.postMessage({ source: CONTENT, type: "disarm" }, location.origin);
@@ -358,10 +358,14 @@ async function download() {
     const capture = captureF3mf();
     await Promise.race([capture.armed, capture.file]);
     await startNativeDownload(section);
-    const { url, name } = await capture.file;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(t("mw_error_download", res.status));
-    const data = await res.arrayBuffer();
+    const captured = await capture.file;
+    let data = captured.data;
+    if (!data) {
+      const res = await fetch(captured.url!);
+      if (!res.ok) throw new Error(t("mw_error_download", res.status));
+      data = await res.arrayBuffer();
+    }
+    const name = captured.name;
     setStatus(t("mw_status_converting", printer.label));
     const outcome = await bridge.call<ConvertOutcome>(
       { type: "convert", printerId: printer.id, name: name ?? "model.3mf", data }, [data]);
