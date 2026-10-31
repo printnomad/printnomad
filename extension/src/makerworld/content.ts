@@ -183,26 +183,33 @@ function setStatus(text: string | null, clearAfter = 0) {
 }
 
 // --- menu -------------------------------------------------------------------------
-function visibleMenu(): HTMLElement | null {
-  const menus = [...document.querySelectorAll<HTMLElement>('.MuiMenu-root [role="menu"], .MuiPopover-root [role="menu"]')];
-  // No word boundary after "3MF": the menu's text runs items together ("Download 3MFDownload STL").
-  return menus.find((m) => m.offsetParent !== null && /3mf/i.test(m.textContent ?? "")) ?? null;
+// MakerWorld's download menu is its own dropdown (not always a MUI menu): find the
+// visible "…3MF…" entry by its text, whatever the markup or language.
+const isVisible = (el: Element) => (el as HTMLElement).offsetParent !== null || el.getClientRects().length > 0;
+
+function native3mfItem(): HTMLElement | null {
+  // Cheap text test first; layout (visibility) only for the few matches.
+  const leaf = [...document.body.querySelectorAll<HTMLElement>("li, a, button, [role='menuitem'], div, span")].find((el) => {
+    const text = el.textContent?.trim() ?? "";
+    return text.length < 40 && /\b3mf\b/i.test(text)
+      && ![...el.children].some((c) => /3mf/i.test(c.textContent ?? ""))
+      && !el.closest("[data-bb-item], span.primaryButton") && isVisible(el);
+  });
+  if (!leaf) return null;
+  // The clickable row: a menu item if there is one, else the leaf's own block.
+  return leaf.closest<HTMLElement>("[role='menuitem'], li, a, button") ?? leaf.parentElement ?? leaf;
 }
 
-function native3mfItem(menu: HTMLElement): HTMLElement | null {
-  const items = [...menu.querySelectorAll<HTMLElement>('[role="menuitem"], li')].filter((el) => !el.dataset.bbItem);
-  return items.find((el) => /\b3mf\b/i.test(el.textContent ?? "") && (el.textContent ?? "").length < 60) ?? null;
-}
-
-function decorateMenu(menu: HTMLElement) {
-  if (!active || menu.querySelector("[data-bb-item]")) return;
-  const template = native3mfItem(menu);
-  if (!template) return;
-  const item = template.cloneNode(true) as HTMLElement;
+function decorateMenu() {
+  if (!active) return;
+  const native = native3mfItem();
+  if (!native?.parentElement || native.parentElement.querySelector(":scope > [data-bb-item]")) return;
+  const item = native.cloneNode(true) as HTMLElement;
   item.dataset.bbItem = "1";
-  // Replace the deepest text, keep the icon and layout.
-  const textHolder = [...item.querySelectorAll<HTMLElement>("*")].reverse().find((el) => el.children.length === 0 && el.textContent?.trim())
-    ?? item;
+  item.removeAttribute("id");
+  // Replace the deepest text, keep icons and layout.
+  const textHolder = [...item.querySelectorAll<HTMLElement>("*")].reverse()
+    .find((el) => el.children.length === 0 && /3mf/i.test(el.textContent ?? "")) ?? item;
   textHolder.textContent = t("mw_download_for", active.label);
   item.addEventListener("click", (e) => {
     e.preventDefault();
@@ -210,12 +217,14 @@ function decorateMenu(menu: HTMLElement) {
     closeMenu();
     void download();
   }, true);
-  menu.prepend(item);
+  native.before(item);
 }
 
 function closeMenu() {
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   document.querySelector<HTMLElement>(".MuiBackdrop-root, .MuiModal-backdrop")?.click();
+  // A dropdown of its own closes when its arrow is clicked again.
+  if (native3mfItem()) sections().find((s) => isVisible(s.root))?.arrow?.click();
 }
 
 // --- download for the active printer ---------------------------------------------
@@ -245,11 +254,10 @@ function captureF3mf() {
 }
 
 async function clickNative3mf(section: Section) {
-  section.arrow?.click();
+  if (!native3mfItem()) section.arrow?.click();
   const started = Date.now();
   while (Date.now() - started < MENU_TIMEOUT_MS) {
-    const menu = visibleMenu();
-    const item = menu && native3mfItem(menu);
+    const item = native3mfItem();
     if (item) {
       item.click();
       return;
@@ -261,7 +269,7 @@ async function clickNative3mf(section: Section) {
 
 async function download() {
   const printer = active;
-  const section = sections().find((s) => s.root.offsetParent !== null) ?? sections()[0];
+  const section = sections().find((s) => isVisible(s.root)) ?? sections()[0];
   if (!printer || !section || busy) return;
   busy = true;
   setStatus(t("mw_status_downloading"));
@@ -330,8 +338,7 @@ new MutationObserver(() => {
   setTimeout(() => {
     scheduled = false;
     reconcile();
-    const menu = visibleMenu();
-    if (menu && !triggering) decorateMenu(menu);
+    if (!triggering) decorateMenu();
   }, 30);
 }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
 

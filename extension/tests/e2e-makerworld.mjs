@@ -63,7 +63,9 @@ try {
   await mw.waitForSelector("[data-bb-item]");
   const item = await mw.$eval("[data-bb-item]", (e) => e.textContent.trim());
   if (item !== "Download for Creator 5 Pro") throw new Error(`menu item: ${item}`);
-  await mw.evaluate(() => document.querySelector(".MuiMenu-root").remove());
+  const order = await mw.$$eval(".dropdown .item", (items) => items.map((i) => i.textContent.trim()));
+  if (order[0] !== "Download for Creator 5 Pro" || order[1] !== "Download 3MF") throw new Error(`menu: ${order}`);
+  await mw.evaluate(() => document.querySelector(".dropdown").remove());
 
   // 4. The button captures MakerWorld's download, converts it and saves only the result.
   await mw.click(".primaryButton");

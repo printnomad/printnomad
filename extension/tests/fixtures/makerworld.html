@@ -31,11 +31,14 @@
         document.querySelectorAll(".swiper-slide .chip").forEach((c) => c.classList.toggle("selected", c === chip));
       }));
       document.querySelector(".primaryButton").addEventListener("click", () => { window.openedInStudio = true; });
+      // Like MakerWorld: a dropdown of its own under the button (no MUI menu, no roles).
       document.querySelector(".icon-box").addEventListener("click", () => {
+        const open = document.querySelector(".dropdown");
+        if (open) return open.remove();
         const root = document.createElement("div");
-        root.className = "MuiMenu-root";
-        root.innerHTML = '<ul role="menu"><li role="menuitem"><span>Download 3MF</span></li><li role="menuitem"><span>Download STL</span></li></ul>';
-        root.querySelector("li").addEventListener("click", async () => {
+        root.className = "dropdown";
+        root.innerHTML = '<div class="item"><div>Download 3MF</div></div><div class="item"><div>Download STL/CAD Files <i>i</i></div></div>';
+        root.querySelector(".item").addEventListener("click", async () => {
           root.remove();
           const res = await fetch("/api/v1/design-service/instance/1/f3mf?type=download");
           const json = await res.json();
@@ -46,7 +49,7 @@
           a.click();
           window.nativeDownloadAttempted = true;
         });
-        document.body.append(root);
+        document.querySelector(".actions").append(root);
       });
     </script>
   </body>
