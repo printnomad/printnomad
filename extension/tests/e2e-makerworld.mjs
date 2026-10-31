@@ -80,6 +80,8 @@ try {
       }).observe(document.body, { childList: true });
     });
     await mw.click(".primaryButton");
+    // A spinner while it works.
+    await mw.waitForSelector(".primaryButton [data-bb-loading]", { timeout: 10_000 });
     await mw.waitForFunction(() => /Saved|Could not|Not saved|failed|answer|found/.test(document.querySelector(".primaryButton span").textContent),
       { timeout: 120_000 });
     const status = await label();

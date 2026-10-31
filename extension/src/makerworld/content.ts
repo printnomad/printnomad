@@ -159,9 +159,24 @@ function buttonLabel(section: Section): HTMLElement | null {
   return section.button.querySelector<HTMLElement>("span") ?? section.button;
 }
 
-function paintButton(section: Section, text?: string) {
+function paintButton(section: Section, text?: string, loading = false) {
   const label = buttonLabel(section);
   if (!label) return;
+  // Work in progress: a spinner instead of the text (kept for screen readers and as tooltip).
+  if (loading) {
+    if (!originalButtonText.has(label) && !label.dataset.bbText) originalButtonText.set(label, label.textContent ?? "");
+    if (label.textContent) label.textContent = "";
+    label.dataset.bbText = "1";
+    label.dataset.bbLoading = "1";
+    label.setAttribute("aria-label", text ?? "");
+    label.title = text ?? "";
+    return;
+  }
+  if (label.dataset.bbLoading) {
+    delete label.dataset.bbLoading;
+    label.removeAttribute("aria-label");
+    label.removeAttribute("title");
+  }
   if (!originalButtonText.has(label) && !label.dataset.bbText) originalButtonText.set(label, label.textContent ?? "");
   const wanted = text ?? (active ? t("mw_download_for", active.label) : null);
   if (wanted === null) {
@@ -176,27 +191,13 @@ function paintButton(section: Section, text?: string) {
 }
 
 let statusText: string | null = null;
-let dotsTimer: ReturnType<typeof setInterval> | undefined;
+let statusLoading = false;
 
-/**
- * Show `text` on the button. Texts ending in "…" (work in progress) animate their dots
- * so it is clear something is still happening; fixed width, so the label does not jump.
- */
+/** Show `text` on the button; texts ending in "…" (work in progress) show a spinner. */
 function setStatus(text: string | null, clearAfter = 0) {
-  clearInterval(dotsTimer);
-  const paint = (shown: string | null) => {
-    statusText = shown;
-    for (const s of sections()) paintButton(s, shown ?? undefined);
-  };
-  if (text?.endsWith("…")) {
-    const base = text.slice(0, -1);
-    let step = 0;
-    const frame = () => paint(base + [".\u2007\u2007", "..\u2007", "..."][step++ % 3]);
-    frame();
-    dotsTimer = setInterval(frame, 400);
-  } else {
-    paint(text);
-  }
+  statusText = text;
+  statusLoading = !!text?.endsWith("…");
+  for (const s of sections()) paintButton(s, text ?? undefined, statusLoading);
   if (clearAfter) setTimeout(() => statusText === text && setStatus(null), clearAfter);
 }
 
@@ -278,7 +279,13 @@ function decorateMenu() {
 // has its size and opacity (our visibility checks) and still takes clicks.
 const hideMenus = (() => {
   const style = document.createElement("style");
-  style.textContent = `html[data-bb-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }`;
+  style.textContent = `html[data-bb-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
+    [data-bb-loading]::after {
+      content: ""; display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.2em;
+      border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%;
+      animation: bb-spin 0.7s linear infinite;
+    }
+    @keyframes bb-spin { to { transform: rotate(360deg); } }`;
   document.documentElement.append(style);
   return (on: boolean) => {
     if (on) document.documentElement.dataset.bbHiding = "1";
@@ -425,7 +432,7 @@ function reconcile() {
   for (const section of sections()) {
     injectChips(section);
     paintSelection(section);
-    paintButton(section, statusText ?? undefined);
+    paintButton(section, statusText ?? undefined, statusLoading);
   }
 }
 
