@@ -214,8 +214,12 @@ function openMenu(section: Section | undefined): HTMLElement | null {
   return below ?? popups.find((p) => !!find3mf(p)) ?? null;
 }
 
-/** The visible "…3MF…" entry (the clickable row) inside `scope`. */
-function find3mf(scope: ParentNode): HTMLElement | null {
+/**
+ * The visible "…3MF…" entry inside `scope`: `leaf` is the innermost element with the
+ * text (clicks on it reach MakerWorld's handler wherever it sits), `row` the whole
+ * entry — the highest ancestor that is still alone, just below the list of entries.
+ */
+function find3mf(scope: ParentNode): { leaf: HTMLElement; row: HTMLElement } | null {
   // Cheap text test first; layout (visibility) only for the few matches.
   const leaf = [...scope.querySelectorAll<HTMLElement>("li, a, button, [role='menuitem'], div, span")].find((el) => {
     const text = el.textContent?.trim() ?? "";
@@ -224,17 +228,18 @@ function find3mf(scope: ParentNode): HTMLElement | null {
       && !el.closest("[data-bb-item], span.primaryButton") && isVisible(el);
   });
   if (!leaf) return null;
-  return leaf.closest<HTMLElement>("[role='menuitem'], li, a, button") ?? leaf.parentElement ?? leaf;
-}
-
-function native3mfItem(): HTMLElement | null {
-  const menu = openMenu(visibleSection());
-  return menu ? find3mf(menu) : null;
+  let row = leaf;
+  while (row.parentElement && row.parentElement !== scope
+    && [...row.parentElement.children].filter((c) => isVisible(c)).length === 1) {
+    row = row.parentElement;
+  }
+  return { leaf, row };
 }
 
 function decorateMenu() {
   if (!active) return;
-  const native = native3mfItem();
+  const menu = openMenu(visibleSection());
+  const native = menu && find3mf(menu)?.row;
   if (!native?.parentElement || native.parentElement.querySelector(":scope > [data-bb-item]")) return;
   const item = native.cloneNode(true) as HTMLElement;
   item.dataset.bbItem = "1";
@@ -325,12 +330,12 @@ async function startNativeDownload(section: Section) {
       return;
     }
     if (!openMenu(section) && section.arrow) nativeClick(section.arrow);
-    const item = await poll(() => {
+    const entry = await poll(() => {
       const menu = openMenu(section);
       return menu && find3mf(menu);
     }, MENU_TIMEOUT_MS);
-    if (!item) throw new Error(t("mw_error_menu"));
-    nativeClick(item);
+    if (!entry) throw new Error(t("mw_error_menu"));
+    nativeClick(entry.leaf);
     threeMfSelectedThisPage = true;
     await closeMenu();
   } finally {

@@ -63,8 +63,8 @@ try {
   await mw.waitForSelector("[data-bb-item]");
   const item = await mw.$eval("[data-bb-item]", (e) => e.textContent.trim());
   if (item !== "Download for Creator 5 Pro") throw new Error(`menu item: ${item}`);
-  const order = await mw.$$eval(".MuiPopper-root .item", (items) => items.map((i) => i.textContent.trim()));
-  if (order[0] !== "Download for Creator 5 Pro" || order[1] !== "Download 3MF") throw new Error(`menu: ${order}`);
+  const order = await mw.$$eval(".MuiPopper-root .list > *", (items) => items.map((i) => i.textContent.trim()));
+  if (order.join("|") !== "Download for Creator 5 Pro|Download 3MF|Download STL/CAD Files i") throw new Error(`menu: ${order}`);
   await mw.click(".icon-box"); // close it
 
   // 4. The button captures MakerWorld's download (through its menu the first time,

@@ -59,7 +59,9 @@
         root.setAttribute("role", "tooltip");
         Object.assign(root.style, { position: "absolute", left: `${control.left + scrollX}px`,
           top: `${control.bottom + scrollY}px`, width: `${control.width}px` });
-        root.innerHTML = '<div class="paper"><div class="item"><div>Download 3MF</div></div><div class="item"><div>Download STL/CAD Files <i>i</i></div></div></div>';
+        // Several wrapper levels, the handler on the row (not on the text), like MakerWorld.
+        root.innerHTML = '<div class="paper"><div class="list"><div class="item"><div><div>Download 3MF</div></div></div>'
+          + '<div class="item"><div><div>Download STL/CAD Files <i>i</i></div></div></div></div></div>';
         root.querySelector(".item").addEventListener("click", () => {
           action = "download_3mf";
           localStorage.setItem("model_operate_last_key", action);
