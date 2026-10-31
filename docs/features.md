@@ -56,6 +56,11 @@ printer's profile even when the designer changed them:
 - **Cooling** — fan percentages refer to each printer's own fans, which differ in power,
   number and numbering.
 
+What a printer needs depends on its kind — one nozzle with a filament changer purges the
+old colour, several toolheads prime a cooled head — so these rules are data per printer
+and per kind of printer, and every report says whether the rules for your printer are
+verified or still generic. See [printer-rules.md](printer-rules.md).
+
 Speeds stay the model's: your slicer caps every move at the filament's maximum
 volumetric speed when slicing, so a faster filament still benefits.
 

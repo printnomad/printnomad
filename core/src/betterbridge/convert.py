@@ -10,7 +10,7 @@ import json
 import math
 from dataclasses import dataclass, field
 
-from . import model_edit, rules
+from . import model_edit, printer_rules, rules
 from .i18n import t
 from .profiles import ProfileError, ProfileLibrary
 from .read_3mf import (
@@ -105,7 +105,8 @@ def convert(
     (proceso y filamentos); por defecto manda el perfil destino porque los ventiladores
     cambian de una impresora a otra.
     `keep_designer_printer_settings`: conservar también los ajustes de proceso que dependen
-    de la impresora (torre de purga, aceleraciones, calibración; ver rules.PRINTER_PROCESS_KEY).
+    de la impresora (torre de purga, aceleraciones, calibración) aunque la regla de la
+    impresora diga que manda ella (ver data/printer_rules.json).
     `map_mode`: rules.MAP_COMPATIBLE | MAP_EXACT | MAP_BY_SLICER (ver options.py).
     `source_lib`: perfiles del laminador de origen (p. ej. Bambu Studio). Con ellos el
     reporte muestra el valor original de cada cambio del diseñador, y los "cambios" que
@@ -114,17 +115,22 @@ def convert(
     if map_mode not in rules.MAP_MODES:
         raise ValueError(f"map_mode must be one of {rules.MAP_MODES}, not {map_mode!r}")
 
+    machine_rules = printer_rules.rules_for(target.printer_model, target.extruders, target.shared_nozzle)
+
     def keep_process_key(k: str) -> bool:
         if rules.is_cooling_key(k):
             return keep_designer_cooling
-        if rules.is_printer_process_key(k):
-            return keep_designer_printer_settings
+        group = printer_rules.group_of(k)
+        if group:
+            return keep_designer_printer_settings or machine_rules.policy(group) == printer_rules.POLICY_MODEL
         return True
 
     def process_reason(k: str) -> str:
         return t("reason.cooling") if rules.is_cooling_key(k) else t("reason.printer_setting")
 
     report = Report(source=str(project.path), target=target.display_name, profiles=target.lib.source)
+    report.printer_rules = {"printer": target.printer_model, "architecture": machine_rules.architecture,
+                            "verified": machine_rules.verified, "issue_url": machine_rules.issue_url}
     result = ConversionResult(report=report)
     kind = detect_source(project)
     report.source_kind = kind
@@ -364,7 +370,8 @@ def convert(
         for k in sorted(set(out) - keep):
             report.source_defaults.append(k)
             out.pop(k)
-    kept_printer = sorted(c.key for c in report.kept_author if c.key in out and rules.is_printer_process_key(c.key))
+    kept_printer = sorted(c.key for c in report.kept_author if c.key in out and rules.is_printer_process_key(c.key)
+                          and keep_designer_printer_settings)
     if kept_printer:
         report.warnings.append(t("convert.warn.designer_printer_settings", keys=", ".join(kept_printer)))
     for k, fixes in rules.VALUE_FIXES.items():

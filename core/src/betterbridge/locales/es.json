@@ -152,5 +152,10 @@
   "option.keep_designer_printer_settings.help": "La torre de purga, las aceleraciones, el pie de elefante y la compensación XY, el flujo de la primera capa, el ajuste de arcos y el nombre del archivo G-code del modelo se mantienen en lugar de los del perfil de tu impresora.",
   "option.keep_designer_printer_settings.warning": "Estos valores se eligieron para la impresora de origen. En una impresora de varios cabezales, apagar la torre de purga puede causar hilos o falta de material después de cada cambio de color; los valores de calibración (pie de elefante, compensación XY) son de tu máquina.",
   "report.source_defaults": "Valores por defecto del perfil de origen quitados (el laminador usa los suyos): {count}",
-  "report.not_changed": "Marcados como cambiados pero iguales al perfil de origen ({count}, no se tratan como del diseñador): {keys}"
+  "report.not_changed": "Marcados como cambiados pero iguales al perfil de origen ({count}, no se tratan como del diseñador): {keys}",
+  "architecture.single": "un extrusor",
+  "architecture.filament_changer": "una boquilla con cambiador de filamento",
+  "architecture.toolchanger": "varios cabezales",
+  "report.rules_verified": "Reglas de impresora: verificadas para {printer} ({architecture})",
+  "report.rules_generic": "Reglas de impresora: genéricas para impresoras con {architecture}, aún sin verificar en {printer}. Si algo no imprime bien, cuéntanos: {url}"
 }

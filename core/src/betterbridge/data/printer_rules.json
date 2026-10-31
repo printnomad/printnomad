@@ -1,0 +1,48 @@
+{
+  "_comment": "How each kind of printer treats the process settings that depend on the machine. Policies: 'printer' = the target profile applies, 'model' = the designer's value is kept. Rules for a printer model override those of its architecture. A rule is 'verified' only after converting and printing on that printer; otherwise reports say the rules are generic and ask for feedback. Contribute: docs/printer-rules.md.",
+
+  "issue_url": "https://github.com/BetterBridge/betterbridge/issues/new?template=printer_rules.yml",
+
+  "setting_groups": {
+    "purge_tower": "enable_prime_tower|prime_tower_\\w+|prime_volume|wipe_tower_(?!x$|y$)\\w+|flush_into_(infill|objects|support)",
+    "kinematics": "\\w*_acceleration|accel_to_decel_\\w+",
+    "calibration": "elefant_foot_compensation(_layers)?|initial_layer_flow_ratio|xy_(contour|hole)_compensation",
+    "firmware": "enable_arc_fitting",
+    "file_naming": "filename_format"
+  },
+
+  "default_policies": {
+    "purge_tower": "printer",
+    "kinematics": "printer",
+    "calibration": "printer",
+    "firmware": "printer",
+    "file_naming": "printer"
+  },
+
+  "architectures": {
+    "single": {
+      "_detect": "one extruder, no filament changer",
+      "policies": {},
+      "notes": "Multicolour projects need manual filament changes; the purge tower only matters if the user adds them."
+    },
+    "filament_changer": {
+      "_detect": "one nozzle fed by a filament changer (AMS, IFS, ACE, MMU): single_extruder_multi_material",
+      "policies": {},
+      "notes": "The old colour must be purged at every change: in the purge tower, or through a purge chute on printers that have one (Bambu)."
+    },
+    "toolchanger": {
+      "_detect": "several extruders (independent toolheads, tool changers, IDEX)",
+      "policies": {},
+      "notes": "No colour purge between heads; idle heads may be cooled (ooze_prevention, standby_temperature_delta) and the tower primes the next head."
+    }
+  },
+
+  "printers": {
+    "Flashforge Creator 5 Pro": {
+      "architecture": "toolchanger",
+      "policies": {},
+      "verified": "2026-10-30, Flash Studio 1.7.20 profiles: purge tower from the printer (profile default on, ooze_prevention, standby −100 °C, purge_in_prime_tower off; the tower only primes the next head)",
+      "notes": "Turning the tower off is possible (no colour purge needed) at the risk of under-extrusion or strings after each head change."
+    }
+  }
+}

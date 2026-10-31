@@ -1,0 +1,49 @@
+name: Printer rules (conversion behaviour on your printer)
+description: Tell us how converted projects behave on your printer, so its rules can be added or verified
+labels: [printer-rules]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        BetterBridge takes some settings from your printer instead of the model (purge tower, accelerations, calibration…).
+        The report says whether the rules for your printer are **verified** or **generic**. See docs/printer-rules.md.
+  - type: input
+    id: printer
+    attributes:
+      label: Printer model and nozzle
+      placeholder: e.g. Flashforge Creator 5 Pro, 0.4 mm
+    validations: {required: true}
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Kind of printer
+      options:
+        - Single extruder
+        - One nozzle with a filament changer (AMS, IFS, ACE, MMU…)
+        - Several toolheads / tool changer / IDEX
+        - Other (explain below)
+    validations: {required: true}
+  - type: input
+    id: slicer
+    attributes:
+      label: Slicer and version
+    validations: {required: true}
+  - type: textarea
+    id: report
+    attributes:
+      label: Conversion report
+      description: Paste the report BetterBridge showed (the "Printer rules" line matters).
+      render: text
+    validations: {required: true}
+  - type: textarea
+    id: result
+    attributes:
+      label: What happened when printing
+      description: Which setting should come from the model or from the printer, and why (e.g. "the purge tower is not needed because…"). Photos help.
+    validations: {required: true}
+  - type: checkboxes
+    id: printed
+    attributes:
+      label: Tested
+      options:
+        - label: I printed the converted project on this printer

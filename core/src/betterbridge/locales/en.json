@@ -152,5 +152,10 @@
   "option.keep_designer_printer_settings.help": "Purge tower, accelerations, elephant foot and XY compensation, first-layer flow, arc fitting and the G-code file name set in the model are kept instead of your printer's profile values.",
   "option.keep_designer_printer_settings.warning": "These values were chosen for the source printer. On a printer with several toolheads, turning the purge tower off can cause stringing or missing material after each color change; calibration values (elephant foot, XY compensation) belong to your machine.",
   "report.source_defaults": "Source preset defaults removed (the slicer applies its own): {count}",
-  "report.not_changed": "Marked as changed but equal to the source preset ({count}, not treated as the designer's): {keys}"
+  "report.not_changed": "Marked as changed but equal to the source preset ({count}, not treated as the designer's): {keys}",
+  "architecture.single": "single extruder",
+  "architecture.filament_changer": "single nozzle with filament changer",
+  "architecture.toolchanger": "several toolheads",
+  "report.rules_verified": "Printer rules: verified for {printer} ({architecture})",
+  "report.rules_generic": "Printer rules: generic for printers with {architecture}, not yet verified on {printer}. If something does not print right, tell us: {url}"
 }
