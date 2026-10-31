@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { gzipSync } from "node:zlib";
 
 import {
   type Catalog,
@@ -40,11 +41,17 @@ async function catalogFor(ff = FF): Promise<Catalog> {
   };
 }
 
-function fakeFetch(files: Record<string, string>, log: string[] = []): Fetch {
+function fakeFetch(files: Record<string, string | Uint8Array>, log: string[] = []): Fetch {
   return async (url) => {
     log.push(url);
-    const text = files[url];
-    return { ok: text !== undefined, status: text === undefined ? 404 : 200, text: async () => text ?? "" };
+    const body = files[url];
+    const bytes = typeof body === "string" ? new TextEncoder().encode(body) : (body ?? new Uint8Array());
+    return {
+      ok: body !== undefined,
+      status: body === undefined ? 404 : 200,
+      text: async () => new TextDecoder().decode(bytes),
+      arrayBuffer: async () => Uint8Array.from(bytes).buffer,
+    };
   };
 }
 
@@ -102,4 +109,36 @@ test("falls back to the next catalog and refuses tampered bundles", async () => 
 test("reports a printer missing from the catalog", async () => {
   const store = new ProfileStore([`${BASE}catalog.json`], fakeFetch({ [`${BASE}catalog.json`]: JSON.stringify(await catalogFor()) }));
   await assert.rejects(store.bundlesFor("flashstudio", "Unknown"), ProfileError);
+});
+
+
+test("reads gzipped bundles shipped with the extension", async () => {
+  const c = await catalogFor();
+  for (const v of Object.values(c.slicers.flashstudio.vendors)) v.bundle += ".gz";
+  const files = {
+    "chrome-extension://x/profiles/catalog.json": JSON.stringify(c),
+    "chrome-extension://x/profiles/flashstudio/1.7.15/Flashforge.json.gz": gzipSync(FF),
+    "chrome-extension://x/profiles/flashstudio/1.7.15/OrcaFilamentLibrary.json.gz": gzipSync(LIB),
+  };
+  const store = new ProfileStore(["chrome-extension://x/profiles/catalog.json"], fakeFetch(files));
+  const { bundles } = await store.bundlesFor("flashstudio", "Flashforge Creator 5 Pro 0.4 nozzle");
+  assert.deepEqual(bundles, [FF, LIB]);
+});
+
+
+test("uses the shipped copy of an unchanged bundle instead of downloading it", async () => {
+  const remote = await catalogFor();
+  const shipped = await catalogFor();
+  for (const v of Object.values(shipped.slicers.flashstudio.vendors)) v.bundle += ".gz";
+  const log: string[] = [];
+  const files = {
+    [`${BASE}catalog.json`]: JSON.stringify(remote),
+    "chrome-extension://x/profiles/catalog.json": JSON.stringify(shipped),
+    "chrome-extension://x/profiles/flashstudio/1.7.15/Flashforge.json.gz": gzipSync(FF),
+    "chrome-extension://x/profiles/flashstudio/1.7.15/OrcaFilamentLibrary.json.gz": gzipSync(LIB),
+  };
+  const store = new ProfileStore([`${BASE}catalog.json`, "chrome-extension://x/profiles/catalog.json"], fakeFetch(files, log));
+  const { bundles } = await store.bundlesFor("flashstudio", "Flashforge Creator 5 Pro 0.4 nozzle");
+  assert.deepEqual(bundles, [FF, LIB]);
+  assert.ok(!log.some((u) => u.startsWith(BASE) && u.endsWith(".json") && !u.endsWith("catalog.json")), log.join("\n"));
 });

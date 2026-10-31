@@ -49,7 +49,12 @@ export interface TextCache {
   put(url: string, text: string): Promise<void>;
 }
 
-export type Fetch = (url: string) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
+export type Fetch = (url: string) => Promise<{
+  ok: boolean;
+  status: number;
+  text(): Promise<string>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}>;
 
 export class ProfileError extends Error {}
 
@@ -128,20 +133,50 @@ export class ProfileStore {
   private async bundle(url: string, meta: VendorEntry): Promise<string> {
     // Only downloads are cached: bundles shipped with the extension are local already
     // (and Cache Storage rejects chrome-extension:// URLs).
-    const cache = /^https?:/.test(url) ? this.cache : undefined;
+    const remote = /^https?:/.test(url);
+    const cache = remote ? this.cache : undefined;
     const cached = await cache?.get(url);
     if (cached !== undefined && (await sha256Hex(cached)) === meta.sha256) return cached;
+    // Unchanged since the extension was built: use the copy it ships instead of downloading.
+    const shipped = remote ? await this.shippedCopy(meta.sha256) : undefined;
+    if (shipped !== undefined) return shipped;
     const text = await this.fetchText(url);
     if ((await sha256Hex(text)) !== meta.sha256) throw new ProfileError(`checksum mismatch for ${url}`);
     await cache?.put(url, text);
     return text;
   }
 
+  /** Bundle with this checksum in a lower-priority catalog (the one shipped with the extension). */
+  private async shippedCopy(sha256: string): Promise<string | undefined> {
+    for (const catalogUrl of this.catalogUrls.slice(1)) {
+      try {
+        const catalog = this.catalogs.get(catalogUrl) ?? parseCatalog(await this.fetchText(catalogUrl));
+        this.catalogs.set(catalogUrl, catalog);
+        for (const slicer of Object.values(catalog.slicers)) {
+          for (const v of Object.values(slicer.vendors)) {
+            if (v.sha256 !== sha256) continue;
+            const text = await this.fetchText(new URL(v.bundle, catalogUrl).href);
+            if ((await sha256Hex(text)) === sha256) return text;
+          }
+        }
+      } catch {
+        // no shipped catalog: download instead
+      }
+    }
+    return undefined;
+  }
+
   private async fetchText(url: string): Promise<string> {
     const res = await this.fetchFn(url);
     if (!res.ok) throw new ProfileError(`HTTP ${res.status}`);
-    return res.text();
+    // Bundles shipped with the extension are gzipped (see build.mjs).
+    return url.endsWith(".gz") ? gunzip(await res.arrayBuffer()) : res.text();
   }
+}
+
+export async function gunzip(data: ArrayBuffer): Promise<string> {
+  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).text();
 }
 
 export function parseCatalog(text: string): Catalog {

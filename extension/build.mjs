@@ -2,12 +2,15 @@
 //
 //   node build.mjs                        → dist/
 //   BB_PROFILES_DIR=<catalog dir> node build.mjs
-//       also bundles the fallback profiles listed in config.json (fallbackProfiles)
-//       from a catalog built by tools/build_profile_catalog.py.
+//       also bundles the profiles listed in config.json (fallbackProfiles: vendor
+//       names or "*" for every vendor of a slicer) from a catalog built by
+//       tools/build_profile_catalog.py. Bundles are stored gzipped (JSON shrinks ~17×);
+//       the extension decompresses them when it uses them.
 import { build } from "esbuild";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, "dist");
@@ -75,13 +78,16 @@ if (profilesDir) {
       console.warn(`fallback profiles: ${slicer} is not in ${profilesDir}/catalog.json, skipped`);
       continue;
     }
-    const wanted = new Set(vendors.flatMap((v) => [v, ...(entry.vendors[v]?.depends ?? [])]));
-    const kept = Object.fromEntries(Object.entries(entry.vendors).filter(([v]) => wanted.has(v)));
+    const listed = vendors === "*" ? Object.keys(entry.vendors) : vendors;
+    const wanted = new Set(listed.flatMap((v) => [v, ...(entry.vendors[v]?.depends ?? [])]));
+    const kept = {};
     for (const v of wanted) {
-      if (!kept[v]) throw new Error(`fallback vendor ${slicer}/${v} is not in the catalog`);
-      const src = join(profilesDir, kept[v].bundle);
-      mkdirSync(dirname(join(dist, "profiles", kept[v].bundle)), { recursive: true });
-      cpSync(src, join(dist, "profiles", kept[v].bundle));
+      if (!entry.vendors[v]) throw new Error(`fallback vendor ${slicer}/${v} is not in the catalog`);
+      const bundle = `${entry.vendors[v].bundle}.gz`;
+      mkdirSync(dirname(join(dist, "profiles", bundle)), { recursive: true });
+      writeFileSync(join(dist, "profiles", bundle), gzipSync(readFileSync(join(profilesDir, entry.vendors[v].bundle)), { level: 9 }));
+      // sha256 stays the one of the uncompressed bundle: it is checked after decompressing.
+      kept[v] = { ...entry.vendors[v], bundle };
       for (const cover of Object.values(kept[v].covers ?? {})) {
         mkdirSync(dirname(join(dist, "profiles", cover)), { recursive: true });
         cpSync(join(profilesDir, cover), join(dist, "profiles", cover));

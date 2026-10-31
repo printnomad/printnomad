@@ -24,7 +24,7 @@ tools/build_profile_catalog.py  turns slicer releases into the profile catalog t
 - **Engine**: Pyodide in a module Web Worker started by extension pages (`extension/src/engine/`). MV3 service workers cannot `import()` Pyodide. The core is shipped as `core.json` and written into Pyodide's file system; `betterbridge.web.convert_file()` takes profile bundles and returns plain JSON. Boot ~1 s; a 3 MB project converts in ~0.5 s.
 - **Profiles** (automatic, nothing to configure):
   1. *Catalog* built weekly by CI from the latest release of each slicer repository (`.github/workflows/profiles.yml` → GitHub Pages): one minified bundle per vendor, sha256-verified and cached by release. When a repository lags behind its app (Flashforge: repository 1.7.15, Flash Studio 1.7.20), the catalog can be built from the released app instead (`tools/build_profile_catalog.py --from-app`).
-  2. *Bundled fallback* (`extension/config.json` → `fallbackProfiles`) when offline or before the catalog is published.
+  2. *Shipped copy*: every bundle of the configured slicers (`extension/config.json` → `fallbackProfiles`, `"*"` = all vendors), gzipped (~1.4 MB for Flash Studio, Bambu Studio and OrcaSlicer). Used offline, before the catalog is published, and whenever the online bundle has the same sha256.
   Reports name the source (`repo@release` or `App version`).
 - **Not possible from the extension: the installed slicer's own profiles.** Chromium's File System Access API blocks `~/Library` (including `Application Support`) and `/Applications` on macOS, and `%APPDATA%`/`%LOCALAPPDATA%`/`%PROGRAMDATA%` on Windows (`chrome_file_system_access_permission_context.cc`). See *Helper app* below.
 

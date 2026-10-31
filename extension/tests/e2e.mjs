@@ -3,7 +3,7 @@
 // reachable in tests).
 //
 //   npm run test:e2e                      synthetic project + fake profiles (self-contained)
-//   BB_E2E_FILE=x.3mf BB_E2E_PRINTER="…" [BB_E2E_EXPECT=text] BB_E2E_SKIP_BUILD=1 npm run test:e2e
+//   BB_E2E_FILE=x.3mf BB_E2E_PRINTER="…" [BB_E2E_SLICER=key] [BB_E2E_EXPECT=text] BB_E2E_SKIP_BUILD=1 npm run test:e2e
 //                                         a real project with the dist/ you built
 //
 // The browser comes from CHROME_PATH or a usual install location; without one the test
@@ -73,7 +73,8 @@ try {
   const page = await browser.newPage();
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.goto(`chrome-extension://${id}/options.html`);
-  await page.evaluate((printer) => chrome.storage.sync.set({ printers: [{ id: "p1", slicer: "flashstudio", printer }] }), printer);
+  const slicer = process.env.BB_E2E_SLICER ?? "flashstudio";
+  await page.evaluate((printer, slicer) => chrome.storage.sync.set({ printers: [{ id: "p1", slicer, printer }] }), printer, slicer);
   await page.reload();
   await page.waitForFunction(() => document.querySelectorAll("#convert-printer option").length > 0);
 
