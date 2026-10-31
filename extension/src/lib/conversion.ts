@@ -45,6 +45,18 @@ export class Converter {
     }
   }
 
+  /**
+   * Get ready before the first conversion: boot the engine and load the profiles of
+   * `printers` and of the source slicers (Bambu projects), so a click only converts.
+   */
+  async prepare(printers: MyPrinter[], sourcePrinters: { slicer: string; printer: string }[] = []) {
+    await Promise.allSettled([
+      this.engine.warm(),
+      ...printers.map((p) => this.bundlesFor(p)),
+      ...sourcePrinters.map((s) => this.store.bundlesFor(s.slicer, s.printer)),
+    ]);
+  }
+
   /** `data` is copied: the same project can be converted for several printers. */
   async convert(printer: MyPrinter, name: string, data: ArrayBuffer, settings: Settings, platform: string,
     sourceBundles: string[]): Promise<ConvertResult> {

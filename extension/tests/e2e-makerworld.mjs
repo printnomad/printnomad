@@ -93,6 +93,7 @@ try {
       "import json,sys,zipfile; print(json.loads(zipfile.ZipFile(sys.argv[1]).read('Metadata/project_settings.config'))['printer_model'])",
       complete[0].filename]).toString().trim();
     if (model !== "Flashforge Creator 5 Pro") throw new Error(`the saved file is for ${model}, not the converted project`);
+
   };
   await convertOnce(1);
   await convertOnce(2);

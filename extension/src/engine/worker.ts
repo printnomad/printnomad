@@ -132,6 +132,9 @@ async function handle(request: Request): Promise<unknown> {
       return listPrinters(request.args);
     case "listOptions":
       return listOptions(request.args.lang);
+    case "warm":
+      // Start Pyodide and import the core ahead of the first conversion.
+      return (await engine()).pyimport("betterbridge.web") && null;
     case "sourceInfo":
       return sourceInfo(request.args.name, request.args.data);
   }

@@ -25,6 +25,18 @@ async function printers(): Promise<PagePrinter[]> {
   });
 }
 
+/**
+ * Boot the engine and load the profiles ahead of the click: the user's printers and
+ * the slicer MakerWorld projects come from (made for "Bambu Lab", see slicers.json makers).
+ */
+async function prepare(): Promise<null> {
+  const [settings, { catalog }] = await Promise.all([loadSettings(), converter.store.catalog()]);
+  const source = Object.entries(catalog.slicers).find(([, s]) => s.makers?.includes("Bambu Lab"));
+  const sourcePrinter = source && Object.values(source[1].vendors).flatMap((v) => v.printers)[0];
+  await converter.prepare(settings.printers, source && sourcePrinter ? [{ slicer: source[0], printer: sourcePrinter.name }] : []);
+  return null;
+}
+
 async function convert(printerId: string, name: string, data: ArrayBuffer): Promise<ConvertOutcome> {
   const settings = await loadSettings();
   const printer = settings.printers.find((p) => p.id === printerId);
@@ -36,7 +48,7 @@ async function convert(printerId: string, name: string, data: ArrayBuffer): Prom
   const download = await saveOutput(res.output);
   if (!download.saved) return { status: "cancelled" };
   const warnings = Array.isArray(res.report?.warnings) ? (res.report.warnings as unknown[]).length : 0;
-  return { status: "saved", fileName: download.fileName, warnings };
+  return { status: "saved", fileName: download.fileName, warnings, convertMs: Math.round(res.ms) };
 }
 
 window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
@@ -44,8 +56,8 @@ window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
   if (!CONFIG.makerworldOrigins.includes(parentOrigin)) return;
   const request = e.data;
   try {
-    const result = request.type === "printers"
-      ? await printers()
+    const result = request.type === "printers" ? await printers()
+      : request.type === "prepare" ? await prepare()
       : await convert(request.printerId, request.name, request.data);
     reply({ source: BRIDGE, id: request.id, ok: true, result });
   } catch (err) {

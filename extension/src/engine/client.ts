@@ -47,6 +47,11 @@ export class Engine {
     return this.call({ op: "sourceInfo", args: { name, data: data.slice(0) } });
   }
 
+  /** Boot the engine now (it takes ~1 s) instead of on the first conversion. */
+  warm(): Promise<null> {
+    return this.call({ op: "warm", args: {} });
+  }
+
   listOptions(lang?: string): Promise<OptionInfo[]> {
     return this.call({ op: "listOptions", args: { lang } });
   }

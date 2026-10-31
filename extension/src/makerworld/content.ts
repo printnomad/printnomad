@@ -297,7 +297,6 @@ async function closeMenu() {
 const visibleSection = () => sections().find((s) => isVisible(s.button)) ?? sections()[0];
 
 // --- download for the active printer ---------------------------------------------
-/** `armed` resolves once the page script listens; `file` with MakerWorld's answer. */
 function captureF3mf() {
   let markArmed: () => void;
   const armed = new Promise<void>((resolve) => (markArmed = resolve));
@@ -367,6 +366,7 @@ async function download() {
   const section = visibleSection();
   if (!printer || !section || busy) return;
   busy = true;
+  const started = performance.now();
   setStatus(t("mw_status_downloading"));
   try {
     const capture = captureF3mf();
@@ -379,10 +379,13 @@ async function download() {
       if (!res.ok) throw new Error(t("mw_error_download", res.status));
       data = await res.arrayBuffer();
     }
-    const name = captured.name;
+    const downloadMs = Math.round(performance.now() - started);
+    // MakerWorld's own name for the file (what its download would save).
+    const name = captured.name ?? "model.3mf";
     setStatus(t("mw_status_converting", printer.label));
-    const outcome = await bridge.call<ConvertOutcome>(
-      { type: "convert", printerId: printer.id, name: name ?? "model.3mf", data }, [data]);
+    const outcome = await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, name, data }, [data]);
+    console.info(`[BetterBridge] 3MF from MakerWorld ${downloadMs} ms · total ${Math.round(performance.now() - started)} ms`
+      + (outcome.status === "saved" ? ` · conversion ${outcome.convertMs} ms` : ""));
     const messages: Record<ConvertOutcome["status"], string> = {
       saved: t("mw_status_saved"),
       cancelled: t("mw_status_cancelled"),
@@ -436,10 +439,17 @@ new MutationObserver(() => {
   }, 30);
 }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
 
+let prepared = false;
+
 async function loadPrinters() {
   printers = await bridge.call<PagePrinter[]>({ type: "printers" });
   if (active && !printers.some((p) => p.id === active!.id)) active = null;
   reconcile();
+  // A chip of ours is on the page: get the engine and profiles ready for the click.
+  if (!prepared && document.querySelector("[data-bb-printer]")) {
+    prepared = true;
+    void bridge.call({ type: "prepare" }).catch(() => (prepared = false));
+  }
 }
 
 chrome.storage.onChanged.addListener((changes) => {

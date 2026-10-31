@@ -96,6 +96,8 @@ export function describeSource(entry: SlicerEntry): string {
  */
 export class ProfileStore {
   private readonly catalogs = new Map<string, Catalog>();
+  // Verified bundle texts by checksum, for the life of the page (repeated conversions).
+  private readonly memory = new Map<string, Promise<string>>();
   private readonly catalogUrls: string[];
   private readonly fetchFn: Fetch;
   private readonly cache?: TextCache;
@@ -132,7 +134,17 @@ export class ProfileStore {
     return { bundles, source: describeSource(entry) };
   }
 
-  private async bundle(url: string, meta: VendorEntry): Promise<string> {
+  private bundle(url: string, meta: VendorEntry): Promise<string> {
+    let text = this.memory.get(meta.sha256);
+    if (!text) {
+      text = this.loadBundle(url, meta);
+      text.catch(() => this.memory.delete(meta.sha256));
+      this.memory.set(meta.sha256, text);
+    }
+    return text;
+  }
+
+  private async loadBundle(url: string, meta: VendorEntry): Promise<string> {
     // Only downloads are cached: bundles shipped with the extension are local already
     // (and Cache Storage rejects chrome-extension:// URLs).
     const remote = /^https?:/.test(url);

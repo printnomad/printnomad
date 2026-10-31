@@ -69,6 +69,7 @@ export type Request =
   | { id: number; op: "convert"; args: ConvertRequest }
   | { id: number; op: "listPrinters"; args: ListPrintersRequest }
   | { id: number; op: "listOptions"; args: { lang?: string } }
+  | { id: number; op: "warm"; args: Record<string, never> }
   | { id: number; op: "sourceInfo"; args: { name: string; data: ArrayBuffer } };
 
 export type Response =

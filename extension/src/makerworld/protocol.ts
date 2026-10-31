@@ -31,10 +31,11 @@ export interface PagePrinter {
 
 export type BridgeRequest =
   | { source: typeof CONTENT; id: number; type: "printers" }
+  | { source: typeof CONTENT; id: number; type: "prepare" }
   | { source: typeof CONTENT; id: number; type: "convert"; printerId: string; name: string; data: ArrayBuffer };
 
 export type ConvertOutcome =
-  | { status: "saved"; fileName: string; warnings: number }
+  | { status: "saved"; fileName: string; warnings: number; convertMs: number }
   | { status: "cancelled" }
   | { status: "already" }
   | { status: "error"; message: string; needsMap?: boolean };
