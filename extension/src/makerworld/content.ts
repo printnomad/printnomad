@@ -176,9 +176,27 @@ function paintButton(section: Section, text?: string) {
 }
 
 let statusText: string | null = null;
+let dotsTimer: ReturnType<typeof setInterval> | undefined;
+
+/**
+ * Show `text` on the button. Texts ending in "…" (work in progress) animate their dots
+ * so it is clear something is still happening; fixed width, so the label does not jump.
+ */
 function setStatus(text: string | null, clearAfter = 0) {
-  statusText = text;
-  for (const s of sections()) paintButton(s, text ?? undefined);
+  clearInterval(dotsTimer);
+  const paint = (shown: string | null) => {
+    statusText = shown;
+    for (const s of sections()) paintButton(s, shown ?? undefined);
+  };
+  if (text?.endsWith("…")) {
+    const base = text.slice(0, -1);
+    let step = 0;
+    const frame = () => paint(base + [".\u2007\u2007", "..\u2007", "..."][step++ % 3]);
+    frame();
+    dotsTimer = setInterval(frame, 400);
+  } else {
+    paint(text);
+  }
   if (clearAfter) setTimeout(() => statusText === text && setStatus(null), clearAfter);
 }
 
