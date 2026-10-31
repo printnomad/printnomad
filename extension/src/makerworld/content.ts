@@ -256,6 +256,18 @@ function decorateMenu() {
   native.before(item);
 }
 
+// While BetterBridge uses MakerWorld's menu, keep it out of sight: clipped, so it still
+// has its size and opacity (our visibility checks) and still takes clicks.
+const hideMenus = (() => {
+  const style = document.createElement("style");
+  style.textContent = `html[data-bb-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }`;
+  document.documentElement.append(style);
+  return (on: boolean) => {
+    if (on) document.documentElement.dataset.bbHiding = "1";
+    else delete document.documentElement.dataset.bbHiding;
+  };
+})();
+
 /** A click MakerWorld handles itself (our capture listener lets it through). */
 function nativeClick(target: HTMLElement) {
   triggering = true;
@@ -329,6 +341,7 @@ async function startNativeDownload(section: Section) {
       nativeClick(section.button);
       return;
     }
+    hideMenus(true);
     if (!openMenu(section) && section.arrow) nativeClick(section.arrow);
     const entry = await poll(() => {
       const menu = openMenu(section);
@@ -339,6 +352,7 @@ async function startNativeDownload(section: Section) {
     threeMfSelectedThisPage = true;
     await closeMenu();
   } finally {
+    hideMenus(false);
     try {
       if (stored === null) localStorage.removeItem(ACTION_KEY);
       else localStorage.setItem(ACTION_KEY, stored);

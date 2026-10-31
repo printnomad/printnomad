@@ -65,7 +65,7 @@ await build({
 // Manifest: version from package.json, host permission from the catalog URL.
 const manifest = JSON.parse(readFileSync(join(here, "static", "manifest.json"), "utf8"));
 manifest.version = pkg.version ?? "0.0.0";
-manifest.host_permissions = [`${new URL(config.catalogUrl).origin}/*`];
+manifest.host_permissions = config.catalogUrl ? [`${new URL(config.catalogUrl).origin}/*`] : [];
 // Match patterns take no port: "http://127.0.0.1:47823" → "http://127.0.0.1/*".
 const sites = makerworldOrigins.map((origin) => {
   const { protocol, hostname } = new URL(origin);

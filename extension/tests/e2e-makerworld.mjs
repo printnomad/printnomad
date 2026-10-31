@@ -71,11 +71,21 @@ try {
   //    then its button), converts it and saves only the result; MakerWorld's stored
   //    download preference is left as it was.
   const convertOnce = async (n) => {
+    // MakerWorld's menu must not flash while BetterBridge uses it.
+    await mw.evaluate(() => {
+      window.menuSeen = false;
+      new MutationObserver(() => {
+        const menu = document.querySelector(".MuiPopper-root");
+        if (menu && getComputedStyle(menu).clipPath === "none") window.menuSeen = true;
+      }).observe(document.body, { childList: true });
+    });
     await mw.click(".primaryButton");
     await mw.waitForFunction(() => /Saved|Could not|Not saved|failed|answer|found/.test(document.querySelector(".primaryButton span").textContent),
       { timeout: 120_000 });
     const status = await label();
     if (status !== "Saved ✓") throw new Error(`status: ${status}`);
+    if (await mw.evaluate(() => window.menuSeen)) throw new Error("MakerWorld's menu was visible during the conversion");
+    if (await mw.evaluate(() => "bbHiding" in document.documentElement.dataset)) throw new Error("menus still hidden");
     await mw.waitForFunction(() => document.querySelector(".primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 10_000 });
     const complete = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
     if (complete.length !== n) throw new Error(`${complete.length} downloads after ${n} conversion(s): the original must not be saved`);

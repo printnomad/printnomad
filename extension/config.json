@@ -1,6 +1,6 @@
 {
-  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. fallbackProfiles: target printers to offer offline, plus the source profiles of Bambu projects (original values in reports). featuredModels: printer_model names shown first in the printer picker (the rest by search or brand); names missing from the catalog are ignored. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page).",
-  "catalogUrl": "https://betterbridge.github.io/profiles/catalog.json",
+  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. Empty until the catalog is published (catalogUrlWhenPublished): only the profiles shipped with the extension are used and no request fails. fallbackProfiles: target printers to offer offline, plus the source profiles of Bambu projects (original values in reports). featuredModels: printer_model names shown first in the printer picker (the rest by search or brand); names missing from the catalog are ignored. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page).",
+  "catalogUrl": "",
   "fallbackProfiles": {
     "flashstudio": "*",
     "bambustudio": "*",
@@ -30,5 +30,6 @@
   "makerworldOrigins": [
     "https://makerworld.com",
     "https://makerworld.com.cn"
-  ]
+  ],
+  "catalogUrlWhenPublished": "https://betterbridge.github.io/profiles/catalog.json"
 }

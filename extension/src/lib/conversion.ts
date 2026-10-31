@@ -10,7 +10,8 @@ import type { MyPrinter, Settings } from "./settings.ts";
 /** Published catalog first, the copy shipped with the extension as fallback. */
 export function createProfileStore(): ProfileStore {
   return new ProfileStore(
-    [CONFIG.catalogUrl, chrome.runtime.getURL("profiles/catalog.json")],
+    // No published catalog yet (config.json catalogUrl empty): only the shipped copy.
+    [CONFIG.catalogUrl, chrome.runtime.getURL("profiles/catalog.json")].filter(Boolean),
     (url) => fetch(url),
     cacheStorage(),
   );
