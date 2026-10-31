@@ -47,9 +47,11 @@ choice; your printer's value applies.
 Some process settings describe the machine, not the model, and are taken from your
 printer's profile even when the designer changed them:
 
-- **Purge tower** (and purging into infill/objects). A tool changer such as the
-  Flashforge Creator 5 Pro lowers idle heads by 80 °C and primes the next head on the
-  tower; MakerWorld projects often turn it off for Bambu printers.
+- **Purge tower** (and purging into infill/objects). How a printer changes colour
+  decides whether it needs one: a single nozzle with a filament changer purges the old
+  colour; a tool changer such as the Flashforge Creator 5 Pro cools idle heads by 100 °C
+  and primes the next one on the tower. The printer maker's profile knows; MakerWorld
+  projects often turn the tower off for Bambu printers, which purge through a chute.
 - **Accelerations** — the machine's kinematics.
 - **Calibration** — elephant foot and XY compensation, first-layer flow.
 - **Arc fitting** (firmware support) and the **G-code file name** (your preference).
@@ -58,6 +60,10 @@ printer's profile even when the designer changed them:
 
 Speeds stay the model's: your slicer caps every move at the filament's maximum
 volumetric speed when slicing, so a faster filament still benefits.
+
+The same rule applies to every printer: BetterBridge does not keep per-printer
+exceptions, which would need someone to verify each machine. The printer maker's profile
+is the reference, and you decide when the model's values should win.
 
 Advanced mode can keep the model's cooling or printer settings anyway; each option
 explains its risk.

@@ -58,7 +58,7 @@ def is_cooling_key(key: str) -> bool:
 
 
 # Process settings that belong to the printer, not to the model: purge/prime tower
-# (a tool changer needs it to prime the next head; the C5P cools idle heads by 80 °C),
+# (a tool changer needs it to prime the next head; the C5P cools idle heads by 100 °C),
 # calibration (elephant foot, XY compensation, first-layer flow), kinematics
 # (accelerations), firmware support (arcs) and the user's G-code file naming. Taken
 # from the target profile unless the option keep_designer_printer_settings is on.
