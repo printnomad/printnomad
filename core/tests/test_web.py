@@ -56,3 +56,16 @@ def test_convert_file_options(profiles_root, tmp_path):
                            options={"map_mode": "sideways"}, lang="en")
     assert not res["ok"] and "map_mode" in res["text"]
     assert {o["key"] for o in web.list_options("es")} >= {"map_mode", "keep_designer_cooling"}
+
+
+def test_convert_file_reports_a_project_already_for_the_printer(profiles_root, tmp_path):
+    src = make_bambu_3mf(tmp_path / "boat.3mf", [PLA], [["2"]], settings={"printer_settings_id": FAKE_PRINTER})
+    res = web.convert_file(str(src), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root), lang="en")
+    assert res["ok"] and res["already_target"] and res["output"] is None
+
+
+def test_designer_preset_of_the_same_printer_counts_as_already_set_up(profiles_root, tmp_path):
+    src = make_bambu_3mf(tmp_path / "boat.3mf", [PLA], [["2"]], settings={
+        "printer_settings_id": "C5P - my tweaks", "printer_model": "Flashforge Creator 5 Pro"})
+    res = web.convert_file(str(src), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root), lang="en")
+    assert res["already_target"]

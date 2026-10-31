@@ -66,7 +66,14 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
     const src = `${dir}/${args.name.replace(/[\\/]/g, "_")}`;
     py.FS.writeFile(src, new Uint8Array(args.data));
     const web = py.pyimport("betterbridge.web");
-    const res = toJs<{ ok: boolean; output: string | null; needs_map: boolean; report: Record<string, unknown> | null; text: string }>(
+    const res = toJs<{
+      ok: boolean;
+      output: string | null;
+      needs_map: boolean;
+      already_target: boolean;
+      report: Record<string, unknown> | null;
+      text: string;
+    }>(
       web.convert_file.callKwargs(src, `${dir}/out`, args.printer, pyBundles(py, args.bundles), {
         slicer: args.slicer ?? null,
         platform: args.platform ?? null,
@@ -82,7 +89,15 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
       const bytes = py.FS.readFile(res.output) as Uint8Array;
       output = { name: res.output.slice(res.output.lastIndexOf("/") + 1), data: bytes.slice().buffer };
     }
-    return { ok: res.ok, needsMap: res.needs_map, report: res.report, text: res.text, output, ms: performance.now() - started };
+    return {
+      ok: res.ok,
+      needsMap: res.needs_map,
+      alreadyTarget: res.already_target,
+      report: res.report,
+      text: res.text,
+      output,
+      ms: performance.now() - started,
+    };
   } finally {
     py.pyimport("shutil").rmtree(dir, true);
   }

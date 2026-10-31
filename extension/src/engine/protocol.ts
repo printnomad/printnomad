@@ -35,6 +35,8 @@ export interface OptionInfo {
 export interface ConvertResult {
   ok: boolean;
   needsMap: boolean;
+  /** The project is already set up for this printer: nothing to convert. */
+  alreadyTarget: boolean;
   /** Report as produced by betterbridge.report.Report.to_dict(), or null on input errors. */
   report: Record<string, unknown> | null;
   /** Human-readable report in `lang`. */

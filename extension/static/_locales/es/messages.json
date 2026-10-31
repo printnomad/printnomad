@@ -119,15 +119,6 @@
   "convert_file_ready": {
     "message": "$1 · listo para convertir"
   },
-  "stat_model": {
-    "message": "Del modelo"
-  },
-  "stat_printer": {
-    "message": "De tu impresora"
-  },
-  "stat_warnings": {
-    "message": "Avisos"
-  },
   "printers_hint": {
     "message": "Las impresoras para las que conviertes. Sus perfiles se descargan solos."
   },
@@ -184,5 +175,17 @@
   },
   "printer_nozzle": {
     "message": "$1 mm"
+  },
+  "convert_all_printers": {
+    "message": "Todas mis impresoras ($1)"
+  },
+  "convert_queued": {
+    "message": "En espera…"
+  },
+  "convert_already": {
+    "message": "Ya está lista para esta impresora"
+  },
+  "result_stats": {
+    "message": "$1 del modelo · $2 de tu impresora · $3 avisos"
   }
 }

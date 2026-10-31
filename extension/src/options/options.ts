@@ -42,7 +42,6 @@ const engine = new Engine();
 let settings: Settings;
 let catalog: Catalog | null = null;
 let models: ModelChoice[] = [];
-let lastDownload: number | null = null;
 
 // --- profiles ---------------------------------------------------------------
 // The installed slicer's folders cannot be read from an extension: Chromium blocks
@@ -108,14 +107,16 @@ function renderPrinters() {
 
   const select = $<HTMLSelectElement>("convert-printer");
   const selected = select.value;
-  select.replaceChildren(
-    ...(settings.printers.length
-      ? settings.printers.map((p) => {
-          const label = modelOfPreset(models, p.slicer, p.printer)?.label ?? p.printer;
-          return new Option(`${label} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected);
-        })
-      : [new Option(t("convert_no_printers"), "")]),
-  );
+  const options = settings.printers.map((p) => {
+    const label = modelOfPreset(models, p.slicer, p.printer)?.label ?? p.printer;
+    return new Option(`${label} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected);
+  });
+  // Several printers: one click converts for all of them (one file each), the default.
+  if (options.length > 1) {
+    options.unshift(new Option(t("convert_all_printers", options.length), ALL_PRINTERS, false,
+      !selected || selected === ALL_PRINTERS));
+  }
+  select.replaceChildren(...(options.length ? options : [new Option(t("convert_no_printers"), "")]));
 }
 
 async function updatePrinters(printers: MyPrinter[]) {
@@ -336,8 +337,9 @@ async function loadOptions() {
 // --- convert a file ----------------------------------------------------------
 function showStatus(kind: keyof typeof STATUS_CLASSES, text: string) {
   const el = $("convert-status");
-  el.className = ["chip", ...STATUS_CLASSES[kind]].join(" ");
+  el.className = ["chip", "self-start", ...STATUS_CLASSES[kind]].join(" ");
   el.textContent = text;
+  el.hidden = false;
   $("convert-result").hidden = false;
 }
 
@@ -376,66 +378,117 @@ function wireDropzone() {
   };
 }
 
-function showStats(report: Record<string, unknown> | null) {
-  const count = (key: string) => (Array.isArray(report?.[key]) ? (report![key] as unknown[]).length : 0);
-  $("convert-stats").hidden = !report;
-  if (!report) return;
-  $("stat-model").textContent = String(count("kept_author"));
-  $("stat-printer").textContent = String(count("changed") + count("source_defaults"));
-  $("stat-warnings").textContent = String(count("warnings"));
-}
+const ALL_PRINTERS = "*";
 
 async function convertFile(event: SubmitEvent) {
   event.preventDefault();
   const file = currentFile;
-  const printer = settings.printers.find((p) => p.id === $<HTMLSelectElement>("convert-printer").value);
-  $("convert-show").hidden = true;
+  const choice = $<HTMLSelectElement>("convert-printer").value;
+  const targets = choice === ALL_PRINTERS ? settings.printers : settings.printers.filter((p) => p.id === choice);
+  $("convert-status").hidden = true;
   $("convert-tip").hidden = true;
-  lastDownload = null;
-  $("convert-report").textContent = "";
-  $("convert-stats").hidden = true;
-  if (!printer) return showStatus("warn", t("convert_no_printers"));
+  $("convert-results").replaceChildren();
+  if (!targets.length) return showStatus("warn", t("convert_no_printers"));
   if (!file) return showStatus("warn", t("convert_no_file"));
 
   const button = $<HTMLButtonElement>("convert-button");
   button.disabled = true;
-  showStatus("info", t("convert_busy"));
+  $("convert-result").hidden = false;
   try {
-    const [bundles, platform, data] = await Promise.all([bundlesFor(printer), platformKey(), file.arrayBuffer()]);
+    const [platform, data] = await Promise.all([platformKey(), file.arrayBuffer()]);
     const sourceBundles = await sourceProfiles(file.name, data);
-    const res = await engine.convert({
-      name: file.name, data, printer: printer.printer, bundles, slicer: printer.slicer, platform, lang: uiLanguage(),
-      // Basic mode: the core's defaults, whatever was chosen earlier in advanced mode.
-      options: settings.advanced ? settings.options : {},
-      sourceBundles,
-    });
-    $("convert-report").textContent = res.text;
-    showStats(res.report);
-    if (res.output) {
-      const url = URL.createObjectURL(new Blob([res.output.data], { type: "model/3mf" }));
-      const id = await chrome.downloads.download({ url, filename: res.output.name, conflictAction: "uniquify" });
-      showStatus("info", t("convert_saving", res.output.name));
-      // With "Ask where to save each file" the download only finishes once the user
-      // picks a folder; the blob must live until then and Finder has nothing to show before.
-      const item = await downloadFinished(id);
-      URL.revokeObjectURL(url);
-      if (item?.state === "complete") {
-        lastDownload = id;
-        showStatus(res.report && (res.report.warnings as unknown[]).length ? "warn" : "ok",
-          t("convert_ok", item.filename.split(/[\\/]/).pop() ?? res.output.name, (res.ms / 1000).toFixed(1)));
-        $("convert-show").hidden = false;
-        $("convert-tip").hidden = false;
-      } else {
-        showStatus("warn", t("convert_not_saved"));
-      }
-    } else {
-      showStatus("error", res.needsMap ? t("convert_needs_map") : t("convert_failed"));
-      ($("convert-details") as HTMLDetailsElement).open = true;
+    const rows = targets.map((p) => resultRow(p, file.name));
+    rows.forEach((row) => row.status("info", t("convert_queued")));
+    let saved = false;
+    // One after the other: a single Python engine, and one save dialog at a time.
+    for (const [i, printer] of targets.entries()) {
+      saved = (await convertFor(printer, rows[i], file, data, platform, sourceBundles)) || saved;
     }
+    $("convert-tip").hidden = !saved;
   } catch (e) {
     showStatus("error", (e as Error).message);
   } finally {
     button.disabled = false;
+  }
+}
+
+/** One printer's line in the results: status, stats, report and "Show in Finder". */
+function resultRow(printer: MyPrinter, fileName: string) {
+  const { node, field } = fromTemplate("tpl-result");
+  const model = modelOfPreset(models, printer.slicer, printer.printer);
+  field("printer").textContent = `${model?.label ?? printer.printer} · ${slicerName(printer.slicer)}`;
+  field("printer").title = fileName;
+  showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
+  $("convert-results").append(node);
+  const count = (report: Record<string, unknown>, key: string) =>
+    (Array.isArray(report[key]) ? (report[key] as unknown[]).length : 0);
+  return {
+    status(kind: keyof typeof STATUS_CLASSES, text: string) {
+      field("status").className = ["chip", "max-w-full", ...STATUS_CLASSES[kind]].join(" ");
+      field("status").textContent = text;
+    },
+    report(text: string, report: Record<string, unknown> | null) {
+      field("report").textContent = text;
+      field("details").hidden = !text;
+      if (!report) return;
+      field("stats").textContent = t("result_stats", count(report, "kept_author"),
+        count(report, "changed") + count(report, "source_defaults"), count(report, "warnings"));
+      field("stats").hidden = false;
+    },
+    saved(downloadId: number) {
+      const show = field<HTMLButtonElement>("show");
+      show.hidden = false;
+      show.onclick = () => void showInFolder(downloadId);
+    },
+    openDetails() {
+      (field("details") as HTMLDetailsElement).open = true;
+    },
+  };
+}
+
+type ResultRow = ReturnType<typeof resultRow>;
+
+async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: ArrayBuffer, platform: string,
+  sourceBundles: string[]): Promise<boolean> {
+  row.status("info", t("convert_busy"));
+  try {
+    const bundles = await bundlesFor(printer);
+    const res = await engine.convert({
+      name: file.name, data: data.slice(0), printer: printer.printer, bundles, slicer: printer.slicer, platform,
+      lang: uiLanguage(),
+      // Basic mode: the core's defaults, whatever was chosen earlier in advanced mode.
+      options: settings.advanced ? settings.options : {},
+      sourceBundles,
+    });
+    row.report(res.alreadyTarget ? "" : res.text, res.report);
+    if (res.alreadyTarget) {
+      row.status("info", t("convert_already"));
+      return false;
+    }
+    if (!res.output) {
+      row.status("error", res.needsMap ? t("convert_needs_map") : t("convert_failed"));
+      row.openDetails();
+      return false;
+    }
+    const url = URL.createObjectURL(new Blob([res.output.data], { type: "model/3mf" }));
+    const id = await chrome.downloads.download({ url, filename: res.output.name, conflictAction: "uniquify" });
+    row.status("info", t("convert_saving", res.output.name));
+    // With "Ask where to save each file" the download only finishes once the user
+    // picks a folder; the blob must live until then and Finder has nothing to show before.
+    const item = await downloadFinished(id);
+    URL.revokeObjectURL(url);
+    if (item?.state !== "complete") {
+      row.status("warn", t("convert_not_saved"));
+      return false;
+    }
+    row.saved(id);
+    const warned = res.report && (res.report.warnings as unknown[]).length;
+    row.status(warned ? "warn" : "ok", t("convert_ok", item.filename.split(/[\\/]/).pop() ?? res.output.name,
+      (res.ms / 1000).toFixed(1)));
+    return true;
+  } catch (e) {
+    row.status("error", (e as Error).message);
+    return false;
   }
 }
 
@@ -457,11 +510,10 @@ function downloadFinished(id: number): Promise<chrome.downloads.DownloadItem | u
   });
 }
 
-async function showInFolder() {
-  if (lastDownload === null) return;
-  const [item] = await chrome.downloads.search({ id: lastDownload });
+async function showInFolder(id: number) {
+  const [item] = await chrome.downloads.search({ id });
   // The file may have been moved or deleted since: open the downloads folder instead.
-  if (item?.exists) chrome.downloads.show(lastDownload);
+  if (item?.exists) chrome.downloads.show(id);
   else chrome.downloads.showDefaultFolder();
 }
 
@@ -486,7 +538,6 @@ async function main() {
     renderOptions();
   };
   $<HTMLFormElement>("convert").onsubmit = (e) => void convertFile(e as SubmitEvent);
-  $("convert-show").onclick = () => void showInFolder();
 }
 
 void main();

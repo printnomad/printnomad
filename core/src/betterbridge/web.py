@@ -74,8 +74,9 @@ def convert_file(
 ) -> dict:
     """Convert `src` for `printer` and write the result into `out_dir`.
 
-    Returns {"ok", "output", "needs_map", "report", "text"}; `output` is the path of
-    the converted project or None. `options` are the advanced options (see
+    Returns {"ok", "output", "needs_map", "already_target", "report", "text"}; `output`
+    is the path of the converted project or None (also when the project is already set up
+    for that printer: `already_target`). `options` are the advanced options (see
     options.py; missing ones take their defaults). Errors in the input (unknown
     printer, bad map or option) come back in the report instead of raising.
     `source_bundles`: profiles of the slicer the project comes from (see source_info),
@@ -94,7 +95,12 @@ def convert_file(
         known = registry(platform=platform) if slicer else {}
         target = Target(lib, name, known.get(slicer))
     except (MapError, ProfileError, conversion_options.OptionError) as e:
-        return {"ok": False, "output": None, "needs_map": False, "report": None, "text": str(e)}
+        return {"ok": False, "output": None, "needs_map": False, "report": None, "text": str(e),
+                "already_target": False}
+    if target.is_same_printer(project.project_settings or {}):
+        # Not an error when converting for several printers: this one needs nothing.
+        return {"ok": True, "output": None, "needs_map": False, "report": None, "already_target": True,
+                "text": i18n.t("convert.error.already_target", target=target.display_name)}
 
     source_lib = None
     if source_bundles:
@@ -117,5 +123,5 @@ def convert_file(
     # Paths in the embedder's virtual file system mean nothing to the user: names only.
     report.source = Path(src).name
     report.output = Path(output).name if output else ""
-    return {"ok": report.ok, "output": output, "needs_map": report.needs_map,
+    return {"ok": report.ok, "output": output, "needs_map": report.needs_map, "already_target": False,
             "report": report.to_dict(), "text": report.to_text()}

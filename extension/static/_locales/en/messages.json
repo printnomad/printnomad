@@ -126,15 +126,6 @@
     "message": "$1 · ready to convert",
     "description": "$1 = file size"
   },
-  "stat_model": {
-    "message": "From the model"
-  },
-  "stat_printer": {
-    "message": "From your printer"
-  },
-  "stat_warnings": {
-    "message": "Warnings"
-  },
   "printers_hint": {
     "message": "The printers you convert for. Their profiles download by themselves."
   },
@@ -193,5 +184,19 @@
   "printer_nozzle": {
     "message": "$1 mm",
     "description": "$1 = nozzle diameter"
+  },
+  "convert_all_printers": {
+    "message": "All my printers ($1)",
+    "description": "$1 = number of printers"
+  },
+  "convert_queued": {
+    "message": "Waiting…"
+  },
+  "convert_already": {
+    "message": "Already set up for this printer"
+  },
+  "result_stats": {
+    "message": "$1 from the model · $2 from your printer · $3 warnings",
+    "description": "$1, $2, $3 = numbers of settings and warnings"
   }
 }

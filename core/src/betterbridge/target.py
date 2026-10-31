@@ -158,7 +158,12 @@ class Target:
             return False
 
     def is_same_printer(self, settings: dict) -> bool:
-        return settings.get("printer_settings_id") in self.compatible
+        """The project is already set up for this printer: same preset, or the same model and
+        nozzle under a preset of the designer's own (e.g. "A1 Mini - No Timelapse")."""
+        if settings.get("printer_settings_id") in self.compatible:
+            return True
+        same_model = settings.get("printer_model") == self.printer_model
+        return same_model and str(_first(settings.get("nozzle_diameter"), "")) == self.nozzle
 
     # --- variantes de boquilla ---------------------------------------------
     def nozzle_variants(self) -> dict[str, str]:
