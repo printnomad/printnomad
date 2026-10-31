@@ -100,6 +100,14 @@ its app — Flashforge's repository was at 1.7.15 while Flash Studio shipped 1.7
 BetterBridge uses the profiles of the released app. Copies of old profiles are what make
 slicers show "old vs new" values after a conversion.
 
+## Right on MakerWorld
+
+Your printers appear in MakerWorld's *Print Files* as if MakerWorld supported them: a
+Creator 5 Pro chip next to A1, P1S… (printers MakerWorld already lists are left alone).
+Pick it and the green button becomes *Download for Creator 5 Pro*: the project is
+downloaded through MakerWorld as usual, converted in the browser and saved — only the
+converted file.
+
 ## Nothing silent
 
 Every replaced, kept, removed or warned value is in the report (text and JSON), including

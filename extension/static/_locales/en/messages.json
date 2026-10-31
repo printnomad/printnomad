@@ -207,5 +207,38 @@
   },
   "general_slicer_help": {
     "message": "By default each printer uses its brand's slicer (Flash Studio for Flashforge, Bambu Studio for Bambu Lab…) and OrcaSlicer for the rest. Turn it on if you open everything in OrcaSlicer. You can still change the slicer of a single printer on its card."
+  },
+  "mw_chip_title": {
+    "message": "$1 · converted by BetterBridge"
+  },
+  "mw_download_for": {
+    "message": "Download for $1"
+  },
+  "mw_status_downloading": {
+    "message": "Getting the 3MF…"
+  },
+  "mw_status_converting": {
+    "message": "Converting for $1…"
+  },
+  "mw_status_saved": {
+    "message": "Saved ✓"
+  },
+  "mw_status_cancelled": {
+    "message": "Not saved"
+  },
+  "mw_status_already": {
+    "message": "Already set up for this printer"
+  },
+  "mw_status_error": {
+    "message": "Could not convert"
+  },
+  "mw_error_timeout": {
+    "message": "MakerWorld did not answer: are you signed in?"
+  },
+  "mw_error_download": {
+    "message": "Download failed ($1)"
+  },
+  "mw_error_menu": {
+    "message": "MakerWorld's download menu was not found"
   }
 }

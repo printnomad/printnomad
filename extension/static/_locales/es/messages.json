@@ -196,5 +196,38 @@
   },
   "general_slicer_help": {
     "message": "Por defecto cada impresora usa el laminador de su marca (Flash Studio para Flashforge, Bambu Studio para Bambu Lab…) y OrcaSlicer para las demás. Actívalo si abres todo en OrcaSlicer. Igual puedes cambiar el laminador de una impresora en su tarjeta."
+  },
+  "mw_chip_title": {
+    "message": "$1 · convertido por BetterBridge"
+  },
+  "mw_download_for": {
+    "message": "Descargar para $1"
+  },
+  "mw_status_downloading": {
+    "message": "Obteniendo el 3MF…"
+  },
+  "mw_status_converting": {
+    "message": "Convirtiendo para $1…"
+  },
+  "mw_status_saved": {
+    "message": "Guardado ✓"
+  },
+  "mw_status_cancelled": {
+    "message": "No se guardó"
+  },
+  "mw_status_already": {
+    "message": "Ya está listo para esta impresora"
+  },
+  "mw_status_error": {
+    "message": "No se pudo convertir"
+  },
+  "mw_error_timeout": {
+    "message": "MakerWorld no respondió: ¿iniciaste sesión?"
+  },
+  "mw_error_download": {
+    "message": "Falló la descarga ($1)"
+  },
+  "mw_error_menu": {
+    "message": "No se encontró el menú de descarga de MakerWorld"
   }
 }

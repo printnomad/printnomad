@@ -1,5 +1,5 @@
 {
-  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. fallbackProfiles: target printers to offer offline, plus the source profiles of Bambu projects (original values in reports). featuredModels: printer_model names shown first in the printer picker (the rest by search or brand); names missing from the catalog are ignored.",
+  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. fallbackProfiles: target printers to offer offline, plus the source profiles of Bambu projects (original values in reports). featuredModels: printer_model names shown first in the printer picker (the rest by search or brand); names missing from the catalog are ignored. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page).",
   "catalogUrl": "https://betterbridge.github.io/profiles/catalog.json",
   "fallbackProfiles": {
     "flashstudio": "*",
@@ -26,5 +26,9 @@
     "Elegoo Neptune 4 Pro",
     "Qidi X-Max 3",
     "Voron 2.4 350"
+  ],
+  "makerworldOrigins": [
+    "https://makerworld.com",
+    "https://makerworld.com.cn"
   ]
 }

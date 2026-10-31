@@ -23,15 +23,11 @@ const PYODIDE_FILES = ["pyodide.mjs", "pyodide.asm.mjs", "pyodide.asm.wasm", "py
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 
-await build({
-  entryPoints: {
-    background: "src/background.ts",
-    options: "src/options/options.ts",
-    worker: "src/engine/worker.ts",
-  },
+// Sites of the MakerWorld integration; BB_TEST_ORIGINS adds a local test page (tests/e2e-makerworld.mjs).
+const makerworldOrigins = [...config.makerworldOrigins, ...(process.env.BB_TEST_ORIGINS ?? "").split(",").filter(Boolean)];
+const shared = {
   outdir: dist,
   bundle: true,
-  format: "esm",
   target: "chrome120",
   minify: true,
   sourcemap: true,
@@ -39,19 +35,52 @@ await build({
     __BB_CONFIG__: JSON.stringify({
       catalogUrl: config.catalogUrl,
       featuredModels: config.featuredModels ?? [],
+      makerworldOrigins,
       version: pkg.version ?? "0.0.0",
     }),
   },
   logLevel: "warning",
+};
+// Extension pages and workers: ES modules.
+await build({
+  ...shared,
+  format: "esm",
+  entryPoints: {
+    background: "src/background.ts",
+    options: "src/options/options.ts",
+    worker: "src/engine/worker.ts",
+    bridge: "src/makerworld/bridge.ts",
+  },
+});
+// Content scripts are classic scripts.
+await build({
+  ...shared,
+  format: "iife",
+  entryPoints: {
+    "makerworld-content": "src/makerworld/content.ts",
+    "makerworld-main": "src/makerworld/main-world.ts",
+  },
 });
 
 // Manifest: version from package.json, host permission from the catalog URL.
 const manifest = JSON.parse(readFileSync(join(here, "static", "manifest.json"), "utf8"));
 manifest.version = pkg.version ?? "0.0.0";
 manifest.host_permissions = [`${new URL(config.catalogUrl).origin}/*`];
+// Match patterns take no port: "http://127.0.0.1:47823" → "http://127.0.0.1/*".
+const sites = makerworldOrigins.map((origin) => {
+  const { protocol, hostname } = new URL(origin);
+  return `${protocol}//${hostname}/*`;
+});
+manifest.content_scripts = [
+  // Page world first: it must wrap fetch/XHR before MakerWorld's code runs.
+  { matches: sites, js: ["makerworld-main.js"], world: "MAIN", run_at: "document_start" },
+  { matches: sites, js: ["makerworld-content.js"], run_at: "document_idle" },
+];
+manifest.web_accessible_resources = [{ resources: ["bridge.html"], matches: sites }];
 writeFileSync(join(dist, "manifest.json"), JSON.stringify(manifest, null, 2));
 cpSync(join(here, "static", "_locales"), join(dist, "_locales"), { recursive: true });
 cpSync(join(here, "src", "options", "options.html"), join(dist, "options.html"));
+cpSync(join(here, "src", "makerworld", "bridge.html"), join(dist, "bridge.html"));
 
 mkdirSync(join(dist, "pyodide"));
 for (const f of PYODIDE_FILES) cpSync(join(here, "node_modules", "pyodide", f), join(dist, "pyodide", f));

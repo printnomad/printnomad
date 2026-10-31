@@ -1,0 +1,43 @@
+// Messages between the MakerWorld content script, the page script (main world) and the
+// bridge page (engine iframe). Every message carries `source` so unrelated postMessage
+// traffic on the page is ignored.
+
+export const CONTENT = "betterbridge:content";
+export const MAIN = "betterbridge:main";
+export const BRIDGE = "betterbridge:bridge";
+
+/** Content script → main world. */
+export type ToMain =
+  | { source: typeof CONTENT; type: "arm" }
+  | { source: typeof CONTENT; type: "disarm" }
+  | { source: typeof CONTENT; type: "swiper-update" };
+
+/** Main world → content script: MakerWorld's own 3MF download request was captured. */
+export type FromMain =
+  | { source: typeof MAIN; type: "armed" }
+  | { source: typeof MAIN; type: "f3mf"; url: string; name: string | null }
+  | { source: typeof MAIN; type: "f3mf-error"; status: number };
+
+/** A printer from My printers as the MakerWorld page shows it. */
+export interface PagePrinter {
+  id: string;
+  /** Model without the brand, e.g. "Creator 5 Pro" (what MakerWorld's chips look like). */
+  label: string;
+  brand: string;
+  slicer: string;
+}
+
+export type BridgeRequest =
+  | { source: typeof CONTENT; id: number; type: "printers" }
+  | { source: typeof CONTENT; id: number; type: "convert"; printerId: string; name: string; data: ArrayBuffer };
+
+export type ConvertOutcome =
+  | { status: "saved"; fileName: string; warnings: number }
+  | { status: "cancelled" }
+  | { status: "already" }
+  | { status: "error"; message: string; needsMap?: boolean };
+
+export type BridgeMessage =
+  | { source: typeof BRIDGE; type: "ready" }
+  | { source: typeof BRIDGE; id: number; ok: true; result: unknown }
+  | { source: typeof BRIDGE; id: number; ok: false; error: string };
