@@ -1,10 +1,10 @@
 // Options page: My printers, profile status, conversion options and a manual "Convert a file".
 import { CONFIG } from "../config.ts";
-import { Engine } from "../engine/client.ts";
 import type { OptionInfo } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
 import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
-import { cacheStorage, ProfileStore, type Catalog } from "../profiles/catalog.ts";
+import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
+import type { Catalog } from "../profiles/catalog.ts";
 import {
   allNozzles,
   brands,
@@ -33,25 +33,12 @@ function fromTemplate(id: string) {
   return { node, field };
 }
 
-const store = new ProfileStore(
-  [CONFIG.catalogUrl, chrome.runtime.getURL("profiles/catalog.json")],
-  (url) => fetch(url),
-  cacheStorage(),
-);
-const engine = new Engine();
+const converter = new Converter();
+const { store, engine } = converter;
 
 let settings: Settings;
 let catalog: Catalog | null = null;
 let models: ModelChoice[] = [];
-
-// --- profiles ---------------------------------------------------------------
-// The installed slicer's folders cannot be read from an extension: Chromium blocks
-// ~/Library, /Applications and %APPDATA% in the File System Access API. Profiles come
-// from the catalog; exact installed profiles and the user's own presets will come
-// through the helper app (see docs/architecture.md).
-async function bundlesFor(p: MyPrinter): Promise<string[]> {
-  return (await store.bundlesFor(p.slicer, p.printer)).bundles;
-}
 
 async function loadCatalog() {
   const status = $("profiles-status");
@@ -269,17 +256,6 @@ function addPickedPrinter() {
   closePicker();
 }
 
-/** Profiles of the slicer the project was made with, if the catalog has them (optional). */
-async function sourceProfiles(name: string, data: ArrayBuffer): Promise<string[]> {
-  try {
-    const info = await engine.sourceInfo(name, data);
-    if (!info.slicer || !info.printer) return [];
-    return (await store.bundlesFor(info.slicer, info.printer)).bundles;
-  } catch {
-    return []; // only enriches the report: convert without it
-  }
-}
-
 // --- conversion options (advanced mode) -------------------------------------
 let optionInfo: OptionInfo[] | null = null;
 
@@ -426,7 +402,7 @@ async function convertFile(event: SubmitEvent) {
   $("convert-result").hidden = false;
   try {
     const [platform, data] = await Promise.all([platformKey(), file.arrayBuffer()]);
-    const sourceBundles = await sourceProfiles(file.name, data);
+    const sourceBundles = await converter.sourceProfiles(file.name, data);
     const rows = targets.map((p) => resultRow(p, file.name));
     rows.forEach((row) => row.status("info", t("convert_queued")));
     let saved = false;
@@ -482,14 +458,7 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
   sourceBundles: string[]): Promise<boolean> {
   row.status("info", t("convert_busy"));
   try {
-    const bundles = await bundlesFor(printer);
-    const res = await engine.convert({
-      name: file.name, data: data.slice(0), printer: printer.printer, bundles, slicer: printer.slicer, platform,
-      lang: uiLanguage(),
-      // Basic mode: the core's defaults, whatever was chosen earlier in advanced mode.
-      options: settings.advanced ? settings.options : {},
-      sourceBundles,
-    });
+    const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles);
     row.report(res.alreadyTarget ? "" : res.text, res.report);
     if (res.alreadyTarget) {
       row.status("info", t("convert_already"));
@@ -500,51 +469,20 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
       row.openDetails();
       return false;
     }
-    const url = URL.createObjectURL(new Blob([res.output.data], { type: "model/3mf" }));
-    const id = await chrome.downloads.download({ url, filename: res.output.name, conflictAction: "uniquify" });
     row.status("info", t("convert_saving", res.output.name));
-    // With "Ask where to save each file" the download only finishes once the user
-    // picks a folder; the blob must live until then and Finder has nothing to show before.
-    const item = await downloadFinished(id);
-    URL.revokeObjectURL(url);
-    if (item?.state !== "complete") {
+    const download = await saveOutput(res.output);
+    if (!download.saved) {
       row.status("warn", t("convert_not_saved"));
       return false;
     }
-    row.saved(id);
+    row.saved(download.id);
     const warned = res.report && (res.report.warnings as unknown[]).length;
-    row.status(warned ? "warn" : "ok", t("convert_ok", item.filename.split(/[\\/]/).pop() ?? res.output.name,
-      (res.ms / 1000).toFixed(1)));
+    row.status(warned ? "warn" : "ok", t("convert_ok", download.fileName, (res.ms / 1000).toFixed(1)));
     return true;
   } catch (e) {
     row.status("error", (e as Error).message);
     return false;
   }
-}
-
-/** Final state of a download (complete or interrupted, e.g. cancelled in the save dialog). */
-function downloadFinished(id: number): Promise<chrome.downloads.DownloadItem | undefined> {
-  return new Promise((resolve) => {
-    const check = async () => {
-      const [item] = await chrome.downloads.search({ id });
-      if (!item || item.state !== "in_progress") {
-        chrome.downloads.onChanged.removeListener(onChanged);
-        resolve(item);
-      }
-    };
-    const onChanged = (delta: chrome.downloads.DownloadDelta) => {
-      if (delta.id === id && delta.state) void check();
-    };
-    chrome.downloads.onChanged.addListener(onChanged);
-    void check();
-  });
-}
-
-async function showInFolder(id: number) {
-  const [item] = await chrome.downloads.search({ id });
-  // The file may have been moved or deleted since: open the downloads folder instead.
-  if (item?.exists) chrome.downloads.show(id);
-  else chrome.downloads.showDefaultFolder();
 }
 
 // --- wiring -----------------------------------------------------------------
