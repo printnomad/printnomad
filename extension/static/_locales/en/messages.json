@@ -7,12 +7,6 @@
     "message": "Open 3D models from MakerWorld and other sites already set up for your printer and slicer.",
     "description": "Store description"
   },
-  "options_title": {
-    "message": "BetterBridge settings"
-  },
-  "options_subtitle": {
-    "message": "Convert projects for your own printers, keeping the model's settings."
-  },
   "printers_title": {
     "message": "My printers"
   },
@@ -35,9 +29,6 @@
   "printers_remove": {
     "message": "Remove"
   },
-  "profiles_title": {
-    "message": "Printer profiles"
-  },
   "profiles_status_loading": {
     "message": "Loading profile catalog…"
   },
@@ -54,12 +45,6 @@
   },
   "convert_title": {
     "message": "Convert a file"
-  },
-  "convert_hint": {
-    "message": "Try BetterBridge with a .3mf you already downloaded."
-  },
-  "convert_file": {
-    "message": "Project (.3mf)"
   },
   "convert_printer": {
     "message": "For"
@@ -95,11 +80,8 @@
   "conversion_title": {
     "message": "Conversion"
   },
-  "conversion_basic": {
-    "message": "BetterBridge picks the safest settings: the project opens and slices in any slicer, with your printer's cooling and the model's print settings."
-  },
   "conversion_advanced": {
-    "message": "Advanced mode"
+    "message": "Advanced"
   },
   "conversion_reset": {
     "message": "Restore defaults"
@@ -119,5 +101,78 @@
   },
   "convert_tip": {
     "message": "Open it as it is: your printer is already selected. If you pick the printer again in the slicer, choose “Transfer” to keep the model's values (“Discard” resets them to your printer's profile)."
+  },
+  "nav_printers": {
+    "message": "My printers"
+  },
+  "hero_eyebrow": {
+    "message": "3MF projects for your printer"
+  },
+  "hero_title": {
+    "message": "Any model, ready for your printer."
+  },
+  "hero_text": {
+    "message": "BetterBridge converts MakerWorld and Bambu Studio projects for your printer and slicer, keeping what the designer tuned."
+  },
+  "hero_step1": {
+    "message": "Add your printer once."
+  },
+  "hero_step2": {
+    "message": "Drop the model's .3mf."
+  },
+  "hero_step3": {
+    "message": "Open it in your slicer and slice."
+  },
+  "convert_drop_label": {
+    "message": ".3mf project"
+  },
+  "convert_drop_title": {
+    "message": "Drop your project here"
+  },
+  "convert_drop_hint": {
+    "message": "or click to choose a file"
+  },
+  "convert_file_ready": {
+    "message": "$1 · ready to convert",
+    "description": "$1 = file size"
+  },
+  "stat_model": {
+    "message": "From the model"
+  },
+  "stat_printer": {
+    "message": "From your printer"
+  },
+  "stat_warnings": {
+    "message": "Warnings"
+  },
+  "printers_hint": {
+    "message": "The printers you convert for. Their profiles download by themselves."
+  },
+  "printers_add_title": {
+    "message": "Add a printer"
+  },
+  "conversion_hint": {
+    "message": "How BetterBridge decides which values to use."
+  },
+  "conversion_basic_tab": {
+    "message": "Basic"
+  },
+  "basic_model_title": {
+    "message": "What the designer tuned"
+  },
+  "basic_model_text": {
+    "message": "Supports, infill, speeds, ironing, purge tower… everything the designer changed is kept."
+  },
+  "basic_printer_title": {
+    "message": "What belongs to your machine"
+  },
+  "basic_printer_text": {
+    "message": "Bed, G-code, cooling, accelerations and calibration come from your printer's profile."
+  },
+  "basic_slicer_title": {
+    "message": "Ready in any slicer"
+  },
+  "basic_slicer_text": {
+    "message": "Filaments are assigned in automatic mode, so the project opens and slices in OrcaSlicer, Flash Studio and others."
   }
 }

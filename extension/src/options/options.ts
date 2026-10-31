@@ -8,11 +8,19 @@ import { cacheStorage, ProfileStore, type Catalog } from "../profiles/catalog.ts
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const STATUS_CLASSES = {
-  ok: ["bg-ok-bg", "text-ok-fg"],
-  warn: ["bg-warn-bg", "text-warn-fg"],
-  error: ["bg-err-bg", "text-err-fg"],
+  ok: ["bg-ok-soft", "text-ok"],
+  warn: ["bg-warn-soft", "text-warn"],
+  error: ["bg-err-soft", "text-err"],
   info: ["bg-surface", "text-muted"],
 } as const;
+
+/** Clone of a <template> in options.html, localized; `fields` = its [data-field] elements. */
+function fromTemplate(id: string) {
+  const node = ($<HTMLTemplateElement>(id).content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+  localize(node);
+  const field = <T extends HTMLElement = HTMLElement>(name: string) => node.querySelector(`[data-field="${name}"]`) as T;
+  return { node, field };
+}
 
 const store = new ProfileStore(
   [CONFIG.catalogUrl, chrome.runtime.getURL("profiles/catalog.json")],
@@ -57,33 +65,25 @@ function slicerName(key: string): string {
 
 // --- My printers ------------------------------------------------------------
 function renderPrinters() {
-  const list = $("printers");
-  list.replaceChildren(
-    ...settings.printers.map((p) => {
-      const li = document.createElement("li");
-      li.className = "flex items-center justify-between gap-3 rounded-lg border border-line bg-surface px-3 py-2";
-      const label = document.createElement("div");
-      const name = document.createElement("div");
-      name.className = "font-medium";
-      name.textContent = p.printer;
-      const slicer = document.createElement("div");
-      slicer.className = "text-xs text-muted";
-      slicer.textContent = slicerName(p.slicer);
-      label.append(name, slicer);
-      const remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "rounded-md px-2 py-1 text-xs text-muted hover:bg-err-bg hover:text-err-fg";
-      remove.textContent = t("printers_remove");
-      remove.onclick = () => updatePrinters(settings.printers.filter((x) => x.id !== p.id));
-      li.append(label, remove);
-      return li;
-    }),
-  );
-  $("printers-empty").hidden = settings.printers.length > 0;
+  const items = settings.printers.map((p) => {
+    const { node, field } = fromTemplate("tpl-printer");
+    field("name").textContent = p.printer;
+    field("slicer").textContent = slicerName(p.slicer);
+    const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
+    remove.title = remove.ariaLabel = t("printers_remove");
+    remove.onclick = () => updatePrinters(settings.printers.filter((x) => x.id !== p.id));
+    return node;
+  });
+  $("printers").replaceChildren(...(items.length ? items : [fromTemplate("tpl-printers-empty").node]));
+  // No printer yet: open the add panel so the first step is obvious.
+  ($("add-panel") as HTMLDetailsElement).open ||= settings.printers.length === 0;
 
   const select = $<HTMLSelectElement>("convert-printer");
+  const selected = select.value;
   select.replaceChildren(
-    ...settings.printers.map((p) => new Option(`${p.printer} · ${slicerName(p.slicer)}`, p.id)),
+    ...(settings.printers.length
+      ? settings.printers.map((p) => new Option(`${p.printer} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected))
+      : [new Option(t("convert_no_printers"), "")]),
   );
 }
 
@@ -148,67 +148,56 @@ async function setOption(o: OptionInfo, value: boolean | string) {
 }
 
 function optionControl(o: OptionInfo): HTMLElement {
-  const box = document.createElement("div");
-  const help = document.createElement("p");
-  help.className = "mt-1 text-xs text-muted";
-  help.textContent = o.help;
+  const value = optionValue(o);
+  const { node, field } = fromTemplate(o.kind === "bool" ? "tpl-option-bool" : "tpl-option-choice");
+  field("label").textContent = o.label;
+  field("help").textContent = o.help;
   if (o.kind === "bool") {
-    const label = document.createElement("label");
-    label.className = "flex items-center gap-2 font-medium";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.className = "size-4 accent-accent";
-    input.checked = optionValue(o) === true;
+    const input = field<HTMLInputElement>("input");
+    input.checked = value === true;
     input.onchange = () => void setOption(o, input.checked);
-    const text = document.createElement("span");
-    text.textContent = o.label;
-    label.append(input, text);
-    box.append(label, help);
   } else {
-    const fieldset = document.createElement("fieldset");
-    const legend = document.createElement("legend");
-    legend.className = "font-medium";
-    legend.textContent = o.label;
-    fieldset.append(legend, help);
-    for (const choice of o.choices ?? []) {
-      const label = document.createElement("label");
-      label.className = "mt-2 flex items-start gap-2";
-      const input = document.createElement("input");
-      input.type = "radio";
+    field("choices").replaceChildren(...(o.choices ?? []).map((choice) => {
+      const item = fromTemplate("tpl-choice");
+      const input = item.field<HTMLInputElement>("input");
       input.name = `option-${o.key}`;
       input.value = choice.value;
-      input.className = "mt-0.5 accent-accent";
-      input.checked = optionValue(o) === choice.value;
+      input.checked = value === choice.value;
       input.onchange = () => void setOption(o, choice.value);
-      const text = document.createElement("span");
-      text.textContent = choice.label;
-      label.append(input, text);
-      fieldset.append(label);
-    }
-    box.append(fieldset);
+      item.field("label").textContent = choice.label;
+      return item.node;
+    }));
   }
-  if (o.warning !== undefined && optionValue(o) === o.warn_when) {
-    const warning = document.createElement("p");
-    warning.className = "mt-2 rounded-md bg-warn-bg px-3 py-2 text-xs text-warn-fg";
-    warning.setAttribute("role", "alert");
+  const warning = field("warning");
+  if (o.warning !== undefined && value === o.warn_when) {
     warning.textContent = o.warning;
-    box.append(warning);
+    warning.hidden = false;
   }
-  return box;
+  return node;
 }
 
 function renderOptions() {
   const list = $("conversion-options");
-  $<HTMLInputElement>("advanced").checked = settings.advanced;
+  $("mode-basic").ariaChecked = String(!settings.advanced);
+  $("mode-advanced").ariaChecked = String(settings.advanced);
   $("conversion-basic").hidden = settings.advanced;
-  list.hidden = !settings.advanced;
-  $("conversion-reset").hidden = !settings.advanced || Object.keys(settings.options).length === 0;
+  $("conversion-advanced").hidden = !settings.advanced;
+  $("conversion-reset").hidden = Object.keys(settings.options).length === 0;
   if (!settings.advanced) return;
   if (!optionInfo) {
-    list.textContent = t("conversion_loading");
+    const loading = document.createElement("li");
+    loading.className = "p-5 text-muted";
+    loading.textContent = t("conversion_loading");
+    list.replaceChildren(loading);
     return;
   }
   list.replaceChildren(...optionInfo.map(optionControl));
+}
+
+async function setAdvanced(advanced: boolean) {
+  settings.advanced = advanced;
+  await saveSettings({ advanced });
+  await loadOptions();
 }
 
 async function loadOptions() {
@@ -217,7 +206,10 @@ async function loadOptions() {
   try {
     optionInfo = await engine.listOptions(uiLanguage());
   } catch (e) {
-    $("conversion-options").textContent = (e as Error).message;
+    const error = document.createElement("li");
+    error.className = "p-5 text-err";
+    error.textContent = (e as Error).message;
+    $("conversion-options").replaceChildren(error);
     return;
   }
   renderOptions();
@@ -226,19 +218,64 @@ async function loadOptions() {
 // --- convert a file ----------------------------------------------------------
 function showStatus(kind: keyof typeof STATUS_CLASSES, text: string) {
   const el = $("convert-status");
-  el.className = ["rounded-md", "px-2", "py-1", ...STATUS_CLASSES[kind]].join(" ");
+  el.className = ["chip", ...STATUS_CLASSES[kind]].join(" ");
   el.textContent = text;
   $("convert-result").hidden = false;
 }
 
+let currentFile: File | null = null;
+
+function formatSize(bytes: number): string {
+  return bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`;
+}
+
+function chooseFile(file: File | undefined) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith(".3mf")) {
+    showStatus("warn", t("convert_no_file"));
+    return;
+  }
+  currentFile = file;
+  // MakerWorld names use "+" for spaces: "4-colors+Benchy+AMS" → "4-colors Benchy AMS".
+  $("file-name").textContent = file.name.replace(/\.3mf$/i, "").replace(/[+_]+/g, " ");
+  $("file-detail").textContent = t("convert_file_ready", formatSize(file.size));
+  $("convert-result").hidden = true;
+}
+
+function wireDropzone() {
+  const zone = $("dropzone");
+  const input = $<HTMLInputElement>("convert-file");
+  input.onchange = () => chooseFile(input.files?.[0]);
+  const drag = (on: boolean) => (e: DragEvent) => {
+    e.preventDefault();
+    zone.dataset.drag = String(on);
+  };
+  zone.ondragenter = zone.ondragover = drag(true);
+  zone.ondragleave = drag(false);
+  zone.ondrop = (e) => {
+    drag(false)(e);
+    chooseFile(e.dataTransfer?.files[0]);
+  };
+}
+
+function showStats(report: Record<string, unknown> | null) {
+  const count = (key: string) => (Array.isArray(report?.[key]) ? (report![key] as unknown[]).length : 0);
+  $("convert-stats").hidden = !report;
+  if (!report) return;
+  $("stat-model").textContent = String(count("kept_author"));
+  $("stat-printer").textContent = String(count("changed") + count("source_defaults"));
+  $("stat-warnings").textContent = String(count("warnings"));
+}
+
 async function convertFile(event: SubmitEvent) {
   event.preventDefault();
-  const file = $<HTMLInputElement>("convert-file").files?.[0];
+  const file = currentFile;
   const printer = settings.printers.find((p) => p.id === $<HTMLSelectElement>("convert-printer").value);
   $("convert-show").hidden = true;
   $("convert-tip").hidden = true;
   lastDownload = null;
   $("convert-report").textContent = "";
+  $("convert-stats").hidden = true;
   if (!printer) return showStatus("warn", t("convert_no_printers"));
   if (!file) return showStatus("warn", t("convert_no_file"));
 
@@ -255,6 +292,7 @@ async function convertFile(event: SubmitEvent) {
       sourceBundles,
     });
     $("convert-report").textContent = res.text;
+    showStats(res.report);
     if (res.output) {
       const url = URL.createObjectURL(new Blob([res.output.data], { type: "model/3mf" }));
       const id = await chrome.downloads.download({ url, filename: res.output.name, conflictAction: "uniquify" });
@@ -314,6 +352,7 @@ async function main() {
   localize();
   settings = await loadSettings();
   await loadCatalog();
+  wireDropzone();
   fillSlicerSelect($<HTMLSelectElement>("add-slicer"), settings.printers.at(-1)?.slicer ?? DEFAULT_SLICER);
   renderPrinters();
   void loadOptions();
@@ -327,12 +366,10 @@ async function main() {
     const printer = $<HTMLSelectElement>("add-printer-name").value;
     if (!printer || settings.printers.some((p) => p.slicer === slicer && p.printer === printer)) return;
     void updatePrinters([...settings.printers, { id: crypto.randomUUID(), slicer, printer }]);
+    ($("add-panel") as HTMLDetailsElement).open = false;
   };
-  $<HTMLInputElement>("advanced").onchange = async (e) => {
-    settings.advanced = (e.target as HTMLInputElement).checked;
-    await saveSettings({ advanced: settings.advanced });
-    await loadOptions();
-  };
+  $("mode-basic").onclick = () => void setAdvanced(false);
+  $("mode-advanced").onclick = () => void setAdvanced(true);
   $("conversion-reset").onclick = async () => {
     settings.options = {};
     await saveSettings({ options: {} });

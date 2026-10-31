@@ -5,12 +5,6 @@
   "ext_description": {
     "message": "Abre modelos 3D de MakerWorld y otros sitios ya preparados para tu impresora y tu laminador."
   },
-  "options_title": {
-    "message": "Ajustes de BetterBridge"
-  },
-  "options_subtitle": {
-    "message": "Convierte proyectos para tus impresoras manteniendo los valores del modelo."
-  },
   "printers_title": {
     "message": "Mis impresoras"
   },
@@ -32,9 +26,6 @@
   "printers_remove": {
     "message": "Quitar"
   },
-  "profiles_title": {
-    "message": "Perfiles de impresora"
-  },
   "profiles_status_loading": {
     "message": "Cargando el catálogo de perfiles…"
   },
@@ -49,12 +40,6 @@
   },
   "convert_title": {
     "message": "Convertir un archivo"
-  },
-  "convert_hint": {
-    "message": "Prueba BetterBridge con un .3mf que ya descargaste."
-  },
-  "convert_file": {
-    "message": "Proyecto (.3mf)"
   },
   "convert_printer": {
     "message": "Para"
@@ -89,11 +74,8 @@
   "conversion_title": {
     "message": "Conversión"
   },
-  "conversion_basic": {
-    "message": "BetterBridge elige los ajustes más seguros: el proyecto abre y lamina en cualquier laminador, con el enfriamiento de tu impresora y los valores de impresión del modelo."
-  },
   "conversion_advanced": {
-    "message": "Modo avanzado"
+    "message": "Avanzado"
   },
   "conversion_reset": {
     "message": "Restablecer valores por defecto"
@@ -112,5 +94,77 @@
   },
   "convert_tip": {
     "message": "Ábrelo tal cual: tu impresora ya está seleccionada. Si vuelves a elegir la impresora en el laminador, pulsa «Transfer» (Transferir) para mantener los valores del modelo («Discard» los cambia por los del perfil de tu impresora)."
+  },
+  "nav_printers": {
+    "message": "Mis impresoras"
+  },
+  "hero_eyebrow": {
+    "message": "Proyectos 3MF para tu impresora"
+  },
+  "hero_title": {
+    "message": "Cualquier modelo, listo para tu impresora."
+  },
+  "hero_text": {
+    "message": "BetterBridge convierte proyectos de MakerWorld y Bambu Studio para tu impresora y tu laminador, manteniendo lo que el diseñador ajustó."
+  },
+  "hero_step1": {
+    "message": "Añade tu impresora una sola vez."
+  },
+  "hero_step2": {
+    "message": "Suelta el .3mf del modelo."
+  },
+  "hero_step3": {
+    "message": "Ábrelo en tu laminador y lamina."
+  },
+  "convert_drop_label": {
+    "message": "Proyecto .3mf"
+  },
+  "convert_drop_title": {
+    "message": "Suelta aquí tu proyecto"
+  },
+  "convert_drop_hint": {
+    "message": "o haz clic para elegir un archivo"
+  },
+  "convert_file_ready": {
+    "message": "$1 · listo para convertir"
+  },
+  "stat_model": {
+    "message": "Del modelo"
+  },
+  "stat_printer": {
+    "message": "De tu impresora"
+  },
+  "stat_warnings": {
+    "message": "Avisos"
+  },
+  "printers_hint": {
+    "message": "Las impresoras para las que conviertes. Sus perfiles se descargan solos."
+  },
+  "printers_add_title": {
+    "message": "Añadir impresora"
+  },
+  "conversion_hint": {
+    "message": "Cómo decide BetterBridge qué valores usar."
+  },
+  "conversion_basic_tab": {
+    "message": "Básico"
+  },
+  "basic_model_title": {
+    "message": "Lo que ajustó el diseñador"
+  },
+  "basic_model_text": {
+    "message": "Soportes, relleno, velocidades, planchado, torre de purga… todo lo que el diseñador cambió se mantiene."
+  },
+  "basic_printer_title": {
+    "message": "Lo que es de tu máquina"
+  },
+  "basic_printer_text": {
+    "message": "Plato, G-code, enfriamiento, aceleraciones y calibración vienen del perfil de tu impresora."
+  },
+  "basic_slicer_title": {
+    "message": "Listo en cualquier laminador"
+  },
+  "basic_slicer_text": {
+    "message": "Los filamentos se asignan en modo automático: el proyecto abre y lamina en OrcaSlicer, Flash Studio y otros."
   }
 }
