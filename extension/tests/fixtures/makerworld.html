@@ -26,12 +26,25 @@
         <div class="btn" style="display: inline-flex; width: 320px"><span class="primaryButton"><div><span>Open in Bambu Studio</span></div></span><div class="icon-box">▾</div></div>
       </div>
     </div>
+    <!-- MakerWorld also renders a mobile copy of the section, hidden on desktop. -->
+    <div class="section mobile-box" style="display: none">
+      <h4>Print Files (1)</h4>
+      <div class="swiper"><div class="swiper-wrapper">
+        <div class="swiper-slide"><div class="first x"><div class="chip">All</div></div></div>
+        <div class="swiper-slide swiper-slide-active"><div class="x"><div class="chip selected">A1 mini</div></div></div>
+        <div class="swiper-slide"><div class="x"><div class="chip">P1S</div></div></div>
+      </div></div>
+      <div class="profiles"><div aria-haspopup="true"><div class="active"><span class="config_title">0.2 mm</span></div></div></div>
+      <div class="actions">
+        <div class="btn" style="display: inline-flex; width: 320px"><span class="primaryButton"><div><span>Open in Bambu Studio</span></div></span><div class="icon-box">▾</div></div>
+      </div>
+    </div>
     <!-- MakerWorld keeps hidden copies of menus in the page: must never be used. -->
     <div class="MuiPopover-root" style="opacity: 0; visibility: hidden"><ul role="menu"><li>Download 3MF</li></ul></div>
     <script>
       // In-memory action, like MakerWorld's React state; persisted in localStorage.
       let action = localStorage.getItem("model_operate_last_key") || "open_in_studio";
-      const label = document.querySelector(".primaryButton span");
+      const label = document.querySelector(".section:not(.mobile-box) .primaryButton span");
       // Like MakerWorld: XHR with responseType "arraybuffer" for the /f3mf JSON.
       const download = async () => {
         const json = await new Promise((resolve, reject) => {
@@ -49,18 +62,22 @@
         a.click();
         window.nativeDownloadAttempted = true;
       };
+      // A chip click is a route change in MakerWorld (Next.js); count them.
+      window.chipClicks = 0;
       document.querySelectorAll(".swiper-slide .chip").forEach((chip) => chip.addEventListener("click", () => {
-        document.querySelectorAll(".swiper-slide .chip").forEach((c) => c.classList.toggle("selected", c === chip));
+        window.chipClicks++;
+        const text = chip.textContent;
+        document.querySelectorAll(".swiper-slide .chip").forEach((c) => c.classList.toggle("selected", c.textContent === text));
       }));
-      document.querySelector(".primaryButton").addEventListener("click", () => {
+      document.querySelector(".section:not(.mobile-box) .primaryButton").addEventListener("click", () => {
         if (action === "download_3mf") download();
         else window.openedInStudio = true;
       });
       // Like MakerWorld: a floating MUI popper anchored right below the button, as wide as it.
-      document.querySelector(".icon-box").addEventListener("click", () => {
+      document.querySelector(".section:not(.mobile-box) .icon-box").addEventListener("click", () => {
         const open = document.querySelector(".MuiPopper-root");
         if (open) return open.remove();
-        const control = document.querySelector(".btn").getBoundingClientRect();
+        const control = document.querySelector(".section:not(.mobile-box) .btn").getBoundingClientRect();
         const root = document.createElement("div");
         root.className = "MuiPopper-root";
         root.setAttribute("role", "tooltip");

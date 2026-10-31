@@ -137,12 +137,14 @@ function paintSelection(section: Section) {
 }
 
 function activate(printer: PagePrinter) {
-  // Show every print profile (MakerWorld filters by its own chip): select its "All".
-  if (active?.id !== printer.id) {
-    for (const section of sections()) {
-      const all = nativeSlides(section.wrapper)[0];
-      chipOf(all)?.click();
-    }
+  // Show every print profile (MakerWorld filters by its own chip): select its "All" once,
+  // in the visible copy of the section (desktop and mobile copies share MakerWorld's
+  // state; clicking both starts two route changes and Next.js cancels the first one).
+  // Switching between our chips: MakerWorld is already on "All".
+  if (!active) {
+    const section = visibleSection();
+    const all = section && chipOf(nativeSlides(section.wrapper)[0]);
+    if (all && !all.classList.contains("selected")) nativeClick(all);
   }
   active = printer;
   reconcile();
