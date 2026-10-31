@@ -63,24 +63,33 @@ try {
   await mw.waitForSelector("[data-bb-item]");
   const item = await mw.$eval("[data-bb-item]", (e) => e.textContent.trim());
   if (item !== "Download for Creator 5 Pro") throw new Error(`menu item: ${item}`);
-  const order = await mw.$$eval(".dropdown .item", (items) => items.map((i) => i.textContent.trim()));
+  const order = await mw.$$eval(".MuiPopper-root .item", (items) => items.map((i) => i.textContent.trim()));
   if (order[0] !== "Download for Creator 5 Pro" || order[1] !== "Download 3MF") throw new Error(`menu: ${order}`);
-  await mw.evaluate(() => document.querySelector(".dropdown").remove());
+  await mw.click(".icon-box"); // close it
 
-  // 4. The button captures MakerWorld's download, converts it and saves only the result.
-  await mw.click(".primaryButton");
-  await mw.waitForFunction(() => /Saved|Could not|Not saved|failed|answer/.test(document.querySelector(".primaryButton span").textContent),
-    { timeout: 120_000 });
-  const status = await label();
-  if (status !== "Saved ✓") throw new Error(`status: ${status}`);
+  // 4. The button captures MakerWorld's download (through its menu the first time,
+  //    then its button), converts it and saves only the result; MakerWorld's stored
+  //    download preference is left as it was.
+  const convertOnce = async (n) => {
+    await mw.click(".primaryButton");
+    await mw.waitForFunction(() => /Saved|Could not|Not saved|failed|answer|found/.test(document.querySelector(".primaryButton span").textContent),
+      { timeout: 120_000 });
+    const status = await label();
+    if (status !== "Saved ✓") throw new Error(`status: ${status}`);
+    await mw.waitForFunction(() => document.querySelector(".primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 10_000 });
+    const complete = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
+    if (complete.length !== n) throw new Error(`${complete.length} downloads after ${n} conversion(s): the original must not be saved`);
+    const model = execFileSync("python3", ["-c",
+      "import json,sys,zipfile; print(json.loads(zipfile.ZipFile(sys.argv[1]).read('Metadata/project_settings.config'))['printer_model'])",
+      complete[0].filename]).toString().trim();
+    if (model !== "Flashforge Creator 5 Pro") throw new Error(`the saved file is for ${model}, not the converted project`);
+  };
+  await convertOnce(1);
+  await convertOnce(2);
   if (await mw.evaluate(() => window.openedInStudio)) throw new Error("MakerWorld's own action ran");
-  const downloads = await options.evaluate(() => chrome.downloads.search({}));
-  const complete = downloads.filter((d) => d.state === "complete");
-  if (complete.length !== 1) throw new Error(`${complete.length} downloads (the original must not be saved)`);
-  const model = execFileSync("python3", ["-c",
-    "import json,sys,zipfile; print(json.loads(zipfile.ZipFile(sys.argv[1]).read('Metadata/project_settings.config'))['printer_model'])",
-    complete[0].filename]).toString().trim();
-  if (model !== "Flashforge Creator 5 Pro") throw new Error(`the saved file is for ${model}, not the converted project`);
+  if (await mw.evaluate(() => localStorage.getItem("model_operate_last_key")) !== null) {
+    throw new Error("MakerWorld's stored download preference was changed");
+  }
 
   // 5. A native chip gives MakerWorld its button back.
   await mw.click(".swiper-slide:last-child .chip");

@@ -183,21 +183,53 @@ function setStatus(text: string | null, clearAfter = 0) {
 }
 
 // --- menu -------------------------------------------------------------------------
-// MakerWorld's download menu is its own dropdown (not always a MUI menu): find the
-// visible "…3MF…" entry by its text, whatever the markup or language.
-const isVisible = (el: Element) => (el as HTMLElement).offsetParent !== null || el.getClientRects().length > 0;
+// MakerWorld's download menu is a floating MUI element anchored right below the green
+// button, as wide as it; hidden copies (opacity 0, visibility hidden) stay in the page.
+// Approach from makerworld-to-snapmaker-u1: find it by position, then its 3MF entry by
+// text (any language).
+const POPUPS = ".MuiPopper-root, .MuiPopover-root, .MuiMenu-root, [role='tooltip'], [role='menu'], [role='listbox']";
+// MakerWorld remembers the last download action (e.g. "download_3mf") here.
+const ACTION_KEY = "model_operate_last_key";
+const ACTION_3MF = "download_3mf";
 
-function native3mfItem(): HTMLElement | null {
+function isVisible(el: Element | null): boolean {
+  if (!el) return false;
+  const rect = el.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  for (let node: Element | null = el; node && node !== document.body; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return false;
+  }
+  return true;
+}
+
+/** The open download menu: a visible popup anchored right below the button's control. */
+function openMenu(section: Section | undefined): HTMLElement | null {
+  const anchor = section?.button.parentElement?.getBoundingClientRect();
+  const popups = [...document.querySelectorAll<HTMLElement>(POPUPS)].filter((p) => !section?.root.contains(p) && isVisible(p));
+  const below = anchor && popups.find((p) => {
+    const r = p.getBoundingClientRect();
+    return Math.abs(r.top - anchor.bottom) <= 24 && Math.abs(r.left - anchor.left) <= 16 && Math.abs(r.right - anchor.right) <= 16;
+  });
+  return below ?? popups.find((p) => !!find3mf(p)) ?? null;
+}
+
+/** The visible "…3MF…" entry (the clickable row) inside `scope`. */
+function find3mf(scope: ParentNode): HTMLElement | null {
   // Cheap text test first; layout (visibility) only for the few matches.
-  const leaf = [...document.body.querySelectorAll<HTMLElement>("li, a, button, [role='menuitem'], div, span")].find((el) => {
+  const leaf = [...scope.querySelectorAll<HTMLElement>("li, a, button, [role='menuitem'], div, span")].find((el) => {
     const text = el.textContent?.trim() ?? "";
     return text.length < 40 && /\b3mf\b/i.test(text)
       && ![...el.children].some((c) => /3mf/i.test(c.textContent ?? ""))
       && !el.closest("[data-bb-item], span.primaryButton") && isVisible(el);
   });
   if (!leaf) return null;
-  // The clickable row: a menu item if there is one, else the leaf's own block.
   return leaf.closest<HTMLElement>("[role='menuitem'], li, a, button") ?? leaf.parentElement ?? leaf;
+}
+
+function native3mfItem(): HTMLElement | null {
+  const menu = openMenu(visibleSection());
+  return menu ? find3mf(menu) : null;
 }
 
 function decorateMenu() {
@@ -214,18 +246,38 @@ function decorateMenu() {
   item.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopImmediatePropagation();
-    closeMenu();
-    void download();
+    void closeMenu().then(download);
   }, true);
   native.before(item);
 }
 
-function closeMenu() {
-  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  document.querySelector<HTMLElement>(".MuiBackdrop-root, .MuiModal-backdrop")?.click();
-  // A dropdown of its own closes when its arrow is clicked again.
-  if (native3mfItem()) sections().find((s) => isVisible(s.root))?.arrow?.click();
+/** A click MakerWorld handles itself (our capture listener lets it through). */
+function nativeClick(target: HTMLElement) {
+  triggering = true;
+  try {
+    target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+  } finally {
+    triggering = false;
+  }
 }
+
+async function poll<T>(get: () => T | null, timeout: number): Promise<T | null> {
+  const started = Date.now();
+  for (;;) {
+    const value = get();
+    if (value || Date.now() - started >= timeout) return value;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
+
+/** Close the menu; MakerWorld usually does it itself after a choice, else toggle the arrow. */
+async function closeMenu() {
+  const section = visibleSection();
+  if (await poll(() => (openMenu(section) ? null : true), 600)) return;
+  if (section?.arrow && openMenu(section)) nativeClick(section.arrow);
+}
+
+const visibleSection = () => sections().find((s) => isVisible(s.button)) ?? sections()[0];
 
 // --- download for the active printer ---------------------------------------------
 /** `armed` resolves once the page script listens; `file` with MakerWorld's answer. */
@@ -253,35 +305,54 @@ function captureF3mf() {
   return { armed, file };
 }
 
-async function clickNative3mf(section: Section) {
-  if (!native3mfItem()) section.arrow?.click();
-  const started = Date.now();
-  while (Date.now() - started < MENU_TIMEOUT_MS) {
-    const item = native3mfItem();
-    if (item) {
-      item.click();
+let threeMfSelectedThisPage = false;
+
+/**
+ * Start MakerWorld's own 3MF download: its button when 3MF is already its action, else
+ * the menu's 3MF entry. Choosing that entry also makes 3MF the button's remembered
+ * action: the user's stored preference is put back afterwards.
+ */
+async function startNativeDownload(section: Section) {
+  let stored: string | null = null;
+  try {
+    stored = localStorage.getItem(ACTION_KEY);
+  } catch {
+    // storage blocked: nothing to restore
+  }
+  try {
+    if (stored === ACTION_3MF || threeMfSelectedThisPage) {
+      nativeClick(section.button);
       return;
     }
-    await new Promise((r) => setTimeout(r, 100));
+    if (!openMenu(section) && section.arrow) nativeClick(section.arrow);
+    const item = await poll(() => {
+      const menu = openMenu(section);
+      return menu && find3mf(menu);
+    }, MENU_TIMEOUT_MS);
+    if (!item) throw new Error(t("mw_error_menu"));
+    nativeClick(item);
+    threeMfSelectedThisPage = true;
+    await closeMenu();
+  } finally {
+    try {
+      if (stored === null) localStorage.removeItem(ACTION_KEY);
+      else localStorage.setItem(ACTION_KEY, stored);
+    } catch {
+      // storage blocked
+    }
   }
-  throw new Error(t("mw_error_menu"));
 }
 
 async function download() {
   const printer = active;
-  const section = sections().find((s) => isVisible(s.root)) ?? sections()[0];
+  const section = visibleSection();
   if (!printer || !section || busy) return;
   busy = true;
   setStatus(t("mw_status_downloading"));
   try {
     const capture = captureF3mf();
     await Promise.race([capture.armed, capture.file]);
-    triggering = true;
-    try {
-      await clickNative3mf(section);
-    } finally {
-      triggering = false;
-    }
+    await startNativeDownload(section);
     const { url, name } = await capture.file;
     const res = await fetch(url);
     if (!res.ok) throw new Error(t("mw_error_download", res.status));
@@ -317,7 +388,7 @@ function reconcile() {
 // Our button replaces MakerWorld's action; native chips switch our mode off.
 document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
-  if (!target || triggering) return;
+  if (!target || triggering || target.closest("[data-bb-item]")) return;
   const slide = target.closest<HTMLElement>(".swiper-slide");
   if (slide && !slide.dataset.bbPrinter && sections().some((s) => s.wrapper.contains(slide))) {
     deactivate();

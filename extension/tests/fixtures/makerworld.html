@@ -23,33 +23,51 @@
       </div></div>
       <div class="profiles"><div aria-haspopup="true"><div class="active"><span class="config_title">0.2 mm</span></div></div></div>
       <div class="actions">
-        <div class="btn"><span class="primaryButton"><div><span>Open in Bambu Studio</span></div></span><div class="icon-box">▾</div></div>
+        <div class="btn" style="display: inline-flex; width: 320px"><span class="primaryButton"><div><span>Open in Bambu Studio</span></div></span><div class="icon-box">▾</div></div>
       </div>
     </div>
+    <!-- MakerWorld keeps hidden copies of menus in the page: must never be used. -->
+    <div class="MuiPopover-root" style="opacity: 0; visibility: hidden"><ul role="menu"><li>Download 3MF</li></ul></div>
     <script>
+      // In-memory action, like MakerWorld's React state; persisted in localStorage.
+      let action = localStorage.getItem("model_operate_last_key") || "open_in_studio";
+      const label = document.querySelector(".primaryButton span");
+      const download = async () => {
+        const res = await fetch("/api/v1/design-service/instance/1/f3mf?type=download");
+        const json = await res.json();
+        const a = document.createElement("a");
+        a.href = json.url;
+        a.download = json.name;
+        document.body.append(a);
+        a.click();
+        window.nativeDownloadAttempted = true;
+      };
       document.querySelectorAll(".swiper-slide .chip").forEach((chip) => chip.addEventListener("click", () => {
         document.querySelectorAll(".swiper-slide .chip").forEach((c) => c.classList.toggle("selected", c === chip));
       }));
-      document.querySelector(".primaryButton").addEventListener("click", () => { window.openedInStudio = true; });
-      // Like MakerWorld: a dropdown of its own under the button (no MUI menu, no roles).
+      document.querySelector(".primaryButton").addEventListener("click", () => {
+        if (action === "download_3mf") download();
+        else window.openedInStudio = true;
+      });
+      // Like MakerWorld: a floating MUI popper anchored right below the button, as wide as it.
       document.querySelector(".icon-box").addEventListener("click", () => {
-        const open = document.querySelector(".dropdown");
+        const open = document.querySelector(".MuiPopper-root");
         if (open) return open.remove();
+        const control = document.querySelector(".btn").getBoundingClientRect();
         const root = document.createElement("div");
-        root.className = "dropdown";
-        root.innerHTML = '<div class="item"><div>Download 3MF</div></div><div class="item"><div>Download STL/CAD Files <i>i</i></div></div>';
-        root.querySelector(".item").addEventListener("click", async () => {
+        root.className = "MuiPopper-root";
+        root.setAttribute("role", "tooltip");
+        Object.assign(root.style, { position: "absolute", left: `${control.left + scrollX}px`,
+          top: `${control.bottom + scrollY}px`, width: `${control.width}px` });
+        root.innerHTML = '<div class="paper"><div class="item"><div>Download 3MF</div></div><div class="item"><div>Download STL/CAD Files <i>i</i></div></div></div>';
+        root.querySelector(".item").addEventListener("click", () => {
+          action = "download_3mf";
+          localStorage.setItem("model_operate_last_key", action);
+          label.textContent = "Download 3MF";
           root.remove();
-          const res = await fetch("/api/v1/design-service/instance/1/f3mf?type=download");
-          const json = await res.json();
-          const a = document.createElement("a");
-          a.href = json.url;
-          a.download = json.name;
-          document.body.append(a);
-          a.click();
-          window.nativeDownloadAttempted = true;
+          download();
         });
-        document.querySelector(".actions").append(root);
+        document.body.append(root);
       });
     </script>
   </body>
