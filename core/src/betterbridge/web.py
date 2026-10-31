@@ -14,7 +14,7 @@ from . import i18n, read_3mf, write_3mf
 from . import options as conversion_options
 from .convert import convert
 from .profiles import ProfileError, ProfileLibrary
-from .remap_filaments import MapError, parse_map
+from .remap_filaments import MapError, format_map, parse_map, suggest_map
 from .slicers import registry, source_slicer
 from .target import Target, find_printer
 
@@ -123,5 +123,26 @@ def convert_file(
     # Paths in the embedder's virtual file system mean nothing to the user: names only.
     report.source = Path(src).name
     report.output = Path(output).name if output else ""
-    return {"ok": report.ok, "output": output, "needs_map": report.needs_map, "already_target": False,
-            "report": report.to_dict(), "text": report.to_text()}
+    result_dict = {"ok": report.ok, "output": output, "needs_map": report.needs_map, "already_target": False,
+                   "report": report.to_dict(), "text": report.to_text()}
+    if report.needs_map:
+        result_dict["plan"] = assignment_plan(project, result.usage, target.extruders)
+    return result_dict
+
+
+def assignment_plan(project, usage: dict[str, set[int] | None], extruders: int) -> dict:
+    """What a filament → extruder assignment screen needs: the project's filaments (with the
+    plates using them), the extruders, and a suggestion to start from (--map syntax)."""
+    settings = project.project_settings or {}
+    types = [str(t) for t in settings.get("filament_type") or ["PLA"]]
+    colours = list(settings.get("filament_colour") or ["#FFFFFF"] * len(types))
+    profiles = list(settings.get("filament_settings_id") or [""] * len(types))
+    filaments = []
+    for i, ftype in enumerate(types, start=1):
+        plates = sorted((p for p, used in usage.items() if used is None or i in used), key=str)
+        filaments.append({"index": i, "type": ftype, "colour": colours[i - 1] if i - 1 < len(colours) else "#FFFFFF",
+                          "profile": profiles[i - 1] if i - 1 < len(profiles) else "", "plates": plates})
+    suggestion = suggest_map(types, colours, usage, extruders)
+    return {"extruders": extruders, "filaments": filaments,
+            "plates": {p: sorted(u) if u is not None else None for p, u in usage.items()},
+            "suggestion": format_map(suggestion) if suggestion else None}
