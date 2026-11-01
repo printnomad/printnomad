@@ -89,6 +89,20 @@ filament settings, the purge table, objects and parts, plates, per-layer colour 
 and the colour painting of each triangle (the meshes themselves are untouched; each
 rewritten paint code is checked to keep its shape and its new colours).
 
+## A project that will not slice gets fixed
+
+A project already set up for your printer is not skipped blindly: it is reviewed, and
+values that would stop it slicing are fixed (the file is saved as `…_fixed.3mf`). The
+known case is the extruders each filament may use (`filament_printable`). Filament
+presets saved by users often carry the default of Bambu's two-nozzle code (extruders 1
+and 2 only); after picking such a preset in Flash Studio, a manual assignment to
+extruders 3–4 fails with *"The right nozzle can not print PLA"*. The review opens those
+filaments to every extruder. A restriction set by the printer maker's own preset (for
+example a flexible filament limited to some extruders) is kept, by the conversion too,
+and the report warns when the assignment sends that filament elsewhere. The preset
+that caused the problem stays as it is in the slicer: fix it there (or the review will
+be needed again after picking it).
+
 ## Opens in any slicer
 
 Filament-to-extruder assignment uses the slicer's *automatic* mode by default, so the

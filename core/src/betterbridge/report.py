@@ -76,6 +76,8 @@ class Report:
     errors: list[str] = field(default_factory=list)
     # Hace falta que el usuario asigne filamentos a extrusores (CLI --map o tabla del plugin).
     needs_map: bool = False
+    # The project was already set up for the target: only reviewed (repair.py).
+    already_target: bool = False
 
     @property
     def ok(self) -> bool:

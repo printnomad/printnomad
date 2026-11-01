@@ -182,7 +182,8 @@ def test_same_bed_keeps_model_file(lib, tmp_path):
 
 def test_project_already_for_target_rejected(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
-                          settings={"printer_model": "Flashforge Creator 5 Pro", "printer_settings_id": MACHINE})
+                          settings={"printer_model": "Flashforge Creator 5 Pro", "printer_settings_id": MACHINE,
+                                    "filament_printable": ["15"]})
     _, result, _ = run(lib, path)
     assert not result.report.ok and "Creator 5 Pro" in result.report.errors[0]
 

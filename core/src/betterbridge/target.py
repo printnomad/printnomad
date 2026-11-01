@@ -131,6 +131,21 @@ class Target:
         """Máscara de extrusores en los que puede ir cada filamento (bit 0 = E1)."""
         return str((1 << self.extruders) - 1)
 
+    def filament_printable_of(self, preset: str) -> str:
+        """Extruder mask for a filament preset: the printer maker's own restriction when
+        its system preset sets one (e.g. a flexible filament only on some extruders), else
+        every extruder. User presets do not count: theirs is often the slicer default
+        meant for two nozzles (3), copied when the preset was saved."""
+        key = ("filament", preset)
+        if preset and key in self.lib.raw and self.lib.vendors.get(key) != USER_VENDOR:
+            try:
+                own = _first(self.lib.resolve("filament", preset).get("filament_printable"))
+            except ProfileError:
+                own = None
+            if str(own or "").isdigit() and 0 < int(own) & int(self.filament_printable_all):
+                return str(int(own) & int(self.filament_printable_all))
+        return self.filament_printable_all
+
     @property
     def manual_map_max_extruder(self) -> int | None:
         limits = [s.quirk("manual_map_max_extruder") for s in (self.slicer, *self.also_open_in) if s]

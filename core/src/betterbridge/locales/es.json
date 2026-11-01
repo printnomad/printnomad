@@ -154,5 +154,8 @@
   "report.source_defaults": "Valores por defecto del perfil de origen quitados (el laminador usa los suyos): {count}",
   "report.not_changed": "Marcados como cambiados pero iguales al perfil de origen ({count}, no se tratan como del diseñador): {keys}",
   "report.filaments_removed": "Filamentos sin usar quitados: {filaments}",
-  "report.filaments_merged": "Filamentos {filaments} fusionados en el filamento {new} (cabezal {extruder})"
+  "report.filaments_merged": "Filamentos {filaments} fusionados en el filamento {new} (cabezal {extruder})",
+  "convert.warn.filament_not_printable": "Placa {plate}: el filamento #{filament} ({type}) va en E{extruder}, pero el perfil del fabricante solo permite {allowed}. El laminador no podrá laminar: muévelo a {allowed}.",
+  "reason.filament_printable_repaired": "el valor venía de un perfil hecho para otra impresora; este filamento puede ir en {allowed}",
+  "report.repaired": "El proyecto ya estaba preparado para esta impresora: solo se corrigieron valores que impedían laminarlo."
 }

@@ -11,7 +11,7 @@ import math
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
-from . import model_edit, renumber, rules
+from . import model_edit, renumber, repair, rules
 from .i18n import t
 from .profiles import ProfileError, ProfileLibrary
 from .read_3mf import (
@@ -126,6 +126,8 @@ def convert(
                "keep_designer_printer_settings": keep_designer_printer_settings, "map_mode": map_mode,
                "source_lib": source_lib}
     settings = project.project_settings
+    if settings and detect_source(project) not in (SOURCE_PRUSA, SOURCE_UNKNOWN) and target.is_same_printer(settings):
+        return _review(project, target)
     # Only projects that will really be converted (the checks of _convert come first).
     if not settings or detect_source(project) in (SOURCE_PRUSA, SOURCE_UNKNOWN) or target.is_same_printer(settings):
         return _convert(project, target, nozzle, user_map, **options)
@@ -150,6 +152,17 @@ def convert(
         result.files = {**changed, **result.files}
     result.report.filament_changes = _describe(plan)
     return result
+
+
+def _review(project: Project3MF, target: Target) -> ConversionResult:
+    """A project already set up for `target`: nothing to convert, but values that would
+    stop it slicing are fixed (repair.py). Without fixes, the report says so (an error,
+    as before: there is nothing to write)."""
+    report, files = repair.review(project, target)
+    report.already_target = True
+    if not files:
+        report.errors.append(t("convert.error.already_target", target=target.display_name))
+    return ConversionResult(report=report, files=files)
 
 
 def _describe(plan: renumber.Renumbering) -> list[str]:
@@ -385,8 +398,11 @@ def _convert(
     over_limit = manual_limit is not None and highest > manual_limit
     slicer_map_mode = _slicer_map_mode(map_mode, user_map, over_limit, target.extruders, report)
     put("filament_map_mode", slicer_map_mode, t("reason.filament_map_mode"))
-    put("filament_printable", [target.filament_printable_all] * n,
-        t("reason.filament_printable", count=target.extruders))
+    masks = [target.filament_printable_of(p) for p in fprofiles]
+    put("filament_printable", masks, t("reason.filament_printable", count=target.extruders))
+    plate_maps = {p: (slicer_map_mode, m) for p, m in assignment.per_plate.items()}
+    conflicts = repair.printable_conflicts(masks, plate_maps, usage)
+    report.warnings.extend(repair.conflict_warnings(conflicts, masks, ftypes))
     ext_colours = list(machine_cfg.get("extruder_colour") or [])
     ext_colours += ["#FFFFFF"] * (target.extruders - len(ext_colours))
     for i in reversed(range(n)):

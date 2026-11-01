@@ -26,6 +26,10 @@ def sha256_file(path: Path) -> str:
 
 
 def output_path(source: Path, suffix: str) -> Path:
+    """`<stem><suffix>.3mf` next to the source; a project already named for the printer
+    (being repaired, see repair.py) gets `_fixed` instead of the suffix twice."""
+    if source.stem.endswith(suffix):
+        return source.with_name(f"{source.stem}_fixed.3mf")
     return source.with_name(f"{source.stem}{suffix}.3mf")
 
 

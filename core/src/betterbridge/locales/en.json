@@ -154,5 +154,8 @@
   "report.source_defaults": "Source preset defaults removed (the slicer applies its own): {count}",
   "report.not_changed": "Marked as changed but equal to the source preset ({count}, not treated as the designer's): {keys}",
   "report.filaments_removed": "Unused filaments removed: {filaments}",
-  "report.filaments_merged": "Filaments {filaments} merged into filament {new} (extruder {extruder})"
+  "report.filaments_merged": "Filaments {filaments} merged into filament {new} (extruder {extruder})",
+  "convert.warn.filament_not_printable": "Plate {plate}: filament #{filament} ({type}) is assigned to E{extruder}, but its printer maker's profile only allows {allowed}. The slicer will refuse to slice: move it to {allowed}.",
+  "reason.filament_printable_repaired": "the value came from a profile made for another printer; this filament can use {allowed}",
+  "report.repaired": "The project was already set up for this printer: only values that would stop it slicing were fixed."
 }

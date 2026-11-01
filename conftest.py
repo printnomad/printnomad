@@ -55,8 +55,11 @@ def make_bambu_3mf(
     bed: int = 256,
     settings: dict | None = None,
     paint: tuple[int, ...] = (),
+    plate_map_mode: str = "Auto For Flush",
+    plate_maps: list[int] | None = None,
 ) -> Path:
-    """filaments: [(tipo, id de perfil, color)]; plates: ids de objeto por placa."""
+    """filaments: [(tipo, id de perfil, color)]; plates: ids de objeto por placa.
+    plate_map_mode / plate_maps: asignación de cada placa (por defecto automática, todo en E1)."""
     object_extruders = object_extruders or {}
     part_overrides = part_overrides or {}
     n = len(filaments)
@@ -100,8 +103,8 @@ def make_bambu_3mf(
     for i, plate in enumerate(plates, 1):
         ms.append("  <plate>")
         ms.append(f'    <metadata key="plater_id" value="{i}"/>')
-        ms.append('    <metadata key="filament_map_mode" value="Auto For Flush"/>')
-        ms.append(f'    <metadata key="filament_maps" value="{" ".join(["1"] * n)}"/>')
+        ms.append(f'    <metadata key="filament_map_mode" value="{plate_map_mode}"/>')
+        ms.append(f'    <metadata key="filament_maps" value="{" ".join(str(e) for e in plate_maps or [1] * n)}"/>')
         for oid in plate:
             ms.append("    <model_instance>")
             ms.append(f'      <metadata key="object_id" value="{oid}"/>')
@@ -215,6 +218,12 @@ def build_profiles_tree(tmp_path: Path) -> Path:
             "compatible_printers": [machine, "Flashforge Creator 5 Pro 0.6 nozzle"], "filament_settings_id": [name],
             "filament_max_volumetric_speed": ["18"],
         })
+    # Restricción del propio fabricante: este filamento solo en E1–E2 (como Elastic @FF C5P).
+    _write(ff / "filament/tpu.json", {
+        "type": "filament", "name": "Flashforge TPU @FF C5P", "instantiation": "true",
+        "compatible_printers": [machine], "filament_type": ["TPU"], "filament_printable": ["3"],
+        "filament_max_volumetric_speed": ["4"], "nozzle_temperature": ["230"],
+    })
     return root
 
 
