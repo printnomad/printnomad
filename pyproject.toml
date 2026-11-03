@@ -1,5 +1,5 @@
 # Configuración de desarrollo del monorepo (no es un paquete).
-# Paquetes: core/ (betterbridge) y orca-plugin/ (betterbridge-orca).
+# Paquetes: core/ (printnomad) y orca-plugin/ (printnomad-orca).
 
 [tool.pytest.ini_options]
 pythonpath = ["core/src"]
@@ -15,8 +15,8 @@ select = ["E", "F", "W", "I", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 # HTML/JS embebido y XML de prueba: el largo de línea no aplica.
-"orca-plugin/betterbridge_orca/panel_html.py" = ["E501"]
+"orca-plugin/printnomad_orca/panel_html.py" = ["E501"]
 "conftest.py" = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["betterbridge", "betterbridge_orca", "conftest"]
+known-first-party = ["printnomad", "printnomad_orca", "conftest"]

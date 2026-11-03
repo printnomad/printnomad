@@ -270,7 +270,7 @@ def find_printer(lib: ProfileLibrary, query: str) -> str | None:
 def load_target(printer: str, slicer: str | None = None, profiles_dir: str | None = None) -> Target:
     """Destino a partir del nombre (o parte única del nombre) de un preset de máquina.
 
-    - `profiles_dir` (o la variable BETTERBRIDGE_PROFILES): carpeta de perfiles explícita.
+    - `profiles_dir` (o la variable PRINTNOMAD_PROFILES): carpeta de perfiles explícita.
     - `slicer`: clave del registro (p. ej. "flashstudio").
     - Ninguno: se busca en los laminadores instalados, en el orden del registro.
     """

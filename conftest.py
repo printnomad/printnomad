@@ -233,7 +233,7 @@ def _spanish_messages():
 
     Las pruebas de i18n (core/tests/test_i18n.py) cambian el idioma explícitamente.
     """
-    from betterbridge import i18n
+    from printnomad import i18n
 
     i18n.set_language("es")
     yield

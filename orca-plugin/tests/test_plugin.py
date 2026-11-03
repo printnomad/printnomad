@@ -13,8 +13,8 @@ import pytest
 from conftest import make_bambu_3mf
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent          # orca-plugin/
-CORE_PKG = PLUGIN_ROOT.parent / "core" / "src" / "betterbridge"
-PLUGIN_PKG = PLUGIN_ROOT / "betterbridge_orca"
+CORE_PKG = PLUGIN_ROOT.parent / "core" / "src" / "printnomad"
+PLUGIN_PKG = PLUGIN_ROOT / "printnomad_orca"
 UI_DIR = PLUGIN_ROOT / "ui"
 BUILT_PANEL = UI_DIR / "dist" / "panel.html"
 HAVE_UI_TOOLS = shutil.which("node") is not None and (UI_DIR / "node_modules" / "jsdom").exists()
@@ -86,19 +86,19 @@ def fake_orca(profiles_root):
 
 @pytest.fixture
 def plugin(tmp_path, profiles_root, monkeypatch):
-    pkg = tmp_path / "pkg" / "betterbridge_orca"
+    pkg = tmp_path / "pkg" / "printnomad_orca"
     shutil.copytree(PLUGIN_PKG, pkg)
     shutil.copytree(CORE_PKG, pkg / "core")
     # El HTML del panel viene del build de ui/; sin node basta una plantilla mínima.
     (pkg / "panel.html").write_text(
-        _built_panel() or "<script>window.BB_I18N = __BB_I18N__;</script>", encoding="utf-8")
+        _built_panel() or "<script>window.PN_I18N = __PN_I18N__;</script>", encoding="utf-8")
     orca, state = fake_orca(profiles_root)
     monkeypatch.setitem(sys.modules, "orca", orca)
     monkeypatch.syspath_prepend(str(pkg.parent))
-    for name in [m for m in sys.modules if m.startswith("betterbridge_orca")]:
+    for name in [m for m in sys.modules if m.startswith("printnomad_orca")]:
         monkeypatch.delitem(sys.modules, name)
-    module = importlib.import_module("betterbridge_orca")
-    module.BetterBridgePlugin().register_capabilities()
+    module = importlib.import_module("printnomad_orca")
+    module.PrintNomadPlugin().register_capabilities()
     return module, orca, state
 
 
@@ -237,8 +237,8 @@ def test_panel_messages_exist_for_every_key_used():
 
 def test_page_injects_translations(plugin):
     module, _, _ = plugin
-    html = module.page.render("en", template="<script>window.BB_I18N = __BB_I18N__;</script>")
-    assert '"panel.convert": "Convert"' in html and "__BB_I18N__" not in html
+    html = module.page.render("en", template="<script>window.PN_I18N = __PN_I18N__;</script>")
+    assert '"panel.convert": "Convert"' in html and "__PN_I18N__" not in html
     assert '"plugin.' not in html  # solo los textos del panel
 
 
@@ -251,7 +251,7 @@ def test_panel_flow_in_browser_dom(plugin, tmp_path):
     """
     module, _, _ = plugin
     html = module.page.render("es")
-    assert "/*__BB_CSS__*/" not in html and ".bg-accent" in html   # CSS de Tailwind incrustado
+    assert "/*__PN_CSS__*/" not in html and ".bg-accent" in html   # CSS de Tailwind incrustado
     assert ".bg-red-500" not in html                                # y solo con clases usadas
     path = tmp_path / "panel.html"
     path.write_text(html, encoding="utf-8")

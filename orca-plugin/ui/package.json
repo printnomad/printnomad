@@ -1,7 +1,7 @@
 {
-  "name": "betterbridge-orca-ui",
+  "name": "printnomad-orca-ui",
   "private": true,
-  "description": "Dock panel of the BetterBridge OrcaSlicer plugin (Tailwind CSS, built into one HTML file)",
+  "description": "Dock panel of the PrintNomad OrcaSlicer plugin (Tailwind CSS, built into one HTML file)",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {

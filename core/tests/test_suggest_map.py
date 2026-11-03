@@ -1,8 +1,8 @@
 """Suggested filament → extruder assignment when a plate needs more filaments than extruders."""
 
-from betterbridge import web
-from betterbridge.remap_filaments import format_map, parse_map, suggest_map
 from conftest import FAKE_PRINTER, make_bambu_3mf
+from printnomad import web
+from printnomad.remap_filaments import format_map, parse_map, suggest_map
 
 # The 12 colours of a real MakerWorld project (bettyb.3mf), all painted on one plate.
 BETTY = ["#000000", "#FFFFFF", "#888888", "#FF6A13", "#C9E5BD", "#2A2E32",

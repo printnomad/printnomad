@@ -1,8 +1,8 @@
 import pytest
 
-from betterbridge import rules
-from betterbridge.profiles import ProfileError, ProfileLibrary
-from betterbridge.target import Target, find_printer, load_target, output_suffix
+from printnomad import rules
+from printnomad.profiles import ProfileError, ProfileLibrary
+from printnomad.target import Target, find_printer, load_target, output_suffix
 
 MACHINE = "Flashforge Creator 5 Pro 0.4 nozzle"
 
@@ -43,7 +43,7 @@ def test_load_target_from_profiles_dir_and_errors(profiles_root, monkeypatch):
         load_target("No existe", profiles_dir=profiles_root)
     with pytest.raises(ProfileError):
         load_target("x", slicer="nope")
-    monkeypatch.setenv("BETTERBRIDGE_PROFILES", str(profiles_root))
+    monkeypatch.setenv("PRINTNOMAD_PROFILES", str(profiles_root))
     assert load_target(MACHINE).machine == MACHINE
 
 
@@ -123,7 +123,7 @@ def test_inheritance_resolved_within_vendor_then_library(tmp_path):
 
 
 def test_most_restrictive_quirk_applies(profiles_root):
-    from betterbridge.slicers import Slicer
+    from printnomad.slicers import Slicer
     flash = Slicer(key="flashstudio", name="Flash Studio")
     orca = Slicer(key="orcaslicer", name="OrcaSlicer", quirks={"manual_map_max_extruder": 2})
     lib = ProfileLibrary.load(profiles_root)

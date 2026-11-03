@@ -1,6 +1,6 @@
 """HTML del panel: lo genera ui/ (Tailwind) y tools/build.py lo mete en la wheel.
 
-El plugin sustituye `__BB_I18N__` por los textos `panel.*` del idioma activo.
+El plugin sustituye `__PN_I18N__` por los textos `panel.*` del idioma activo.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from pathlib import Path
 from .core import i18n
 
 PAGE_FILE = Path(__file__).parent / "panel.html"
-I18N_MARKER = "__BB_I18N__"
+I18N_MARKER = "__PN_I18N__"
 PANEL_PREFIX = "panel."
 
 

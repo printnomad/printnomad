@@ -83,7 +83,7 @@ function sections(): Section[] {
 
 const slides = (wrapper: HTMLElement) =>
   [...wrapper.children].filter((c): c is HTMLElement => c.classList.contains("swiper-slide"));
-const nativeSlides = (wrapper: HTMLElement) => slides(wrapper).filter((s) => !s.dataset.bbPrinter);
+const nativeSlides = (wrapper: HTMLElement) => slides(wrapper).filter((s) => !s.dataset.pnPrinter);
 const chipOf = (slide: HTMLElement) => slide.querySelector<HTMLElement>(":scope > div > div");
 
 /** My printers that MakerWorld has no chip for (it already lists its own printers). */
@@ -100,11 +100,11 @@ function injectChips(section: Section) {
   let changed = false;
   let after: Element = natives[0];
   for (const printer of missingPrinters(section.wrapper)) {
-    let slide = section.wrapper.querySelector<HTMLElement>(`:scope > [data-bb-printer="${CSS.escape(printer.id)}"]`);
+    let slide = section.wrapper.querySelector<HTMLElement>(`:scope > [data-pn-printer="${CSS.escape(printer.id)}"]`);
     if (!slide) {
       slide = template.cloneNode(true) as HTMLElement;
       slide.className = "swiper-slide";
-      slide.dataset.bbPrinter = printer.id;
+      slide.dataset.pnPrinter = printer.id;
       slide.firstElementChild?.classList.remove("first");
       const chip = chipOf(slide);
       if (chip) {
@@ -132,7 +132,7 @@ function paintSelection(section: Section) {
   for (const slide of slides(section.wrapper)) {
     const chip = chipOf(slide);
     if (!chip) continue;
-    const ours = slide.dataset.bbPrinter;
+    const ours = slide.dataset.pnPrinter;
     if (ours) chip.classList.toggle("selected", ours === active?.id);
     else if (active) chip.classList.remove("selected"); // React keeps "All" selected underneath
   }
@@ -168,30 +168,30 @@ function paintButton(section: Section, text?: string, loading = false) {
   if (!label) return;
   // Work in progress: a spinner instead of the text (kept for screen readers and as tooltip).
   if (loading) {
-    if (!originalButtonText.has(label) && !label.dataset.bbText) originalButtonText.set(label, label.textContent ?? "");
+    if (!originalButtonText.has(label) && !label.dataset.pnText) originalButtonText.set(label, label.textContent ?? "");
     if (label.textContent) label.textContent = "";
-    label.dataset.bbText = "1";
-    label.dataset.bbLoading = "1";
+    label.dataset.pnText = "1";
+    label.dataset.pnLoading = "1";
     label.setAttribute("aria-label", text ?? "");
     label.title = text ?? "";
     return;
   }
-  if (label.dataset.bbLoading) {
-    delete label.dataset.bbLoading;
+  if (label.dataset.pnLoading) {
+    delete label.dataset.pnLoading;
     label.removeAttribute("aria-label");
     label.removeAttribute("title");
   }
-  if (!originalButtonText.has(label) && !label.dataset.bbText) originalButtonText.set(label, label.textContent ?? "");
+  if (!originalButtonText.has(label) && !label.dataset.pnText) originalButtonText.set(label, label.textContent ?? "");
   const wanted = text ?? (active ? t("mw_download_for", active.label) : null);
   if (wanted === null) {
-    if (label.dataset.bbText) {
+    if (label.dataset.pnText) {
       label.textContent = originalButtonText.get(label) ?? label.textContent;
-      delete label.dataset.bbText;
+      delete label.dataset.pnText;
     }
     return;
   }
   if (label.textContent !== wanted) label.textContent = wanted;
-  label.dataset.bbText = "1";
+  label.dataset.pnText = "1";
 }
 
 let statusText: string | null = null;
@@ -248,7 +248,7 @@ function find3mf(scope: ParentNode): { leaf: HTMLElement; row: HTMLElement } | n
     const text = el.textContent?.trim() ?? "";
     return text.length < 40 && /\b3mf\b/i.test(text)
       && ![...el.children].some((c) => /3mf/i.test(c.textContent ?? ""))
-      && !el.closest("[data-bb-item], span.primaryButton") && isVisible(el);
+      && !el.closest("[data-pn-item], span.primaryButton") && isVisible(el);
   });
   if (!leaf) return null;
   let row = leaf;
@@ -263,9 +263,9 @@ function decorateMenu() {
   if (!active) return;
   const menu = openMenu(visibleSection());
   const native = menu && find3mf(menu)?.row;
-  if (!native?.parentElement || native.parentElement.querySelector(":scope > [data-bb-item]")) return;
+  if (!native?.parentElement || native.parentElement.querySelector(":scope > [data-pn-item]")) return;
   const item = native.cloneNode(true) as HTMLElement;
-  item.dataset.bbItem = "1";
+  item.dataset.pnItem = "1";
   item.removeAttribute("id");
   // Replace the deepest text, keep icons and layout.
   const textHolder = [...item.querySelectorAll<HTMLElement>("*")].reverse()
@@ -279,21 +279,21 @@ function decorateMenu() {
   native.before(item);
 }
 
-// While BetterBridge uses MakerWorld's menu, keep it out of sight: clipped, so it still
+// While PrintNomad uses MakerWorld's menu, keep it out of sight: clipped, so it still
 // has its size and opacity (our visibility checks) and still takes clicks.
 const hideMenus = (() => {
   const style = document.createElement("style");
-  style.textContent = `html[data-bb-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
-    [data-bb-loading]::after {
+  style.textContent = `html[data-pn-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
+    [data-pn-loading]::after {
       content: ""; display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.2em;
       border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%;
-      animation: bb-spin 0.7s linear infinite;
+      animation: pn-spin 0.7s linear infinite;
     }
-    @keyframes bb-spin { to { transform: rotate(360deg); } }`;
+    @keyframes pn-spin { to { transform: rotate(360deg); } }`;
   document.documentElement.append(style);
   return (on: boolean) => {
-    if (on) document.documentElement.dataset.bbHiding = "1";
-    else delete document.documentElement.dataset.bbHiding;
+    if (on) document.documentElement.dataset.pnHiding = "1";
+    else delete document.documentElement.dataset.pnHiding;
   };
 })();
 
@@ -332,7 +332,7 @@ function captureF3mf() {
   const file = new Promise<{ url?: string; data?: ArrayBuffer; name: string | null }>((resolve, reject) => {
     const timer = setTimeout(() => finish(new Error(t("mw_error_timeout"))), CAPTURE_TIMEOUT_MS);
     function onMessage(e: MessageEvent<FromMain>) {
-      if (e.source !== window || e.data?.source !== "betterbridge:main") return;
+      if (e.source !== window || e.data?.source !== "printnomad:main") return;
       if (e.data.type === "armed") markArmed();
       else if (e.data.type === "f3mf" || e.data.type === "f3mf-file") finish(null, e.data);
       else finish(new Error(t("mw_error_download", e.data.status)));
@@ -413,11 +413,11 @@ async function download() {
     const name = captured.name ?? "model.3mf";
     setStatus(t("mw_status_converting", printer.label));
     const outcome = await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, name, data }, [data]);
-    console.info(`[BetterBridge] 3MF from MakerWorld ${downloadMs} ms · total ${Math.round(performance.now() - started)} ms`
+    console.info(`[PrintNomad] 3MF from MakerWorld ${downloadMs} ms · total ${Math.round(performance.now() - started)} ms`
       + (outcome.status === "saved" ? ` · conversion ${outcome.convertMs} ms` : ""));
     await showOutcome(printer, outcome);
   } catch (e) {
-    console.warn("[BetterBridge]", e);
+    console.warn("[PrintNomad]", e);
     setStatus(e instanceof Error ? e.message : t("mw_status_error"), RESULT_VISIBLE_MS);
   } finally {
     busy = false;
@@ -442,7 +442,7 @@ async function showOutcome(printer: PagePrinter, outcome: ConvertOutcome) {
     return;
   }
   setStatus(outcomeText(outcome.status), RESULT_VISIBLE_MS);
-  if (outcome.status === "error") console.warn("[BetterBridge]", outcome.message);
+  if (outcome.status === "error") console.warn("[PrintNomad]", outcome.message);
 }
 
 /**
@@ -452,7 +452,7 @@ async function showOutcome(printer: PagePrinter, outcome: ConvertOutcome) {
 function askAssignment(printer: PagePrinter, plan: AssignmentPlan): Promise<string | null> {
   return new Promise((resolve) => {
     const host = document.createElement("div");
-    host.dataset.bbModal = "1";
+    host.dataset.pnModal = "1";
     const shadow = host.attachShadow({ mode: "open" });
     const style = document.createElement("link");
     style.rel = "stylesheet";
@@ -490,9 +490,9 @@ function reconcile() {
 // Our button replaces MakerWorld's action; native chips switch our mode off.
 document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
-  if (!target || triggering || target.closest("[data-bb-item]")) return;
+  if (!target || triggering || target.closest("[data-pn-item]")) return;
   const slide = target.closest<HTMLElement>(".swiper-slide");
-  if (slide && !slide.dataset.bbPrinter && sections().some((s) => s.wrapper.contains(slide))) {
+  if (slide && !slide.dataset.pnPrinter && sections().some((s) => s.wrapper.contains(slide))) {
     deactivate();
     return;
   }
@@ -522,7 +522,7 @@ async function loadPrinters() {
   if (active && !printers.some((p) => p.id === active!.id)) active = null;
   reconcile();
   // A chip of ours is on the page: get the engine and profiles ready for the click.
-  if (!prepared && document.querySelector("[data-bb-printer]")) {
+  if (!prepared && document.querySelector("[data-pn-printer]")) {
     prepared = true;
     void bridge.call({ type: "prepare" }).catch(() => (prepared = false));
   }

@@ -1,4 +1,4 @@
-# Contributing to BetterBridge
+# Contributing to PrintNomad
 
 Thanks for helping! This guide covers the workflow and the rules that keep the project easy to work on.
 
@@ -15,7 +15,7 @@ Everything must pass before you open a pull request. CI runs the same commands.
 
 ## Repository layout
 
-- `core/` — conversion engine (`betterbridge` package). **Standard library only**: it also runs inside OrcaSlicer's embedded Python and, later, in the browser (Pyodide).
+- `core/` — conversion engine (`printnomad` package). **Standard library only**: it also runs inside OrcaSlicer's embedded Python and, later, in the browser (Pyodide).
 - `orca-plugin/` — OrcaSlicer plugin; `tools/build.py` packages it as a wheel with a copy of `core/`.
 - `tools/` — developer tools shared by components.
 - `conftest.py` — shared test fixtures (synthetic 3MF projects and a fake profile tree).

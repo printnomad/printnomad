@@ -4,8 +4,8 @@ import zipfile
 
 import pytest
 
-from betterbridge import cli, read_3mf, write_3mf
 from conftest import cli_target, make_bambu_3mf
+from printnomad import cli, read_3mf, write_3mf
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
 
@@ -73,7 +73,7 @@ def test_output_keeps_source_permissions(tmp_path):
 def test_cli_printers_lists_presets(tmp_path, monkeypatch, capsys):
     import json as _json
 
-    from betterbridge import slicers
+    from printnomad import slicers
     root = tmp_path / "profiles"
     (root / "V" / "machine").mkdir(parents=True)
     (root / "V/machine/a.json").write_text(_json.dumps({"type": "machine", "name": "V Printer 0.4 nozzle"}))

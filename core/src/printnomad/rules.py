@@ -33,7 +33,7 @@ KEEP_SOURCE_PROCESS_KEYS = {
 }
 
 # Modos de asignación de filamentos a extrusores en project_settings (filament_map_mode).
-# How BetterBridge chooses the slicer's assignment mode (option `map_mode`):
+# How PrintNomad chooses the slicer's assignment mode (option `map_mode`):
 # compatible = automatic in the slicer (opens and slices in every Orca-based slicer),
 # exact = manual (the planned assignment is enforced), slicer = manual unless the
 # target slicer rejects it (data/slicers.json quirk manual_map_max_extruder).

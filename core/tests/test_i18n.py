@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from betterbridge import cli, i18n
 from conftest import cli_target, make_bambu_3mf
+from printnomad import cli, i18n
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG_DIRS = [
-    ROOT / "core" / "src" / "betterbridge" / "locales",
-    ROOT / "orca-plugin" / "betterbridge_orca" / "locales",
+    ROOT / "core" / "src" / "printnomad" / "locales",
+    ROOT / "orca-plugin" / "printnomad_orca" / "locales",
 ]
 
 

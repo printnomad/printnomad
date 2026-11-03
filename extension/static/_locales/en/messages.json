@@ -1,6 +1,6 @@
 {
   "ext_name": {
-    "message": "BetterBridge",
+    "message": "PrintNomad",
     "description": "Extension name"
   },
   "ext_description": {
@@ -80,7 +80,7 @@
     "message": "Loading options…"
   },
   "profiles_hint": {
-    "message": "The official profiles of each slicer, updated automatically. Your own presets will be available with the BetterBridge helper app."
+    "message": "The official profiles of each slicer, updated automatically. Your own presets will be available with the PrintNomad helper app."
   },
   "convert_saving": {
     "message": "Saving $1…",
@@ -102,7 +102,7 @@
     "message": "Any model, ready for your printer."
   },
   "hero_text": {
-    "message": "BetterBridge converts MakerWorld and Bambu Studio projects for your printer and slicer, keeping what the designer tuned."
+    "message": "PrintNomad converts MakerWorld and Bambu Studio projects for your printer and slicer, keeping what the designer tuned."
   },
   "hero_step1": {
     "message": "Add your printer once."
@@ -133,7 +133,7 @@
     "message": "Add a printer"
   },
   "conversion_hint": {
-    "message": "How BetterBridge decides which values to use."
+    "message": "How PrintNomad decides which values to use."
   },
   "conversion_basic_tab": {
     "message": "Basic"
@@ -209,7 +209,7 @@
     "message": "By default each printer uses its brand's slicer (Flash Studio for Flashforge, Bambu Studio for Bambu Lab…) and OrcaSlicer for the rest. Turn it on if you open everything in OrcaSlicer. You can still change the slicer of a single printer on its card."
   },
   "mw_chip_title": {
-    "message": "$1 · converted by BetterBridge"
+    "message": "$1 · converted by PrintNomad"
   },
   "mw_download_for": {
     "message": "Download for $1"

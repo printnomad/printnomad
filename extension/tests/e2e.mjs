@@ -3,7 +3,7 @@
 // reachable in tests).
 //
 //   npm run test:e2e                      synthetic project + fake profiles (self-contained)
-//   BB_E2E_FILE=x.3mf BB_E2E_PRINTER="…" [BB_E2E_SLICER=key] [BB_E2E_EXPECT=text] BB_E2E_SKIP_BUILD=1 npm run test:e2e
+//   PN_E2E_FILE=x.3mf PN_E2E_PRINTER="…" [PN_E2E_SLICER=key] [PN_E2E_EXPECT=text] PN_E2E_SKIP_BUILD=1 npm run test:e2e
 //                                         a real project with the dist/ you built
 //
 // The browser comes from CHROME_PATH or a usual install location; without one the test
@@ -19,12 +19,12 @@ if (!browserPath) {
 }
 
 const work = workDir();
-let file = process.env.BB_E2E_FILE;
-const printer = process.env.BB_E2E_PRINTER ?? "Flashforge Creator 5 Pro 0.4 nozzle";
+let file = process.env.PN_E2E_FILE;
+const printer = process.env.PN_E2E_PRINTER ?? "Flashforge Creator 5 Pro 0.4 nozzle";
 let catalog;
 let painted;
 if (!file) ({ project: file, painted, catalog } = buildFixtures(work));
-if (!process.env.BB_E2E_SKIP_BUILD) buildExtension({ BB_PROFILES_DIR: catalog ?? process.env.BB_PROFILES_DIR ?? "" });
+if (!process.env.PN_E2E_SKIP_BUILD) buildExtension({ PN_PROFILES_DIR: catalog ?? process.env.PN_PROFILES_DIR ?? "" });
 
 const downloads = join(work, "downloads");
 const { browser, id } = await launch(browserPath, work);
@@ -35,8 +35,8 @@ try {
   const page = await browser.newPage();
   page.on("pageerror", (e) => errors.push(String(e)));
   await page.goto(`chrome-extension://${id}/options.html`);
-  // BB_E2E_PRINTERS="slicer|preset;slicer|preset" converts for several printers at once.
-  const printers = (process.env.BB_E2E_PRINTERS ?? `${process.env.BB_E2E_SLICER ?? "flashstudio"}|${printer}`)
+  // PN_E2E_PRINTERS="slicer|preset;slicer|preset" converts for several printers at once.
+  const printers = (process.env.PN_E2E_PRINTERS ?? `${process.env.PN_E2E_SLICER ?? "flashstudio"}|${printer}`)
     .split(";").map((entry, i) => {
       const [slicer, preset] = entry.split("|");
       return { id: `p${i}`, slicer, printer: preset };
@@ -78,12 +78,12 @@ try {
     if (row.already) continue;
     // The status shows the saved file's name (a GUID under CDP); the report, the converted name.
     if (!row.report.includes(expected)) throw new Error(`unexpected report for ${row.printer}:\n${row.report}`);
-    if (process.env.BB_E2E_EXPECT && !row.report.includes(process.env.BB_E2E_EXPECT)) {
-      // e.g. BB_E2E_EXPECT=" → " to check the report shows the designer's original values.
-      throw new Error(`report lacks ${JSON.stringify(process.env.BB_E2E_EXPECT)}:\n${row.report}`);
+    if (process.env.PN_E2E_EXPECT && !row.report.includes(process.env.PN_E2E_EXPECT)) {
+      // e.g. PN_E2E_EXPECT=" → " to check the report shows the designer's original values.
+      throw new Error(`report lacks ${JSON.stringify(process.env.PN_E2E_EXPECT)}:\n${row.report}`);
     }
   }
-  if (!process.env.BB_E2E_FILE && !rows[0].report.includes("Flashforge")) throw new Error(`unexpected report:\n${rows[0].report}`);
+  if (!process.env.PN_E2E_FILE && !rows[0].report.includes("Flashforge")) throw new Error(`unexpected report:\n${rows[0].report}`);
   const complete = items.filter((d) => d.state === "complete");
   const converted = rows.filter((r) => !r.already).length;
   if (complete.length !== converted) throw new Error(`${complete.length} of ${converted} files downloaded`);

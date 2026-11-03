@@ -1,7 +1,7 @@
 name: Profile catalog
 
 # Builds the printer profile catalog the browser extension downloads, from the
-# latest release of every slicer listed in core/src/betterbridge/data/slicers.json,
+# latest release of every slicer listed in core/src/printnomad/data/slicers.json,
 # and publishes it to GitHub Pages.
 
 on:
@@ -35,7 +35,7 @@ jobs:
           mkdir -p site repos
           python - <<'EOF' > slicers.tsv
           import json
-          for key, s in json.load(open("core/src/betterbridge/data/slicers.json")).items():
+          for key, s in json.load(open("core/src/printnomad/data/slicers.json")).items():
               repo = isinstance(s, dict) and s.get("profile_repo")
               if repo:
                   print(key, repo["github"], repo["path"], sep="\t")

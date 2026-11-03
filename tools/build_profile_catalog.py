@@ -36,9 +36,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "core" / "src"))
 
-from betterbridge.profiles import INDEXED_KINDS, KINDS, LIBRARY_VENDOR, ProfileLibrary  # noqa: E402
-from betterbridge.slicers import registry  # noqa: E402
-from betterbridge.web import usable_printers  # noqa: E402
+from printnomad.profiles import INDEXED_KINDS, KINDS, LIBRARY_VENDOR, ProfileLibrary  # noqa: E402
+from printnomad.slicers import registry  # noqa: E402
+from printnomad.web import usable_printers  # noqa: E402
 
 SCHEMA = 1
 COVER_SIZE = 192  # px; shown at 64–96 px, sharp on high-DPI screens
@@ -164,7 +164,7 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path, 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--slicer", required=True, help="key from core/src/betterbridge/data/slicers.json")
+    ap.add_argument("--slicer", required=True, help="key from core/src/printnomad/data/slicers.json")
     ap.add_argument("--profiles", required=True, type=Path, help="resources/profiles of the slicer repository")
     ap.add_argument("--ref", required=True, help="release tag the profiles come from")
     ap.add_argument("--commit", help="commit sha of --ref")

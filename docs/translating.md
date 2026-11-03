@@ -1,13 +1,13 @@
-# Translating BetterBridge
+# Translating PrintNomad
 
-BetterBridge's user-facing text lives in JSON catalogs, one file per language. You do not need to know Python to translate.
+PrintNomad's user-facing text lives in JSON catalogs, one file per language. You do not need to know Python to translate.
 
 ## Where the catalogs are
 
 | Component | Folder |
 |---|---|
-| Core (conversion report, CLI) | `core/src/betterbridge/locales/` |
-| OrcaSlicer plugin (notifications, panel) | `orca-plugin/betterbridge_orca/locales/` |
+| Core (conversion report, CLI) | `core/src/printnomad/locales/` |
+| OrcaSlicer plugin (notifications, panel) | `orca-plugin/printnomad_orca/locales/` |
 | Browser extension (settings page, store listing) | `extension/static/_locales/<code>/messages.json` |
 
 `en.json` is the reference. Each language is `<code>.json`, using the two-letter [ISO 639-1](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes) code (`es`, `fr`, `pt`, `de`…).
@@ -31,12 +31,12 @@ Edit the value in `<code>.json`. If a key is missing, the English text is shown 
 
 ## How the language is chosen
 
-- CLI: `--lang <code>`, else the `BETTERBRIDGE_LANG` environment variable, else the system language, else English.
+- CLI: `--lang <code>`, else the `PRINTNOMAD_LANG` environment variable, else the system language, else English.
 - OrcaSlicer plugin: OrcaSlicer's interface language.
 - Browser extension: the browser's language.
 
 ## For developers
 
-- Never write user-facing text in code: add a key to `en.json` (and the other catalogs) and use `t("area.key", name=value)` from `betterbridge.i18n`.
+- Never write user-facing text in code: add a key to `en.json` (and the other catalogs) and use `t("area.key", name=value)` from `printnomad.i18n`.
 - Keys are flat and dotted by area: `convert.warn.…`, `reason.…`, `report.…`, `cli.…`, `plugin.…`.
 - Placeholders use `{name}`; pass already-formatted numbers (`f"{value:g}"`).

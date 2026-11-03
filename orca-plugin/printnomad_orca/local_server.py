@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 from urllib.parse import quote
 
-log = logging.getLogger("betterbridge")
+log = logging.getLogger("printnomad")
 
 HOST = "127.0.0.1"
 PORT = 47811  # fijo para que el permiso de Orca (por texto exacto) se conceda una vez
@@ -72,6 +72,6 @@ def serve_once(path: Path, port: int = PORT, timeout: float = TIMEOUT_S) -> str:
             server.server_close()
             log.info("servidor local cerrado (%s)", "entregado" if served.is_set() else "sin petición")
 
-    threading.Thread(target=run, name="betterbridge-http", daemon=True).start()
+    threading.Thread(target=run, name="printnomad-http", daemon=True).start()
     return f"http://{HOST}:{server.server_address[1]}/{data_name}"
 

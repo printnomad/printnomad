@@ -2,7 +2,7 @@
 
 export interface MyPrinter {
   id: string;
-  /** Key in core/src/betterbridge/data/slicers.json, e.g. "flashstudio". */
+  /** Key in core/src/printnomad/data/slicers.json, e.g. "flashstudio". */
   slicer: string;
   /** Machine preset name, e.g. "Flashforge Creator 5 Pro 0.4 nozzle". */
   printer: string;

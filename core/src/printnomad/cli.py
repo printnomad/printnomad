@@ -1,7 +1,7 @@
 """Command line.
 
-    betterbridge entrada.3mf --printer "<preset>" [--slicer flashstudio] [--map 1:1,2:2] [--lang es]
-    betterbridge printers [--slicer flashstudio] [--search "creator"] [--json]
+    printnomad entrada.3mf --printer "<preset>" [--slicer flashstudio] [--map 1:1,2:2] [--lang es]
+    printnomad printers [--slicer flashstudio] [--search "creator"] [--json]
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ EXIT_OK, EXIT_ERROR, EXIT_NEEDS_INPUT = 0, 1, 2
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="betterbridge", description=t("cli.description"))
+    p = argparse.ArgumentParser(prog="printnomad", description=t("cli.description"))
     p.add_argument("input", type=Path, help=t("cli.help.input"))
     p.add_argument("--printer", help=t("cli.help.printer"))
     p.add_argument("--slicer", help=t("cli.help.slicer"))
@@ -53,8 +53,8 @@ def _lang_from_argv(argv: list[str]) -> str | None:
 
 
 def list_printers(argv: list[str]) -> int:
-    """`betterbridge printers [--slicer X] [--search texto] [--json]`."""
-    p = argparse.ArgumentParser(prog="betterbridge printers", description=t("cli.printers.description"))
+    """`printnomad printers [--slicer X] [--search texto] [--json]`."""
+    p = argparse.ArgumentParser(prog="printnomad printers", description=t("cli.printers.description"))
     p.add_argument("--slicer", help=t("cli.help.slicer"))
     p.add_argument("--search", help=t("cli.printers.help.search"))
     p.add_argument("--json", action="store_true", help=t("cli.printers.help.json"))

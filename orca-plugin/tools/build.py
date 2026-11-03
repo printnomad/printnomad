@@ -2,9 +2,9 @@
 
 Uso: python orca-plugin/tools/build.py [--install]
 
-La wheel lleva `betterbridge_orca/` (plugin) y una copia del núcleo en
-`betterbridge_orca/core/` (los imports del núcleo son relativos). Con
-`--install` la copia a `~/Library/Application Support/OrcaSlicer/orca_plugins/betterbridge/`.
+La wheel lleva `printnomad_orca/` (plugin) y una copia del núcleo en
+`printnomad_orca/core/` (los imports del núcleo son relativos). Con
+`--install` la copia a `~/Library/Application Support/OrcaSlicer/orca_plugins/printnomad/`.
 """
 
 from __future__ import annotations
@@ -20,12 +20,12 @@ from pathlib import Path
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent          # orca-plugin/
 REPO_ROOT = PLUGIN_ROOT.parent
-PLUGIN_DIR = PLUGIN_ROOT / "betterbridge_orca"
-CORE_DIR = REPO_ROOT / "core" / "src" / "betterbridge"
+PLUGIN_DIR = PLUGIN_ROOT / "printnomad_orca"
+CORE_DIR = REPO_ROOT / "core" / "src" / "printnomad"
 DIST = PLUGIN_ROOT / "dist"
 UI_DIR = PLUGIN_ROOT / "ui"
 PANEL_HTML = UI_DIR / "dist" / "panel.html"
-INSTALL_DIR = Path.home() / "Library/Application Support/OrcaSlicer/orca_plugins/betterbridge"
+INSTALL_DIR = Path.home() / "Library/Application Support/OrcaSlicer/orca_plugins/printnomad"
 
 
 def _record_line(name: str, data: bytes) -> str:
@@ -53,26 +53,26 @@ def build() -> Path:
     files: dict[str, bytes] = {}
     # Código y catálogos de idioma (locales/*.json) del plugin y del núcleo.
     for f in _package_files(PLUGIN_DIR):
-        files[f"betterbridge_orca/{f.relative_to(PLUGIN_DIR).as_posix()}"] = f.read_bytes()
+        files[f"printnomad_orca/{f.relative_to(PLUGIN_DIR).as_posix()}"] = f.read_bytes()
     for f in _package_files(CORE_DIR):
-        files[f"betterbridge_orca/core/{f.relative_to(CORE_DIR).as_posix()}"] = f.read_bytes()
-    files["betterbridge_orca/panel.html"] = build_ui().read_bytes()
+        files[f"printnomad_orca/core/{f.relative_to(CORE_DIR).as_posix()}"] = f.read_bytes()
+    files["printnomad_orca/panel.html"] = build_ui().read_bytes()
 
-    dist_info = f"betterbridge_orca-{version}.dist-info"
+    dist_info = f"printnomad_orca-{version}.dist-info"
     files[f"{dist_info}/METADATA"] = (
         "Metadata-Version: 2.1\n"
-        "Name: betterbridge-orca\n"
+        "Name: printnomad-orca\n"
         f"Version: {version}\n"
         "Summary: Convierte el proyecto abierto a Flashforge Creator 5 Pro\n"
         "Requires-Python: >=3.12\n").encode()
     files[f"{dist_info}/WHEEL"] = (
-        b"Wheel-Version: 1.0\nGenerator: betterbridge\nRoot-Is-Purelib: true\nTag: py3-none-any\n")
-    files[f"{dist_info}/top_level.txt"] = b"betterbridge_orca\n"
+        b"Wheel-Version: 1.0\nGenerator: printnomad\nRoot-Is-Purelib: true\nTag: py3-none-any\n")
+    files[f"{dist_info}/top_level.txt"] = b"printnomad_orca\n"
     record = [_record_line(n, d) for n, d in files.items()] + [f"{dist_info}/RECORD,,"]
     files[f"{dist_info}/RECORD"] = ("\n".join(record) + "\n").encode()
 
     DIST.mkdir(exist_ok=True)
-    out = DIST / f"betterbridge_orca-{version}-py3-none-any.whl"
+    out = DIST / f"printnomad_orca-{version}-py3-none-any.whl"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
         for name, data in files.items():
             zf.writestr(name, data)

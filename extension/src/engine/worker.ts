@@ -1,4 +1,4 @@
-// Conversion worker: runs the Python core (core/src/betterbridge) in Pyodide.
+// Conversion worker: runs the Python core (core/src/printnomad) in Pyodide.
 //
 // Pyodide cannot run in the MV3 service worker (no dynamic import there), so extension
 // pages start this module worker instead. Boot takes ~1 s and happens once per worker.
@@ -29,7 +29,7 @@ async function boot(): Promise<PyodideAPI> {
     fetch(new URL("./core.json", import.meta.url)).then((r) => r.json() as Promise<Record<string, string>>),
   ]);
   for (const [path, text] of Object.entries(core)) {
-    const full = `${LIB}/betterbridge/${path}`;
+    const full = `${LIB}/printnomad/${path}`;
     py.FS.mkdirTree(full.slice(0, full.lastIndexOf("/")));
     py.FS.writeFile(full, text);
   }
@@ -66,7 +66,7 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
   try {
     const src = `${dir}/${args.name.replace(/[\\/]/g, "_")}`;
     py.FS.writeFile(src, new Uint8Array(args.data));
-    const web = py.pyimport("betterbridge.web");
+    const web = py.pyimport("printnomad.web");
     const res = toJs<{
       ok: boolean;
       output: string | null;
@@ -108,12 +108,12 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
 
 async function listPrinters(args: ListPrintersRequest): Promise<PrinterInfo[]> {
   const py = await engine();
-  return toJs<PrinterInfo[]>(py.pyimport("betterbridge.web").list_printers(pyBundles(py, args.bundles)));
+  return toJs<PrinterInfo[]>(py.pyimport("printnomad.web").list_printers(pyBundles(py, args.bundles)));
 }
 
 async function listOptions(lang?: string): Promise<OptionInfo[]> {
   const py = await engine();
-  return toJs<OptionInfo[]>(py.pyimport("betterbridge.web").list_options(lang ?? null));
+  return toJs<OptionInfo[]>(py.pyimport("printnomad.web").list_options(lang ?? null));
 }
 
 async function sourceInfo(name: string, data: ArrayBuffer): Promise<SourceInfo> {
@@ -121,7 +121,7 @@ async function sourceInfo(name: string, data: ArrayBuffer): Promise<SourceInfo> 
   const path = `${WORK}/${crypto.randomUUID()}-${name.replace(/[\\/]/g, "_")}`;
   py.FS.writeFile(path, new Uint8Array(data));
   try {
-    return toJs<SourceInfo>(py.pyimport("betterbridge.web").source_info(path));
+    return toJs<SourceInfo>(py.pyimport("printnomad.web").source_info(path));
   } finally {
     py.FS.unlink(path);
   }
@@ -137,7 +137,7 @@ async function handle(request: Request): Promise<unknown> {
       return listOptions(request.args.lang);
     case "warm":
       // Start Pyodide and import the core ahead of the first conversion.
-      return (await engine()).pyimport("betterbridge.web") && null;
+      return (await engine()).pyimport("printnomad.web") && null;
     case "sourceInfo":
       return sourceInfo(request.args.name, request.args.data);
   }

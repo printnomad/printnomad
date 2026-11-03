@@ -1,8 +1,8 @@
 {
-  "name": "betterbridge-extension",
+  "name": "printnomad-extension",
   "version": "0.1.0",
   "private": true,
-  "description": "BetterBridge browser extension: converts 3MF projects from model repositories for your printer",
+  "description": "PrintNomad browser extension: converts 3MF projects from model repositories for your printer",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {

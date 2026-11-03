@@ -31,11 +31,11 @@ from .core.slicers import registry, source_library
 from .core.target import Target, load_target
 from .local_server import serve_once
 
-log = logging.getLogger("betterbridge")
+log = logging.getLogger("printnomad")
 
 # Log propio: la carpeta de datos de Orca se puede escribir sin pedir permiso y
 # el log de Python del host no siempre recoge lo que escribe el plugin.
-DIAG_LOG = Path.home() / "Library/Application Support/OrcaSlicer/orca_plugins/plugin_data/betterbridge/debug.log"
+DIAG_LOG = Path.home() / "Library/Application Support/OrcaSlicer/orca_plugins/plugin_data/printnomad/debug.log"
 
 
 def _setup_log() -> None:
@@ -61,7 +61,7 @@ USER_FOLDERS = [str(Path.home() / d) + "/*" for d in ("Downloads", "Documents", 
 
 # Identificador de la capacidad para Orca (estado activado, configuración): estable y
 # sin traducir. No cambiarlo sin migración: Orca guarda ambos bajo este nombre.
-CAPABILITY_NAME = "BetterBridge"
+CAPABILITY_NAME = "PrintNomad"
 
 # Mensajes propios del plugin (locales/*.json) además de los del núcleo.
 i18n.add_catalog_dir(Path(__file__).parent / "locales")
@@ -249,7 +249,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
                 self._send_preview()
             else:
                 self._panel = orca.host.ui.create_dock_panel(
-                    html=page.render(), title="BetterBridge", width=440, height=640,
+                    html=page.render(), title="PrintNomad", width=440, height=640,
                     on_message=self._on_message, on_close=self._on_close, dock="right")
         except Exception:
             log.exception("no se pudo abrir el panel")
@@ -419,7 +419,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
 
 
 @orca.plugin
-class BetterBridgePlugin(orca.base):
+class PrintNomadPlugin(orca.base):
     def register_capabilities(self):
         orca.request_permissions(
             # Perfiles de Flash Studio (solo lectura) y carpetas habituales de proyectos.

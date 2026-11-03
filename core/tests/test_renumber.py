@@ -5,11 +5,11 @@ import json
 import re
 import zipfile
 
-from betterbridge import model_edit, read_3mf, renumber, write_3mf
-from betterbridge.convert import convert
-from betterbridge.profiles import ProfileLibrary
-from betterbridge.target import Target
 from conftest import FAKE_PRINTER, make_bambu_3mf
+from printnomad import model_edit, read_3mf, renumber, write_3mf
+from printnomad.convert import convert
+from printnomad.profiles import ProfileLibrary
+from printnomad.target import Target
 
 COLOURS = ["#000000", "#2A2E32", "#FFFFFF", "#FF6A13", "#136935", "#EFB1D5"]
 LAYERS = (b'<?xml version="1.0"?><custom_gcodes_per_layer><plate><plate_info id="1"/>'

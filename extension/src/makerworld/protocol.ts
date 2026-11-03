@@ -4,9 +4,9 @@ import type { AssignmentPlan } from "../engine/protocol.ts";
 // bridge page (engine iframe). Every message carries `source` so unrelated postMessage
 // traffic on the page is ignored.
 
-export const CONTENT = "betterbridge:content";
-export const MAIN = "betterbridge:main";
-export const BRIDGE = "betterbridge:bridge";
+export const CONTENT = "printnomad:content";
+export const MAIN = "printnomad:main";
+export const BRIDGE = "printnomad:bridge";
 
 /** Content script → main world. */
 export type ToMain =

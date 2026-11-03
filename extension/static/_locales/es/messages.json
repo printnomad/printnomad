@@ -1,6 +1,6 @@
 {
   "ext_name": {
-    "message": "BetterBridge"
+    "message": "PrintNomad"
   },
   "ext_description": {
     "message": "Abre modelos 3D de MakerWorld y otros sitios ya preparados para tu impresora y tu laminador."
@@ -75,7 +75,7 @@
     "message": "Cargando opciones…"
   },
   "profiles_hint": {
-    "message": "Los perfiles oficiales de cada laminador, actualizados automáticamente. Tus propios presets estarán disponibles con la app auxiliar de BetterBridge."
+    "message": "Los perfiles oficiales de cada laminador, actualizados automáticamente. Tus propios presets estarán disponibles con la app auxiliar de PrintNomad."
   },
   "convert_saving": {
     "message": "Guardando $1…"
@@ -96,7 +96,7 @@
     "message": "Cualquier modelo, listo para tu impresora."
   },
   "hero_text": {
-    "message": "BetterBridge convierte proyectos de MakerWorld y Bambu Studio para tu impresora y tu laminador, manteniendo lo que el diseñador ajustó."
+    "message": "PrintNomad convierte proyectos de MakerWorld y Bambu Studio para tu impresora y tu laminador, manteniendo lo que el diseñador ajustó."
   },
   "hero_step1": {
     "message": "Añade tu impresora una sola vez."
@@ -126,7 +126,7 @@
     "message": "Añadir impresora"
   },
   "conversion_hint": {
-    "message": "Cómo decide BetterBridge qué valores usar."
+    "message": "Cómo decide PrintNomad qué valores usar."
   },
   "conversion_basic_tab": {
     "message": "Básico"
@@ -198,7 +198,7 @@
     "message": "Por defecto cada impresora usa el laminador de su marca (Flash Studio para Flashforge, Bambu Studio para Bambu Lab…) y OrcaSlicer para las demás. Actívalo si abres todo en OrcaSlicer. Igual puedes cambiar el laminador de una impresora en su tarjeta."
   },
   "mw_chip_title": {
-    "message": "$1 · convertido por BetterBridge"
+    "message": "$1 · convertido por PrintNomad"
   },
   "mw_download_for": {
     "message": "Descargar para $1"

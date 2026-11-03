@@ -1,4 +1,4 @@
 // Build-time settings injected by build.mjs from config.json and package.json.
-declare const __BB_CONFIG__: { catalogUrl: string; featuredModels: string[]; makerworldOrigins: string[]; version: string };
+declare const __PN_CONFIG__: { catalogUrl: string; featuredModels: string[]; makerworldOrigins: string[]; version: string };
 
-export const CONFIG = __BB_CONFIG__;
+export const CONFIG = __PN_CONFIG__;

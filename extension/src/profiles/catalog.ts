@@ -202,7 +202,7 @@ export function parseCatalog(text: string): Catalog {
 }
 
 /** Cache Storage adapter (extension pages and workers). */
-export function cacheStorage(name = "betterbridge-profiles"): TextCache {
+export function cacheStorage(name = "printnomad-profiles"): TextCache {
   return {
     async get(url) {
       const res = await (await caches.open(name)).match(url);

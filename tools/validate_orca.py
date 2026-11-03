@@ -21,7 +21,7 @@ FLAGS = ["--allow-multicolor-oneplate", "--allow-mix-temp", "--allow-newer-file"
 
 
 def validate(orca: str, path: Path, timeout: int) -> tuple[bool, list[str]]:
-    with tempfile.TemporaryDirectory(prefix="bb-orca-") as out:
+    with tempfile.TemporaryDirectory(prefix="pn-orca-") as out:
         try:
             # cwd temporal: el CLI deja un 00000.log en la carpeta actual.
             proc = subprocess.run([orca, *FLAGS, "--outputdir", out, str(path.resolve())],

@@ -1,7 +1,7 @@
 // Builds the unpacked extension into dist/ (CSS is compiled afterwards by `npm run build:css`).
 //
 //   node build.mjs                        → dist/
-//   BB_PROFILES_DIR=<catalog dir> node build.mjs
+//   PN_PROFILES_DIR=<catalog dir> node build.mjs
 //       also bundles the profiles listed in config.json (fallbackProfiles: vendor
 //       names or "*" for every vendor of a slicer) from a catalog built by
 //       tools/build_profile_catalog.py. Bundles are stored gzipped (JSON shrinks ~17×);
@@ -16,15 +16,15 @@ const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, "dist");
 const pkg = JSON.parse(readFileSync(join(here, "package.json"), "utf8"));
 const config = JSON.parse(readFileSync(join(here, "config.json"), "utf8"));
-const coreDir = join(here, "..", "core", "src", "betterbridge");
+const coreDir = join(here, "..", "core", "src", "printnomad");
 // Files Pyodide needs at runtime (the rest of the npm package is for Node).
 const PYODIDE_FILES = ["pyodide.mjs", "pyodide.asm.mjs", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json"];
 
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
 
-// Sites of the MakerWorld integration; BB_TEST_ORIGINS adds a local test page (tests/e2e-makerworld.mjs).
-const makerworldOrigins = [...config.makerworldOrigins, ...(process.env.BB_TEST_ORIGINS ?? "").split(",").filter(Boolean)];
+// Sites of the MakerWorld integration; PN_TEST_ORIGINS adds a local test page (tests/e2e-makerworld.mjs).
+const makerworldOrigins = [...config.makerworldOrigins, ...(process.env.PN_TEST_ORIGINS ?? "").split(",").filter(Boolean)];
 const shared = {
   outdir: dist,
   bundle: true,
@@ -32,7 +32,7 @@ const shared = {
   minify: true,
   sourcemap: true,
   define: {
-    __BB_CONFIG__: JSON.stringify({
+    __PN_CONFIG__: JSON.stringify({
       catalogUrl: config.catalogUrl,
       featuredModels: config.featuredModels ?? [],
       makerworldOrigins,
@@ -98,7 +98,7 @@ const core = {};
 })(coreDir);
 writeFileSync(join(dist, "core.json"), JSON.stringify(core));
 
-const profilesDir = process.env.BB_PROFILES_DIR;
+const profilesDir = process.env.PN_PROFILES_DIR;
 if (profilesDir) {
   const catalog = JSON.parse(readFileSync(join(profilesDir, "catalog.json"), "utf8"));
   const slicers = {};
@@ -127,6 +127,6 @@ if (profilesDir) {
   }
   writeFileSync(join(dist, "profiles", "catalog.json"), JSON.stringify({ ...catalog, slicers }));
 } else if (!existsSync(join(dist, "profiles"))) {
-  console.warn("BB_PROFILES_DIR not set: no fallback profiles bundled");
+  console.warn("PN_PROFILES_DIR not set: no fallback profiles bundled");
 }
 console.log(`built ${pkg.name} into ${relative(process.cwd(), dist) || "."}`);

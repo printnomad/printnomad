@@ -22,7 +22,7 @@ export function findBrowser() {
 }
 
 export function workDir() {
-  return mkdtempSync(join(tmpdir(), "bb-e2e-"));
+  return mkdtempSync(join(tmpdir(), "pn-e2e-"));
 }
 
 /** Fake profile tree, its catalog and a one-filament Bambu project (from conftest.py). */

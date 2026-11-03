@@ -47,7 +47,7 @@ def write(
         raise WriteError(t("write.error.exists", path=dest))
 
     # Escritura atómica: archivo temporal en la misma carpeta y rename.
-    fd, tmp = tempfile.mkstemp(prefix=".betterbridge-", suffix=".3mf", dir=dest.parent)
+    fd, tmp = tempfile.mkstemp(prefix=".printnomad-", suffix=".3mf", dir=dest.parent)
     os.close(fd)
     try:
         # Nivel 1: misma salida descomprimida, ~5× más rápido que el nivel por defecto.

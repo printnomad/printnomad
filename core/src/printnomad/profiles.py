@@ -12,7 +12,7 @@ from pathlib import Path
 
 from .i18n import t
 
-ENV_PROFILES = "BETTERBRIDGE_PROFILES"
+ENV_PROFILES = "PRINTNOMAD_PROFILES"
 
 KINDS = ("machine", "process", "filament")
 # Además se indexa "machine_model" (datos del modelo, p. ej. la placa por defecto).

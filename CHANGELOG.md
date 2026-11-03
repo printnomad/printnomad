@@ -4,6 +4,9 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Changed
+- **Renamed from BetterBridge to PrintNomad** (the old name was taken on GitHub). Python packages are now `printnomad` and `printnomad_orca`; environment variables `PRINTNOMAD_PROFILES` and `PRINTNOMAD_LANG` replace `BETTERBRIDGE_*`.
+
 ### Fixed
 - **Faster verification of the written 3MF**: copied entries are checked by the CRC-32 and size the ZIP records for them instead of decompressing the whole file and hashing the geometry twice (half of the conversion time in the browser: SpeedBoat 435 → 217 ms in Pyodide). Replaced entries are still compared byte by byte.
 - Bambu G-code from a Bambu target profile is no longer flagged; `retraction_distances_when_cut = 0` (rejected by the slicer, shipped in a Flash Studio profile) is dropped; Standard processes win layer-height ties.
@@ -19,7 +22,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Convert for all my printers at once**: with several printers, one click makes one file per printer (the default choice); a project already set up for one of them is skipped ("already set up", also when the designer used a preset of their own for the same model and nozzle). Each printer gets its own line with status, a summary and its report.
 - **Every printer profile ships with the extension**: the bundles of Flash Studio, Bambu Studio and OrcaSlicer (~1.4 MB gzipped, decompressed on use) and their thumbnails, so every printer is available offline from the first day. The online catalog only brings updates; unchanged bundles are read from the shipped copy.
 - **Printer picker with pictures**: search box, brand filters, a short list of popular printers (`extension/config.json` → `featuredModels`; everything else by search or brand), each model as a card with its thumbnail; nozzle and slicer are chosen afterwards (the brand's own slicer first). The catalog now carries vendor display names and printer thumbnails (WebP, ~7 KB each, from the slicers' `<model>_cover.png`).
-- **Conversion options as data** (`betterbridge.options`): one list of options with defaults and translated labels, help and warnings, shared by the CLI, the plugin and the extension. CLI: `--map-mode`, `--designer-cooling`.
+- **Conversion options as data** (`printnomad.options`): one list of options with defaults and translated labels, help and warnings, shared by the CLI, the plugin and the extension. CLI: `--map-mode`, `--designer-cooling`.
 - **Filament assignment mode**: `compatible` (default; the slicer finalises the assignment, so projects slice in any Orca-based slicer, as other converters do), `exact` (the planned assignment is enforced; OrcaSlicer 2.5 rejects it on extruders 3–4) and `slicer` (previous behaviour). An assignment chosen by hand is always enforced.
 - **The designer's changes with their original values**: with the source slicer's profiles (Bambu Studio's public profiles in the extension, or an installed Bambu Studio for the CLI and the plugin) the report shows each kept change as *original preset value → model value (target profile value)*. Settings marked as changed that still equal the original are not treated as the designer's choice. See [docs/features.md](docs/features.md).
 - **Source preset defaults are no longer carried over**: values a project only has because of its Bambu presets (the designer did not change them and the target profile does not set them; ~200 per project) are removed so the target slicer applies its own defaults, as when the printer is picked from scratch. Re-selecting the printer in the slicer now only lists the model's real changes. Project data (purge tower position, purge table, print order, filament per feature) is kept.
@@ -31,7 +34,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - Reports name where the target profiles came from (folders, or `repo@release`).
 - **Any printer as target**: the target is built from any machine preset (system or user) of an installed slicer; extruders, nozzle variants, bed type, limits, compatible processes and filaments are derived from the profiles. User presets are found too (e.g. your own calibrated filament for the same brand). CLI: `--printer` and `--slicer` replace `--target creator5pro`.
 - **Designer's filament choices kept**: temperatures (nozzle and plates) and density the designer changed are kept on top of the target filament profile; hardware- or calibration-dependent settings (max volumetric speed, flow ratio, pressure advance, cooling) come from the target. `--no-designer-filament` turns it off.
-- `betterbridge printers [--slicer X] [--search text] [--json]` lists the printer presets (system and yours) of the installed slicers.
+- `printnomad printers [--slicer X] [--search text] [--json]` lists the printer presets (system and yours) of the installed slicers.
 - Data-driven registry of slicers (`data/slicers.json`) with per-slicer quirks; when the result will also be opened in OrcaSlicer, its stricter manual-mapping limit applies.
 - Internationalisation: all user-facing text in JSON catalogs (English and Spanish), `--lang` option, language detection (system or OrcaSlicer's), translation guide in `docs/translating.md` with automatic checks for translators.
 
@@ -39,7 +42,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - OrcaSlicer plugin 0.4.0: the target printer is configurable (`slicer`, `printer` in the Config tab); output names use the printer model (e.g. `_CREATOR5_PRO`, `_BAMBU_LAB_P1S`).
 - OrcaSlicer plugin panel rebuilt with Tailwind CSS v4 (only the classes in use are shipped, ~9 KiB), semantic light/dark theme tokens, translated text, separate `ui/` sources with a Node build; tested in jsdom with OrcaSlicer's real JS bridge.
 - The report flags `needs_map` when filaments must be assigned to extruders manually (the CLI and the plugin no longer parse error text).
-- The OrcaSlicer plugin capability is now named `BetterBridge` (re-enable it once in the Plugins dialog).
+- The OrcaSlicer plugin capability is now named `PrintNomad` (re-enable it once in the Plugins dialog).
 - Repository reorganised as a monorepo (`core/`, `orca-plugin/`, `tools/`), licensed AGPL-3.0-or-later, with contribution guidelines and CI.
 
 ## core 0.1.0 / orca-plugin 0.2.9 — 2026-10-30 (first internal version)

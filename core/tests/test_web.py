@@ -3,8 +3,8 @@
 import json
 import zipfile
 
-from betterbridge import web
 from conftest import FAKE_PRINTER, make_bambu_3mf
+from printnomad import web
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
 

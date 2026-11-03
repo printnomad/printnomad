@@ -4,8 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
-from betterbridge.profiles import ProfileLibrary
-from betterbridge.target import Target
+from printnomad.profiles import ProfileLibrary
+from printnomad.target import Target
 
 TOOL = Path(__file__).resolve().parents[1] / "build_profile_catalog.py"
 spec = importlib.util.spec_from_file_location("build_profile_catalog", TOOL)

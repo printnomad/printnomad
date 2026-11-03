@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from betterbridge import slicers
-from betterbridge.profiles import LIBRARY_VENDOR, USER_VENDOR, ProfileError, ProfileLibrary
+from printnomad import slicers
+from printnomad.profiles import LIBRARY_VENDOR, USER_VENDOR, ProfileError, ProfileLibrary
 
 
 def _w(path, data):

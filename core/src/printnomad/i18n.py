@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 
 DEFAULT_LANGUAGE = "en"
-ENV_LANGUAGE = "BETTERBRIDGE_LANG"
+ENV_LANGUAGE = "PRINTNOMAD_LANG"
 META_KEY = "_meta"  # {"name": "Español", "contributors": [...]}: not a message
 
 _catalog_dirs: list[Path] = [Path(__file__).parent / "locales"]

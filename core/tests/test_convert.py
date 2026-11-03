@@ -3,13 +3,13 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from betterbridge import read_3mf, rules
-from betterbridge.convert import convert
-from betterbridge.model_edit import meta
-from betterbridge.profiles import ProfileLibrary
-from betterbridge.slicers import Slicer
-from betterbridge.target import Target
 from conftest import make_bambu_3mf
+from printnomad import read_3mf, rules
+from printnomad.convert import convert
+from printnomad.model_edit import meta
+from printnomad.profiles import ProfileLibrary
+from printnomad.slicers import Slicer
+from printnomad.target import Target
 
 # Particularidad de OrcaSlicer 2.5 (registro de laminadores): manual solo en E1–E2.
 ORCA = Slicer(key="orcaslicer", name="OrcaSlicer", quirks={"manual_map_max_extruder": 2})

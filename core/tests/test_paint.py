@@ -4,11 +4,11 @@ import json
 
 import pytest
 
-from betterbridge import model_edit, read_3mf
-from betterbridge.convert import convert
-from betterbridge.profiles import ProfileLibrary
-from betterbridge.target import Target
 from conftest import FAKE_PRINTER, make_bambu_3mf, paint_code
+from printnomad import model_edit, read_3mf
+from printnomad.convert import convert
+from printnomad.profiles import ProfileLibrary
+from printnomad.target import Target
 
 PLA = ("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")
 
