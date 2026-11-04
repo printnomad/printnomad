@@ -483,7 +483,7 @@ function resultRow(printer: MyPrinter, fileName: string) {
     field("report-panel").replaceChildren(reportPanel({
       text: copied,
       send: CONFIG.reportUrl
-        ? (comment) => sendReport(CONFIG.reportUrl, { report: copied, comment, code: reportCode, version: CONFIG.version })
+        ? (extra) => sendReport(CONFIG.reportUrl, { report: copied, ...extra, code: reportCode, version: CONFIG.version })
         : undefined,
     }));
   };

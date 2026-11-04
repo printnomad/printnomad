@@ -2,10 +2,12 @@
 // testers report with one click and without an account or an email address.
 //
 // The token lives here as a secret (GITHUB_TOKEN), never in the extension. Nothing is logged
-// and the sender's address is used only for the rate limit: it does not reach the issue.
+// and the sender's IP is used only for the rate limit: it does not reach the issue. The contact
+// email is optional and goes in the issue body, so the repository must stay private.
 
 export const MAX_REPORT = 32_000;
 export const MAX_COMMENT = 2_000;
+export const MAX_CONTACT = 254;
 const MAX_BODY = 64_000;
 const GITHUB_API_VERSION = "2026-03-10";
 
@@ -23,10 +25,13 @@ function fenced(text) {
   return `${fence}text\n${text}\n${fence}`;
 }
 
-export function issueFrom({ report, comment, code, version }) {
+export function issueFrom({ report, comment, contact, code, version }) {
   const label = /^PN\d{3}$/.test(code ?? "") ? code : "Report";
   const from = /^[\w.+-]{1,32}$/.test(version ?? "") ? ` from ${version}` : "";
-  const parts = comment ? ["**Comment**", fenced(comment)] : [];
+  const parts = [
+    ...(contact ? ["**Contact**", fenced(contact)] : []),
+    ...(comment ? ["**Comment**", fenced(comment)] : []),
+  ];
   return { title: `[${label}] Tester report${from}`, body: [...parts, "**Report**", fenced(report)].join("\n\n") };
 }
 
@@ -35,6 +40,9 @@ function validate(payload) {
   if (payload.report.length > MAX_REPORT) return "report is too long";
   const { comment } = payload;
   if (comment !== undefined && (typeof comment !== "string" || comment.length > MAX_COMMENT)) return "invalid comment";
+  const { contact } = payload;
+  if (contact !== undefined && (typeof contact !== "string" || contact.length > MAX_CONTACT
+    || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact))) return "invalid contact";
   return null;
 }
 

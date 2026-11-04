@@ -2,7 +2,8 @@
 
 Receives the reports testers send with **Send report** in the extension and files each one as
 an issue in a private repository. No account or email is asked of the tester. The project file
-is never sent: only the text shown in the panel, after the user clicks.
+is never sent: only the text shown in the panel, after the user clicks, plus an optional contact
+email the user may add. **Keep the reports repository private**: its issues hold those emails.
 
 ## Deploy
 
@@ -22,7 +23,7 @@ is never sent: only the text shown in the panel, after the user clicks.
 
 ## Limits
 
-- Report 32,000 characters, comment 2,000; longer reports are cut by the extension.
+- Report 32,000 characters, comment 2,000, contact 254; longer reports are cut by the extension.
 - 5 reports per minute per address (Cloudflare's rate limit is approximate and per location).
 - The origin check keeps other websites out, but a script can forge it: the limit and a private
   repository are the real protection. If spam appears, rotate the token or add a challenge.

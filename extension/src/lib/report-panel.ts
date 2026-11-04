@@ -6,7 +6,7 @@ export interface ReportPanelOptions {
   /** The exact text that is copied or sent. */
   text: string;
   /** Missing when no report service is configured: only Copy is offered. */
-  send?(comment: string): Promise<void>;
+  send?(extra: { comment: string; contact: string }): Promise<void>;
   /** Fold the text under "What is sent", so Send is in view without scrolling. */
   collapsed?: boolean;
 }
@@ -49,6 +49,13 @@ export function reportPanel({ text, send, collapsed }: ReportPanelOptions): HTML
     comment.placeholder = t("report_comment");
     comment.ariaLabel = t("report_comment");
     comment.dataset.field = "comment";
+    const contact = el("input", "w-full rounded-xl bg-sunken px-3 py-2 text-sm");
+    contact.type = "email";
+    contact.maxLength = 254;
+    contact.autocomplete = "email";
+    contact.placeholder = t("report_contact");
+    contact.ariaLabel = t("report_contact");
+    contact.dataset.field = "contact";
     const button = el("button", "btn-primary px-4 py-1.5 text-xs", t("report_send"));
     button.type = "button";
     button.dataset.field = "send";
@@ -56,12 +63,18 @@ export function reportPanel({ text, send, collapsed }: ReportPanelOptions): HTML
     result.dataset.field = "send-result";
     result.setAttribute("role", "status");
     button.onclick = async () => {
+      if (!contact.checkValidity()) {
+        result.textContent = t("report_contact_invalid");
+        contact.focus();
+        return;
+      }
       button.disabled = true;
       button.textContent = t("report_sending");
       try {
-        await send(comment.value);
+        await send({ comment: comment.value, contact: contact.value });
         button.hidden = true;
         comment.hidden = true;
+        contact.hidden = true;
         result.textContent = t("report_sent");
       } catch {
         button.disabled = false;
@@ -69,7 +82,7 @@ export function reportPanel({ text, send, collapsed }: ReportPanelOptions): HTML
         result.textContent = t("report_send_failed");
       }
     };
-    root.append(comment);
+    root.append(comment, contact);
     actions.append(button, copy, result);
   } else {
     actions.append(copy);

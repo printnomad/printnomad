@@ -533,7 +533,7 @@ function showError(issue: Pick<Issue, "code" | "message" | "suggestion"> | undef
     card.append(box);
   }
   const send = CONFIG.reportUrl
-    ? (comment: string) => bridge.call<void>({ type: "send-report", report, comment, code: issue?.code })
+    ? (extra: { comment: string; contact: string }) => bridge.call<void>({ type: "send-report", report, ...extra, code: issue?.code })
     : undefined;
   const closeButton = document.createElement("button");
   closeButton.type = "button";

@@ -5,13 +5,15 @@ const TRUNCATED = "\n… (truncated)";
 export interface OutgoingReport {
   report: string;
   comment?: string;
+  /** Optional email, only to answer the reporter. Never part of the copied text. */
+  contact?: string;
   code?: string;
   version: string;
 }
 
-export function reportPayload({ report, comment, code, version }: OutgoingReport): OutgoingReport {
+export function reportPayload({ report, comment, contact, code, version }: OutgoingReport): OutgoingReport {
   const text = report.length > MAX_REPORT ? report.slice(0, MAX_REPORT - TRUNCATED.length) + TRUNCATED : report;
-  return { report: text, comment: comment?.trim().slice(0, 2_000) || undefined, code, version };
+  return { report: text, comment: comment?.trim().slice(0, 2_000) || undefined, contact: contact?.trim() || undefined, code, version };
 }
 
 /** Rejects when the report did not arrive, so the user can copy it instead. */

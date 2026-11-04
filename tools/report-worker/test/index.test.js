@@ -42,6 +42,13 @@ test("the sender's text cannot inject Markdown or a title", () => {
   assert.ok(issue.body.includes("`````text\n````\n@me"));
 });
 
+test("an optional contact email goes in the body, never in the title", () => {
+  const issue = issueFrom({ report: "r", contact: "a@b.co", code: "PN401" });
+  assert.ok(!issue.title.includes("a@b.co"));
+  assert.match(issue.body, /\*\*Contact\*\*\n\n```text\na@b\.co\n```/);
+  assert.ok(!issueFrom({ report: "r" }).body.includes("Contact"));
+});
+
 test("only the extension can send", async () => {
   const calls = fakeGitHub();
   const body = JSON.stringify({ report: "x" });
@@ -66,6 +73,8 @@ for (const [name, body, status] of [
   ["long report", JSON.stringify({ report: "x".repeat(MAX_REPORT + 1) }), 400],
   ["long comment", JSON.stringify({ report: "x", comment: "y".repeat(MAX_COMMENT + 1) }), 400],
   ["huge body", "x".repeat(70_000), 413],
+  ["contact that is not an email", JSON.stringify({ report: "x", contact: "not an email" }), 400],
+  ["contact too long", JSON.stringify({ report: "x", contact: `${"a".repeat(255)}@b.co` }), 400],
 ]) {
   test(`rejected without calling GitHub: ${name}`, async () => {
     const calls = fakeGitHub();

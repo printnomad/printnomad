@@ -73,6 +73,12 @@
   "report_comment": {
     "message": "Anything to add? (optional)"
   },
+  "report_contact": {
+    "message": "Email (optional), only if you want us to answer you"
+  },
+  "report_contact_invalid": {
+    "message": "That email does not look right. Fix it or leave it empty."
+  },
   "report_send": {
     "message": "Send report"
   },

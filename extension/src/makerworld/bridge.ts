@@ -80,7 +80,7 @@ window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
     const result = request.type === "printers" ? await printers()
       : request.type === "prepare" ? await prepare()
       : request.type === "send-report"
-        ? await sendReport(CONFIG.reportUrl, { report: request.report, comment: request.comment, code: request.code, version: CONFIG.version })
+        ? await sendReport(CONFIG.reportUrl, { report: request.report, comment: request.comment, contact: request.contact, code: request.code, version: CONFIG.version })
       : await convert(request.printerId, request.name, request.data, request.map);
     reply({ source: BRIDGE, id: request.id, ok: true, result });
   } catch (err) {

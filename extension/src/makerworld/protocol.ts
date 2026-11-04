@@ -34,7 +34,7 @@ export interface PagePrinter {
 export type BridgeRequest =
   | { source: typeof CONTENT; id: number; type: "printers" }
   | { source: typeof CONTENT; id: number; type: "prepare" }
-  | { source: typeof CONTENT; id: number; type: "send-report"; report: string; comment: string; code?: string }
+  | { source: typeof CONTENT; id: number; type: "send-report"; report: string; comment: string; contact: string; code?: string }
   | { source: typeof CONTENT; id: number; type: "convert"; printerId: string; name?: string; data?: ArrayBuffer; map?: string };
 
 export type ConvertOutcome =
