@@ -51,6 +51,8 @@ export function reportPanel({ text, send, collapsed }: ReportPanelOptions): HTML
     comment.dataset.field = "comment";
     const contact = el("input", "w-full rounded-xl bg-sunken px-3 py-2 text-sm");
     contact.type = "email";
+    // Same rule as the worker: the browser alone accepts addresses without a domain ("a@b").
+    contact.pattern = "[^\\s@]+@[^\\s@]+\\.[^\\s@]+";
     contact.maxLength = 254;
     contact.autocomplete = "email";
     contact.placeholder = t("report_contact");
@@ -62,9 +64,14 @@ export function reportPanel({ text, send, collapsed }: ReportPanelOptions): HTML
     const result = el("span", "text-xs text-muted", t("report_send_hint"));
     result.dataset.field = "send-result";
     result.setAttribute("role", "status");
+    const contactIsValid = () => {
+      const valid = contact.checkValidity();
+      result.textContent = valid ? t("report_send_hint") : t("report_contact_invalid");
+      return valid;
+    };
+    contact.onblur = contactIsValid;
     button.onclick = async () => {
-      if (!contact.checkValidity()) {
-        result.textContent = t("report_contact_invalid");
+      if (!contactIsValid()) {
         contact.focus();
         return;
       }

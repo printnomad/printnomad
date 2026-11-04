@@ -149,7 +149,7 @@ try {
   if (await label() !== "Error PN102") throw new Error(`button after a damaged file: ${await label()}`);
   await mw.evaluate(`Object.assign(${inModal("comment")}, { value: "from the test" })`);
   // An address that is not one stops the send; a good one goes with it, but not in the report text.
-  await mw.evaluate(`Object.assign(${inModal("contact")}, { value: "not an email" })`);
+  await mw.evaluate(`Object.assign(${inModal("contact")}, { value: "a@b" })`);
   await mw.evaluate(`${inModal("send")}.click()`);
   await mw.waitForFunction(`${inModal("send-result")}.textContent.includes("email")`);
   if (reports.length) throw new Error("sent with an invalid email");
