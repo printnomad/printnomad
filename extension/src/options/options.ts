@@ -4,7 +4,6 @@ import type { Issue } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
 import { DEFAULT_OPTIONS, loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
-import { mapEditor } from "../lib/map-editor.ts";
 import { clipboardReport } from "../lib/report-copy.ts";
 import { reportPanel } from "../lib/report-panel.ts";
 import { sendReport } from "../lib/report-send.ts";
@@ -522,11 +521,6 @@ function resultRow(printer: MyPrinter, fileName: string) {
       showIssue(issue);
       showReport(`✗ [${issue.code}] ${message}`);
     },
-    /** Show (or hide, with null) the filament → extruder assignment screen. */
-    map(editor: HTMLElement | null) {
-      field("map").replaceChildren(...(editor ? [editor] : []));
-      field("map").hidden = !editor;
-    },
   };
 }
 
@@ -536,34 +530,18 @@ type ResultRow = ReturnType<typeof resultRow>;
 const ENGINE_ERROR = "PN902";
 
 async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: ArrayBuffer, platform: string,
-  sourceBundles: string[], map?: string): Promise<boolean> {
+  sourceBundles: string[]): Promise<boolean> {
   row.status("info", t("convert_busy"));
-  row.map(null);
   row.issue(null);
   try {
-    const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles, map);
+    const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles);
     row.report(res.alreadyTarget ? "" : res.text, res.report);
     if (res.alreadyTarget) {
       row.status("info", t("convert_already"));
       return false;
     }
-    if (!res.output && res.needsMap && res.plan) {
-      // More filaments on a plate than extruders: let the user choose, then convert again.
-      row.status("warn", t("convert_choose_extruders"));
-      const label = modelOfPreset(models, printer.slicer, printer.printer)?.label ?? printer.printer;
-      row.map(mapEditor({
-        plan: res.plan,
-        printerLabel: label,
-        onConvert: (chosen) => void convertFor(printer, row, file, data, platform, sourceBundles, chosen),
-        onCancel: () => {
-          row.map(null);
-          row.status("info", t("convert_not_converted"));
-        },
-      }));
-      return false;
-    }
     if (!res.output) {
-      row.status("error", res.needsMap ? t("convert_needs_map") : t("convert_failed"));
+      row.status("error", t("convert_failed"));
       row.issue((res.report?.issues as Issue[] | undefined)?.[0] ?? null);
       row.openDetails();
       return false;
@@ -576,7 +554,12 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
     }
     row.saved(download.id);
     const warned = res.report && (res.report.warnings as unknown[]).length;
-    row.status(warned ? "warn" : "ok", t("convert_ok", download.fileName, (res.ms / 1000).toFixed(1)));
+    const seconds = (res.ms / 1000).toFixed(1);
+    if ((res.report?.over_extruders as unknown[] | undefined)?.length) {
+      row.status("warn", t("convert_ok_check_colours", download.fileName, seconds));
+    } else {
+      row.status(warned ? "warn" : "ok", t("convert_ok", download.fileName, seconds));
+    }
     return true;
   } catch (e) {
     row.status("error", t("convert_failed"));

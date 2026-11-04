@@ -19,7 +19,7 @@ from .remap_filaments import MapError, parse_map
 from .slicers import installed_slicers, registry, source_library
 from .target import Target, load_target
 
-EXIT_OK, EXIT_ERROR, EXIT_NEEDS_INPUT = 0, 1, 2
+EXIT_OK, EXIT_ERROR = 0, 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -163,9 +163,6 @@ def main(argv: list[str] | None = None) -> int:
     print(t("cli.report_path", path=report_path))
     if report.ok:
         return EXIT_OK
-    if report.needs_map:
-        print(t("cli.hint_map"), file=sys.stderr)
-        return EXIT_NEEDS_INPUT
     return EXIT_ERROR
 
 

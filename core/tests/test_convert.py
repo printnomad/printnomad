@@ -416,10 +416,14 @@ def test_more_than_four_filaments(lib, tmp_path):
     # Compatible (por defecto): el reparto por placa queda como sugerencia, en automático.
     assert all(meta(p)["filament_map_mode"] == "Auto For Flush" for p in ms.findall("plate"))
 
-    # Pintura de color: uso desconocido, hace falta --map.
+    # More colours than extruders: everything is kept, automatic (even if "exact" is chosen),
+    # and the user is told to resolve it in the slicer.
     painted = make_bambu_3mf(tmp_path / "b.3mf", fil, [["2"]], paint=(1, 2, 3, 4, 5))
-    _, result, _ = run(lib, painted)
-    assert not result.report.ok and result.report.needs_map
+    for mode in (rules.MAP_COMPATIBLE, rules.MAP_EXACT):
+        _, result, s = run(lib, painted, map_mode=mode)
+        assert result.report.ok and result.report.over_extruders == ["1"]
+        assert len(s["filament_colour"]) == 5 and s["filament_map_mode"] == rules.MAP_MODE_AUTO
+        assert any("5" in w for w in result.report.warnings)
     _, result, s = run(lib, painted, user_map={1: 1, 2: 2, 3: 3, 4: 4, 5: 1})
     assert result.report.ok
     # 1 and 5 share extruder 1: merged into one filament, one per extruder.

@@ -41,9 +41,6 @@
   "convert_failed": {
     "message": "No se pudo convertir el proyecto. Revisa el reporte."
   },
-  "convert_needs_map": {
-    "message": "Este proyecto tiene más filamentos que extrusores la impresora; elegir la asignación llegará pronto."
-  },
   "convert_show": {
     "message": "Mostrar en Finder"
   },
@@ -216,36 +213,6 @@
   },
   "mw_error_menu": {
     "message": "No se encontró el menú de descarga de MakerWorld"
-  },
-  "convert_choose_extruders": {
-    "message": "Elige qué cabezal imprime cada color"
-  },
-  "convert_not_converted": {
-    "message": "No se convirtió"
-  },
-  "map_title": {
-    "message": "Asigna $1 colores a los $2 cabezales de $3"
-  },
-  "map_hint": {
-    "message": "Una placa usa más colores que cabezales tiene la impresora, así que algunos colores se imprimirán igual. Sugerencia: colores parecidos del mismo material comparten cabezal; cámbialo si quieres."
-  },
-  "map_extruder": {
-    "message": "Cabezal $1"
-  },
-  "map_plates": {
-    "message": "Placas $1"
-  },
-  "map_unused": {
-    "message": "$1 colores del proyecto no se usan y siguen a uno parecido."
-  },
-  "map_mixed": {
-    "message": "El cabezal $1 tiene materiales distintos: un material por cabezal."
-  },
-  "map_convert": {
-    "message": "Convertir"
-  },
-  "map_cancel": {
-    "message": "Cancelar"
   },
   "printer_request_label": {
     "message": "¿Qué impresora?"
@@ -549,5 +516,11 @@
   "mw_chip_title": {
     "message": "$1 · convertido por PrintNomad",
     "description": "$1 = printer"
+  },
+  "convert_ok_check_colours": {
+    "message": "Guardado $1 ($2 s). Este modelo tiene más colores que cabezales: elige en el laminador qué cabezal imprime cada uno."
+  },
+  "mw_status_saved_check_colours": {
+    "message": "Guardado ✓ · revisa colores"
   }
 }

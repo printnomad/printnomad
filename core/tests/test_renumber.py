@@ -201,7 +201,7 @@ def test_converted_project_lists_one_filament_per_extruder(profiles_root, tmp_pa
     project = project_with_everything(tmp_path)
     target = Target(ProfileLibrary.load(profiles_root), FAKE_PRINTER)
     first = convert(project, target)
-    assert first.report.needs_map                       # 6 colours on one plate, 4 extruders
+    assert first.report.over_extruders                  # 6 colours on one plate, 4 extruders
     user_map = {1: 1, 2: 1, 3: 2, 4: 3, 5: 2, 6: 4}
     result = convert(project, target, user_map=user_map)
     assert result.report.ok, result.report.errors

@@ -46,9 +46,6 @@
   "convert_failed": {
     "message": "The project could not be converted. See the report."
   },
-  "convert_needs_map": {
-    "message": "This project has more filaments than the printer has extruders; choosing the assignment is coming soon."
-  },
   "convert_show": {
     "message": "Show in Finder"
   },
@@ -226,36 +223,6 @@
   },
   "mw_error_menu": {
     "message": "MakerWorld's download menu was not found"
-  },
-  "convert_choose_extruders": {
-    "message": "Choose which extruder prints each colour"
-  },
-  "convert_not_converted": {
-    "message": "Not converted"
-  },
-  "map_title": {
-    "message": "Assign $1 colours to the $2 extruders of $3"
-  },
-  "map_hint": {
-    "message": "A plate uses more colours than the printer has extruders, so some colours will print the same. Suggested: similar colours of the same material share an extruder; change it if you like."
-  },
-  "map_extruder": {
-    "message": "Extruder $1"
-  },
-  "map_plates": {
-    "message": "Plates $1"
-  },
-  "map_unused": {
-    "message": "$1 colours of the project are not used and follow a similar one."
-  },
-  "map_mixed": {
-    "message": "Extruder $1 has different materials: one material per extruder."
-  },
-  "map_convert": {
-    "message": "Convert"
-  },
-  "map_cancel": {
-    "message": "Cancel"
   },
   "printer_request_label": {
     "message": "Which printer?"
@@ -559,5 +526,12 @@
   "mw_chip_title": {
     "message": "$1 · converted by PrintNomad",
     "description": "$1 = printer"
+  },
+  "convert_ok_check_colours": {
+    "message": "Saved $1 ($2 s). This model has more colours than the printer has extruders: choose which extruder prints each one in your slicer.",
+    "description": "$1 = file name, $2 = seconds"
+  },
+  "mw_status_saved_check_colours": {
+    "message": "Saved ✓ · check colours"
   }
 }

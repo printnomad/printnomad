@@ -123,22 +123,17 @@ try {
   // 5. A native chip gives MakerWorld its button back.
   await mw.click(".section:not(.mobile-box) .swiper-slide:last-child .chip");
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Open in Bambu Studio", { timeout: 10_000 });
-  // 6. A project with more colours on a plate than extruders: the assignment screen over
-  //    MakerWorld (shadow root), then the conversion without downloading again.
+  // 6. A project with more colours on a plate than extruders: converted without asking.
   projectBytes = readFileSync(painted);
   await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
   await mw.click(".section:not(.mobile-box) .primaryButton");
-  const modalButton = await mw.waitForFunction(
-    () => document.querySelector("[data-pn-modal]")?.shadowRoot?.querySelector(".btn-primary"), { timeout: 120_000 });
-  const title = await mw.evaluate(() => document.querySelector("[data-pn-modal]").shadowRoot.querySelector("h3").textContent);
-  if (!/5 colours to the 4 extruders of Creator 5 Pro/.test(title)) throw new Error(`modal: ${title}`);
-  await modalButton.asElement().click();
   await mw.waitForFunction(() => /Saved|Could not|Not saved/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
     { timeout: 120_000 });
-  if (await label() !== "Saved ✓") throw new Error(`after assignment: ${await label()}`);
+  if (await label() !== "Saved ✓ · check colours") throw new Error(`too many colours: ${await label()}`);
+  if (await mw.evaluate(() => document.querySelector("[data-pn-modal]"))) throw new Error("a modal opened");
   const all = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
-  if (all.length !== 3) throw new Error(`${all.length} downloads after the assigned conversion`);
-  console.log("OK: chip, button, menu, capture, conversion, restore and assignment screen");
+  if (all.length !== 3) throw new Error(`${all.length} downloads after the last conversion`);
+  console.log("OK: chip, button, menu, capture, conversion, restore and too many colours");
 
   // 7. A damaged project: the code on the button, the panel, and the report sent in one click.
   projectBytes = Buffer.from("not a zip");

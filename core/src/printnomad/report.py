@@ -89,8 +89,8 @@ class Report:
     errors: list[str] = field(default_factory=list)
     # The errors added with fail(), with code, stage and suggestion.
     issues: list[Issue] = field(default_factory=list)
-    # Hace falta que el usuario asigne filamentos a extrusores (CLI --map o tabla del plugin).
-    needs_map: bool = False
+    # Plates with more colours than extruders (kept; the slicer resolves them).
+    over_extruders: list[str] = field(default_factory=list)
     # The project was already set up for the target: only reviewed (repair.py).
     already_target: bool = False
 

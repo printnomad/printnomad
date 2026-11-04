@@ -5,6 +5,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 ## [Unreleased]
 
 ### Changed
+- **More colours than extruders no longer stops the conversion**: every colour is kept, the project stays in automatic assignment and a warning says to choose the extruders in the slicer. The assignment screen, the `needs_map` report flag and error PN303 are gone; `--map` remains in the CLI.
 - **Renamed from BetterBridge to PrintNomad** (the old name was taken on GitHub). Python packages are now `printnomad` and `printnomad_orca`; environment variables `PRINTNOMAD_PROFILES` and `PRINTNOMAD_LANG` replace `BETTERBRIDGE_*`.
 
 ### Fixed

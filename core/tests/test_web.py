@@ -45,8 +45,6 @@ def test_convert_file_reports_input_errors(profiles_root, tmp_path):
     src = make_bambu_3mf(tmp_path / "boat.3mf", [PLA], [["2"]])
     res = web.convert_file(str(src), str(tmp_path), "No Such Printer", bundles_from(profiles_root), lang="en")
     assert not res["ok"] and res["output"] is None and "No Such Printer" in res["text"]
-    res = web.convert_file(str(src), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root), map_text="x")
-    assert not res["ok"] and res["report"]["issues"][0]["code"] == issues.BAD_MAP
 
 
 def test_convert_file_options(profiles_root, tmp_path):
@@ -118,7 +116,6 @@ def test_unexpected_failure_is_a_report_with_the_detail(profiles_root, tmp_path,
 
 @pytest.mark.parametrize(("printer_kw", "expected"), [
     ({"nozzle": "9.9"}, issues.NOZZLE_UNAVAILABLE),
-    ({"map_text": "1:9"}, issues.BAD_MAP),
     ({"options": {"nope": True}}, issues.BAD_OPTION),
 ])
 def test_input_errors_have_their_code(profiles_root, tmp_path, printer_kw, expected):
@@ -127,14 +124,14 @@ def test_input_errors_have_their_code(profiles_root, tmp_path, printer_kw, expec
     assert _issue(res)["code"] == expected
 
 
-def test_filament_without_equivalent_and_too_many_colours_have_their_code(profiles_root, tmp_path):
+def test_filament_without_equivalent_has_its_code_and_too_many_colours_convert(profiles_root, tmp_path):
     pc = make_bambu_3mf(tmp_path / "pc.3mf", [("PC", "Bambu PC @BBL A1", "#FFFFFF")], [["2"]])
     assert _issue(web.convert_file(str(pc), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root)))["code"] \
         == issues.NO_FILAMENT
     colours = [("PLA", "Bambu PLA Basic @BBL A1", f"#00000{i}") for i in range(5)]
     painted = make_bambu_3mf(tmp_path / "many.3mf", colours, [["2"]], paint=(1, 2, 3, 4, 5))
     res = web.convert_file(str(painted), str(tmp_path), FAKE_PRINTER, bundles_from(profiles_root))
-    assert res["needs_map"] and _issue(res)["code"] == issues.NEEDS_MAP
+    assert res["ok"] and res["output"] and res["report"]["over_extruders"] == ["1"]
 
 
 def test_every_code_has_stage_and_texts_in_every_language():

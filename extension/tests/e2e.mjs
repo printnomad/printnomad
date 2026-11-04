@@ -154,16 +154,17 @@ try {
   }
 
   if (painted) {
-    // More colours on a plate than extruders: the assignment screen, then the conversion.
+    // More colours on a plate than extruders: converted without asking, with a warning.
     await (await page.$("#convert-file")).uploadFile(painted);
     await page.click("#convert-button");
-    await page.waitForSelector('#convert-results [data-field="map"] .btn-primary', { timeout: 120_000 });
-    const groups = await page.$$eval('#convert-results [data-field="map"] [role="radio"][aria-checked="true"]', (c) => c.length);
-    if (groups !== 5) throw new Error(`assignment rows: ${groups}`);
-    await page.click('#convert-results [data-field="map"] .btn-primary');
-    await page.waitForFunction(() => /Saved/.test(document.querySelector('#convert-results [data-field="status"]').textContent),
-      { timeout: 120_000 });
-    console.log("OK: assignment screen and conversion with the chosen extruders");
+    let status = "";
+    for (let i = 0; i < 240 && !/Saved/.test(status); i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      status = await page.$eval('#convert-results [data-field="status"]', (s) => s.textContent);
+    }
+    if (!/more colours than the printer has extruders/.test(status)) throw new Error(`status: ${status}`);
+    if (await page.$('#convert-results [data-field="map"]')) throw new Error("assignment screen still there");
+    console.log("OK: more colours than extruders converted, with a warning");
 
     // A damaged file: code, suggestion and "Copy report".
     const damaged = join(work, "damaged.3mf");

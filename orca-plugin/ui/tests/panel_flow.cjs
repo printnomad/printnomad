@@ -41,7 +41,7 @@ const PREVIEW = {
     { index: 1, type: "PLA", colour: "#FF0000", source: "Bambu PLA Basic", target: "Flashforge PLA Basic @FF C5P", plates: ["1"], extruder: 1 },
     { index: 2, type: "PLA", colour: "#00FF00", source: "Bambu PLA Basic", target: "Flashforge PLA Basic @FF C5P", plates: ["1"], extruder: 2 },
   ],
-  needs_map: false, blocking: false, errors: [], warnings: ["aviso"], output_name: "p_CREATOR5_PRO.3mf",
+  blocking: false, errors: [], warnings: ["aviso"], output_name: "p_CREATOR5_PRO.3mf",
 };
 const RESULT = {
   type: "result", ok: true, project_name: "p.3mf", output: "/x/p_CREATOR5_PRO.3mf",
