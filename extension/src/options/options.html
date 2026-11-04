@@ -125,9 +125,9 @@
           <span class="font-display text-xl font-black tracking-[-0.2px]">Print<span class="text-accent">Nomad</span></span>
         </div>
         <nav class="flex flex-wrap gap-1" data-i18n-aria="nav_label">
-          <a href="#prefs" class="nav-link" data-i18n="nav_prefs"></a>
-          <a href="#printers-section" class="nav-link" data-i18n="nav_printers"></a>
           <a href="#convert" class="nav-link" data-i18n="nav_convert"></a>
+          <a href="#printers-section" class="nav-link" data-i18n="nav_printers"></a>
+          <a href="#prefs" class="nav-link" data-i18n="nav_prefs"></a>
         </nav>
       </div>
     </header>
@@ -145,6 +145,44 @@
           <div class="text-sm text-dark-muted"><span id="hero-default"></span> · <a href="#printers-section" class="inline-flex min-h-11 items-center font-semibold text-mint" data-i18n="hero_change"></a></div>
         </div>
         <img src="icons/hero-slicers.svg" alt="" class="pointer-events-none absolute top-1/2 right-14 hidden w-[500px] max-w-[44%] -translate-y-[42%] min-[1120px]:block" />
+      </section>
+
+      <!-- Convert a file manually -->
+      <section id="convert" class="flex scroll-mt-24 flex-col gap-4" aria-labelledby="convert-title">
+        <div class="flex flex-col gap-1.5">
+          <h2 id="convert-title" class="m-0 text-[34px] tracking-[-0.5px]" data-i18n="convert_title"></h2>
+          <p class="m-0 text-[17px] text-muted" data-i18n="convert_intro"></p>
+        </div>
+        <form id="convert-form" class="flex flex-col gap-3" novalidate>
+          <div class="flex flex-wrap items-stretch gap-3">
+            <label id="dropzone" class="relative flex min-w-0 flex-[999_1_380px] cursor-pointer items-center gap-3.5 rounded-[var(--pn-r-tile)] border-2 border-dashed border-[var(--pn-border-dashed)] bg-surface px-[22px] py-[18px] data-[drag=true]:border-accent data-[drag=true]:bg-accent-tint">
+              <svg viewBox="0 0 24 24" class="size-6 shrink-0 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>
+              <span class="min-w-0 text-[15px] [overflow-wrap:anywhere]"><strong id="file-name" data-i18n="convert_drop_title"></strong> <span id="file-detail" class="text-muted" data-i18n="convert_drop_hint"></span></span>
+              <input id="convert-file" type="file" accept=".3mf" class="sr-only" />
+            </label>
+            <label class="flex min-w-0 flex-[1_1_240px] flex-col gap-1 rounded-[var(--pn-r-tile)] border-[1.5px] border-line bg-surface px-[18px] py-2.5">
+              <span class="text-xs font-semibold text-muted" data-i18n="convert_printer"></span>
+              <select id="convert-printer" class="w-full min-w-0 truncate bg-transparent text-[15px] font-semibold"></select>
+            </label>
+            <button id="convert-button" type="submit" class="min-h-14 cursor-pointer rounded-[var(--pn-r-tile)] bg-accent px-7 text-base font-bold text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50" data-i18n="convert_button"></button>
+          </div>
+          <div id="convert-result" class="flex flex-col gap-3" hidden>
+            <p id="convert-status" class="chip self-start" role="status" hidden></p>
+            <ul id="convert-results" class="m-0 flex list-none flex-col gap-3 p-0" aria-live="polite"></ul>
+            <p id="convert-tip" class="rounded-2xl bg-accent-soft px-4 py-3 text-sm" data-i18n="convert_tip" hidden></p>
+          </div>
+        </form>
+      </section>
+
+      <!-- My printers -->
+      <section id="printers-section" class="flex scroll-mt-24 flex-col gap-5" aria-labelledby="printers-title">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div class="flex flex-col gap-2">
+            <h2 id="printers-title" class="m-0 text-[34px] tracking-[-0.5px]" data-i18n="printers_title"></h2>
+            <p class="m-0 text-[17px] text-muted" data-i18n="printers_hint"></p>
+          </div>
+        </div>
+        <ul id="printers" class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-5 p-0"></ul>
       </section>
 
       <!-- Conversion preferences -->
@@ -267,44 +305,6 @@
           </div>
         </div>
         <div class="flex items-center gap-2 text-sm text-muted"><svg viewBox="0 0 24 24" class="size-4 text-accent" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span data-i18n="prefs_saved"></span></div>
-      </section>
-
-      <!-- My printers -->
-      <section id="printers-section" class="flex scroll-mt-24 flex-col gap-5" aria-labelledby="printers-title">
-        <div class="flex flex-wrap items-end justify-between gap-4">
-          <div class="flex flex-col gap-2">
-            <h2 id="printers-title" class="m-0 text-[34px] tracking-[-0.5px]" data-i18n="printers_title"></h2>
-            <p class="m-0 text-[17px] text-muted" data-i18n="printers_hint"></p>
-          </div>
-        </div>
-        <ul id="printers" class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-5 p-0"></ul>
-      </section>
-
-      <!-- Convert a file manually -->
-      <section id="convert" class="flex scroll-mt-24 flex-col gap-4" aria-labelledby="convert-title">
-        <div class="flex flex-col gap-1.5">
-          <h2 id="convert-title" class="m-0 font-sans text-xl font-bold" data-i18n="convert_title"></h2>
-          <p class="m-0 text-[15px] text-muted" data-i18n="convert_intro"></p>
-        </div>
-        <form id="convert-form" class="flex flex-col gap-3" novalidate>
-          <div class="flex flex-wrap items-stretch gap-3">
-            <label id="dropzone" class="relative flex min-w-0 flex-[999_1_380px] cursor-pointer items-center gap-3.5 rounded-[var(--pn-r-tile)] border-2 border-dashed border-[var(--pn-border-dashed)] bg-surface px-[22px] py-[18px] data-[drag=true]:border-accent data-[drag=true]:bg-accent-tint">
-              <svg viewBox="0 0 24 24" class="size-6 shrink-0 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>
-              <span class="min-w-0 text-[15px] [overflow-wrap:anywhere]"><strong id="file-name" data-i18n="convert_drop_title"></strong> <span id="file-detail" class="text-muted" data-i18n="convert_drop_hint"></span></span>
-              <input id="convert-file" type="file" accept=".3mf" class="sr-only" />
-            </label>
-            <label class="flex min-w-0 flex-[1_1_240px] flex-col gap-1 rounded-[var(--pn-r-tile)] border-[1.5px] border-line bg-surface px-[18px] py-2.5">
-              <span class="text-xs font-semibold text-muted" data-i18n="convert_printer"></span>
-              <select id="convert-printer" class="w-full min-w-0 truncate bg-transparent text-[15px] font-semibold"></select>
-            </label>
-            <button id="convert-button" type="submit" class="min-h-14 cursor-pointer rounded-[var(--pn-r-tile)] bg-accent px-7 text-base font-bold text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50" data-i18n="convert_button"></button>
-          </div>
-          <div id="convert-result" class="flex flex-col gap-3" hidden>
-            <p id="convert-status" class="chip self-start" role="status" hidden></p>
-            <ul id="convert-results" class="m-0 flex list-none flex-col gap-3 p-0" aria-live="polite"></ul>
-            <p id="convert-tip" class="rounded-2xl bg-accent-soft px-4 py-3 text-sm" data-i18n="convert_tip" hidden></p>
-          </div>
-        </form>
       </section>
     </main>
 
