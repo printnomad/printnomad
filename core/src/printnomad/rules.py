@@ -24,13 +24,6 @@ BAMBU_ONLY_KEYS = frozenset({
     "thumbnail_size",
 })
 
-# Ajustes de proceso que se toman del proyecto original aunque el autor no los
-# haya cambiado, con la clave i18n del motivo que va al reporte.
-KEEP_SOURCE_PROCESS_KEYS = {
-    # Orca corta la primera capa a media altura: con una primera capa más alta,
-    # los objetos muy finos (logos de una capa) desaparecen.
-    "initial_layer_print_height": "reason.first_layer",  # clave del catálogo i18n
-}
 
 # Modos de asignación de filamentos a extrusores en project_settings (filament_map_mode).
 # How PrintNomad chooses the slicer's assignment mode (option `map_mode`):

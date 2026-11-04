@@ -46,6 +46,16 @@ def test_profiles_with_utf8_bom_are_read(tmp_path):
     assert lib.settings("machine", "Mine")["gcode_flavor"] == "klipper"
 
 
+def test_process_tie_goes_to_the_finer_one(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    target = Target(lib, MACHINE)
+    lib.raw[("process", "0.12mm Standard @FF C5")] = {"type": "process", "name": "0.12mm Standard @FF C5",
+                                                      "instantiation": "true", "layer_height": "0.12",
+                                                      "compatible_printers": [MACHINE]}
+    lib.vendors[("process", "0.12mm Standard @FF C5")] = "Flashforge"
+    assert target.pick_process(0.16) == "0.12mm Standard @FF C5"
+
+
 def test_missing_parent_raises(profiles_root):
     lib = ProfileLibrary.load(profiles_root)
     with pytest.raises(ProfileError):

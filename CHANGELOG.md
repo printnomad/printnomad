@@ -8,6 +8,8 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Renamed from BetterBridge to PrintNomad** (the old name was taken on GitHub). Python packages are now `printnomad` and `printnomad_orca`; environment variables `PRINTNOMAD_PROFILES` and `PRINTNOMAD_LANG` replace `BETTERBRIDGE_*`.
 
 ### Fixed
+- **Layer height kept when the printer has no process for it**: a 0.16 mm project on a printer with 0.12 and 0.20 processes was silently printed at 0.12 mm. The project's layer height is now kept over the nearest process and listed apart in the report; every other setting comes from that process.
+- **First layer height comes from the target's process**, unless the designer changed it; it used to be kept from the project and declared a designer change. Very thin objects may need it lowered in the slicer.
 - **Line widths in % become mm**: `*_line_width` values such as `skin_infill_line_width = 100%` are converted with the target nozzle's diameter in the project settings, object and part overrides and height ranges. Bambu Studio and QIDI Studio read them as 100 mm ("too large line width").
 - **Profiles saved with a UTF-8 BOM are read** (Snapmaker Orca 2.4.1), also by the catalog builder; they used to be skipped silently.
 - **Filaments chosen per feature are kept**: a filament chosen for walls, infill, support (when the object prints support or a raft) or the purge tower, on the project, an object or a part, could be removed as unused, and support silently moved to filament 1. They now count as used and are renumbered; such a filament with no equivalent on the target is now an error.

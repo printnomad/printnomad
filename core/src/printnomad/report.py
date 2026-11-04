@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 
-from . import rules
 from .i18n import t
 
 
@@ -56,6 +55,9 @@ class Report:
     presets: dict[str, object] = field(default_factory=dict)
     changed: list[FieldChange] = field(default_factory=list)
     kept_author: list[FieldChange] = field(default_factory=list)
+    # From the project, not changed by the designer: the layer height, when the target has no
+    # process of that height.
+    kept_project: list[FieldChange] = field(default_factory=list)
     dropped: list[FieldChange] = field(default_factory=list)
     # Source preset defaults removed so the target slicer's own defaults apply.
     source_defaults: list[str] = field(default_factory=list)
@@ -119,9 +121,12 @@ class Report:
             for c in self.kept_author:
                 was = "" if c.source_preset is None else _short(c.source_preset) + " → "
                 target = t("report.kept_author_line", value=_short(c.final))
-                # Rule-kept values (not the designer's) say why.
-                why = f" [{c.reason}]" if c.key in rules.KEEP_SOURCE_PROCESS_KEYS else ""
-                lines.append(f"  {c.key}: {was}{_short(c.original)} {target}{why}")
+                lines.append(f"  {c.key}: {was}{_short(c.original)} {target}")
+        if self.kept_project:
+            lines.append(t("report.kept_project", count=len(self.kept_project)))
+            for c in self.kept_project:
+                target = t("report.kept_author_line", value=_short(c.final))
+                lines.append(f"  {c.key}: {_short(c.original)} {target} [{c.reason}]")
         if self.dropped:
             lines.append(t("report.dropped", count=len(self.dropped)))
             lines += [f"  {c.key}: {_short(c.original)} [{c.reason}]" for c in self.dropped]

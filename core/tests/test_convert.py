@@ -238,14 +238,72 @@ def test_height_ranges_without_percent_widths_are_not_rewritten(lib, tmp_path, r
     assert read_3mf.LAYER_CONFIG_RANGES not in result.files
 
 
+def _model_preset(lib):
+    """Target process that differs from the project in the settings of the model."""
+    for name in ("0.20mm Standard @FF C5", "0.24mm Standard @FF C5"):
+        lib.raw[("process", name)].update(top_shell_layers="5", sparse_infill_pattern="grid", wall_loops="2")
+    return lib
+
+
+MODEL_VALUES = {"top_shell_layers": "6", "sparse_infill_pattern": "gyroid", "wall_loops": "2"}
+
+
+def test_without_a_process_of_that_height_only_the_layer_height_is_kept(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"layer_height": "0.16", **MODEL_VALUES})
+    _, result, s = run(_model_preset(lib), path)
+    assert result.report.presets["process"] == "0.20mm Standard @FF C5"
+    assert s["layer_height"] == "0.16"
+    # Everything else: the target's process.
+    assert (s["top_shell_layers"], s["sparse_infill_pattern"]) == ("5", "grid")
+    assert s["outer_wall_speed"] == "150" and s["initial_layer_print_height"] == "0.25"
+    [kept] = result.report.kept_project
+    assert (kept.key, kept.original, kept.final) == ("layer_height", "0.16", "0.2")
+    assert "layer_height" not in {c.key for c in (*result.report.kept_author, *result.report.changed)}
+    # The slicers reset what this list does not name, so it must name it.
+    assert "layer_height" in s["different_settings_to_system"][0].split(";")
+    assert "top_shell_layers" not in s["different_settings_to_system"][0]
+    text = result.report.to_text()
+    assert "Valores del proyecto conservados: 1" in text and "layer_height: 0.16" in text
+
+
+def test_with_a_process_of_that_height_only_the_designers_changes_are_kept(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"layer_height": "0.20", **MODEL_VALUES})
+    _, result, s = run(_model_preset(lib), path)
+    assert (s["top_shell_layers"], s["sparse_infill_pattern"]) == ("5", "grid")
+    assert not result.report.kept_project
+    assert "top_shell_layers" not in s["different_settings_to_system"][0]
+
+
+def test_with_a_process_of_that_height_the_designers_change_stays(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        **MODEL_VALUES, "different_settings_to_system": ["top_shell_layers", "", ""]})
+    _, result, s = run(_model_preset(lib), path)
+    assert (s["top_shell_layers"], s["sparse_infill_pattern"]) == ("6", "grid")
+    assert [c.key for c in result.report.kept_author] == ["top_shell_layers"]
+
+
+def test_first_layer_changed_by_the_designer_stays(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "initial_layer_print_height": "0.3", "different_settings_to_system": ["initial_layer_print_height", "", ""]})
+    _, _, s = run(lib, path)
+    assert s["initial_layer_print_height"] == "0.3"
+
+
+def test_kept_layer_height_outside_the_printers_limits_warns(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"layer_height": "0.32"})
+    _, result, s = run(lib, path)
+    assert s["layer_height"] == "0.32"
+    assert any("0.32" in w for w in result.report.warnings)
+
+
 def test_author_process_override_kept_and_limits_warned(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"sparse_infill_speed": "700", "line_width": "0.42"})
     _, result, s = run(lib, path)
     assert s["sparse_infill_speed"] == "700"          # ajuste del autor, sin cambio silencioso
     assert s["outer_wall_speed"] == "150"             # no tocado por el autor: perfil C5P
-    assert s["initial_layer_print_height"] == "0.2"   # del proyecto: objetos finos
-    assert any(c.key == "initial_layer_print_height" for c in result.report.kept_author)
+    assert s["initial_layer_print_height"] == "0.25"  # no la cambió el autor: la del perfil destino
+    assert not any(c.key == "initial_layer_print_height" for c in result.report.kept_author)
     assert any(c.key == "sparse_infill_speed" for c in result.report.kept_author)
     assert any("sparse_infill_speed=700" in w for w in result.report.warnings)
     # 700 mm/s × 0.42 × 0.2 = 58.8 mm³/s > 18: nota (el slicer limita solo), no advertencia
@@ -531,8 +589,7 @@ def test_printer_dependent_process_settings_come_from_the_target(lib, tmp_path):
     assert s["elefant_foot_compensation"] == "0.1"
     assert "xy_hole_compensation" not in s and "filename_format" not in s  # sin valor en el perfil: el del laminador
     assert s["wall_loops"] == "4"                                          # del modelo
-    assert s["different_settings_to_system"][0].split(";") == [
-        "enable_prime_tower", "initial_layer_print_height", "wall_loops"]
+    assert s["different_settings_to_system"][0].split(";") == ["enable_prime_tower", "wall_loops"]
     dropped = {d.key: d.reason for d in result.report.dropped}
     assert "impresora" in dropped["default_acceleration"] and "xy_hole_compensation" in dropped
     assert "enable_prime_tower" not in dropped
@@ -586,12 +643,9 @@ def test_designer_changes_compared_with_the_source_preset(lib, tmp_path):
     assert "wall_loops" in {c.key for c in result.report.kept_author} and not result.report.not_changed
 
 
-def test_rule_kept_first_layer_has_no_original_value_and_says_why(lib, tmp_path):
-    source = ProfileLibrary.from_bundles([{"vendor": "BBL", "files": {
-        "process/a1.json": {"type": "process", "name": "0.20mm Standard @BBL A1", "initial_layer_print_height": "0.2"},
-    }}])
-    _, result, _ = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]), source_lib=source)
-    first = next(c for c in result.report.kept_author if c.key == "initial_layer_print_height")
-    assert first.source_preset is None
-    line = next(x for x in result.report.to_text().splitlines() if "initial_layer_print_height" in x)
-    assert "→" not in line and "[" in line
+def test_first_layer_the_designer_did_not_change_is_not_declared_as_a_change(lib, tmp_path):
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
+    assert s["initial_layer_print_height"] == "0.25"
+    assert "initial_layer_print_height" not in s["different_settings_to_system"][0]
+    kept = {c.key for c in (*result.report.kept_author, *result.report.kept_project)}
+    assert "initial_layer_print_height" not in kept

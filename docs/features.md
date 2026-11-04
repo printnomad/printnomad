@@ -26,6 +26,12 @@ behind. When you select the printer again, the slicer lists them all as "modifie
 choices from leftovers. With PrintNomad that dialog only shows the designer's real
 changes, so **Transfer** is the right answer.
 
+**A layer height your printer has no process for** is kept. A project made with Bambu's
+*0.16mm High Quality* on a printer with 0.12 and 0.20 processes prints at 0.16 mm over the
+nearest process; every other setting comes from that process, plus the designer's changes,
+and the report lists the layer height apart. The first layer also comes from your printer's
+process, unless the designer changed it.
+
 ## You see what the designer changed, and from what
 
 When the source slicer's profiles are available (PrintNomad downloads Bambu Studio's

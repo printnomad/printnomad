@@ -235,7 +235,8 @@ class Target:
             # A igual altura de capa: el de sistema y, entre ellos, el "Standard"
             # (no "Draft", "Fine", "Strength"…, que cambian otros ajustes).
             standard = "standard" in name.lower()
-            return abs(lh - layer_height), user, not standard, name
+            # Rounded: 0.12 and 0.20 are equally near 0.16, whatever the floats say (the name decides).
+            return round(abs(lh - layer_height), 6), user, not standard, name
 
         return min(names, key=key)
 

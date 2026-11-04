@@ -314,11 +314,7 @@ def _convert(
         report.errors.append(str(e))
         return result
     for k, v in process_cfg.items():
-        if k in rules.KEEP_SOURCE_PROCESS_KEYS and k in src and src[k] != v and k not in author_process:
-            # Kept by a PrintNomad rule, not changed by the designer: no original value.
-            report.kept_author.append(FieldChange(k, src[k], v, t(rules.KEEP_SOURCE_PROCESS_KEYS[k])))
-            out[k] = src[k]
-        elif k in author_process and k in src and keep_process_key(k):
+        if k in author_process and k in src and keep_process_key(k):
             report.kept_author.append(FieldChange(k, src[k], v, t("reason.author_on_process"),
                                                   _preset_value(source_process, k)))
             out[k] = src[k]
@@ -335,8 +331,17 @@ def _convert(
         elif rules.is_printer_process_key(k):
             # The target profile does not set it: the slicer's default applies.
             report.dropped.append(FieldChange(k, out.pop(k), None, process_reason(k)))
+    # The target has no process of this layer height: the nearest one is the base and every other
+    # setting comes from it (decided 2026-11-03), but the print keeps the project's layer height.
+    if ("layer_height" in src and "layer_height" not in author_process
+            and not _same_layer_height(process_cfg, layer_height)):
+        report.kept_project.append(FieldChange("layer_height", src["layer_height"], process_cfg.get("layer_height"),
+                                               t("reason.no_process_of_that_height"),
+                                               _preset_value(source_process, "layer_height")))
+        out["layer_height"] = src["layer_height"]
+        reasons.pop("layer_height", None)
     collapsed = _collapse_variants(src, out, set(machine_cfg), target, put)
-    for c in report.kept_author:
+    for c in (*report.kept_author, *report.kept_project):
         msg = rules.check_value(c.key, out.get(c.key, c.original), limits)
         if msg:
             report.warnings.append(t("convert.warn.author_limit", message=msg))
@@ -450,8 +455,10 @@ def _convert(
     put("print_settings_id", process, t("reason.target_process_preset"))
     put("print_compatible_printers", [machine], t("reason.target_process_preset"))
     put("inherits_group", [process, *[p or "" for p in fprofiles], machine], t("reason.target_presets"))
+    # The slicers reset to the preset's value whatever this list does not name
+    # (update_non_diff_values_to_base_config), so everything kept must be listed.
     put("different_settings_to_system",
-        [";".join(sorted(c.key for c in report.kept_author if c.key in out))]
+        [";".join(sorted(c.key for c in (*report.kept_author, *report.kept_project) if c.key in out))]
         + [";".join(sorted(kept_filament.get(i, ()))) for i in range(n)] + [""],
         t("reason.author_on_presets"))
     offered = target.bed_types
@@ -471,7 +478,7 @@ def _convert(
     for k in sorted(k for k in rules.BAMBU_ONLY_KEYS & set(out) if k not in reasons):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.bambu_hardware")))
     # Enfriamiento del origen que el perfil C5P no define: fuera, Orca usa su valor por defecto.
-    kept_keys = {c.key for c in report.kept_author}.union(*kept_filament.values())
+    kept_keys = {c.key for c in (*report.kept_author, *report.kept_project)}.union(*kept_filament.values())
     for k in sorted(k for k in out if k not in reasons and k not in kept_keys and rules.is_cooling_key(k)):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.cooling_no_value")))
     kept_cooling = sorted({c.key for c in report.kept_author if c.key in out and rules.is_cooling_key(c.key)}
@@ -614,6 +621,13 @@ def _drop_unchanged(author: set[str], src: dict, preset: dict, report: Report, i
         if same:
             author.discard(k)
             report.not_changed.append(k if index is None else t("report.filament_key", key=k, index=index + 1))
+
+
+def _same_layer_height(process: dict, layer_height: float) -> bool:
+    try:
+        return math.isclose(float(_first(process.get("layer_height"), 0)), layer_height, abs_tol=1e-6)
+    except (TypeError, ValueError):
+        return False
 
 
 def _collapse_variants(src: dict, out: dict, machine_keys: set[str], target, put) -> set[str]:
