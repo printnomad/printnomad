@@ -7,3 +7,8 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
 });
 
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
+
+// The MakerWorld button's "Preferences" and "Manage printers": content scripts cannot open it.
+chrome.runtime.onMessage.addListener((message: { type?: string }) => {
+  if (message?.type === "open-options") void chrome.runtime.openOptionsPage();
+});

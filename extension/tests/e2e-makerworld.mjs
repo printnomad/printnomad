@@ -52,38 +52,36 @@ try {
   const options = await browser.newPage();
   await options.goto(`chrome-extension://${id}/options.html`);
   await options.evaluate(() => chrome.storage.sync.set({
-    printers: [{ id: "c5p", slicer: "flashstudio", printer: "Flashforge Creator 5 Pro 0.4 nozzle", slicerAuto: true }],
+    printers: [{ id: "c5p", slicer: "flashstudio", printer: "Flashforge Creator 5 Pro 0.4 nozzle", slicerAuto: true },
+      { id: "p1s", slicer: "flashstudio", printer: "Bambu Lab P1S 0.4 nozzle", slicerAuto: true }],
   }));
 
   const mw = await browser.newPage();
   mw.on("pageerror", (e) => errors.push(String(e)));
   await mw.goto(ORIGIN);
-  const label = () => mw.$eval(".section:not(.mobile-box) .primaryButton span", (e) => e.textContent);
+  // Our button lives in a shadow root (the visible copy of the section).
+  const inButton = (selector) => `document.querySelector(".section:not(.mobile-box) [data-pn-button]")?.shadowRoot?.querySelector('${selector}')`;
+  const label = () => mw.evaluate(`${inButton("[data-pn-main]")}?.textContent ?? ${inButton('[role="status"]')}?.textContent ?? ""`);
+  const click = (selector) => mw.evaluate(`${inButton(selector)}.click()`);
 
-  // 1. Our chip, next to "All", looking like MakerWorld's.
-  await mw.waitForSelector('[data-pn-printer="c5p"]', { timeout: 30_000 });
+  // 1. The split button, above MakerWorld's own, which keeps working untouched.
+  await mw.waitForFunction(`${inButton("[data-pn-main]")}?.textContent === "Download for Creator 5 Pro"`, { timeout: 30_000 });
   const chips = await mw.$$eval(".section:not(.mobile-box) .swiper-slide", (s) => s.map((x) => x.textContent.trim()));
-  if (chips.join("|") !== "All|Creator 5 Pro|A1 mini|P1S") throw new Error(`unexpected chips: ${chips}`);
+  if (chips.join("|") !== "All|A1 mini|P1S") throw new Error(`MakerWorld's chips changed: ${chips}`);
+  const native = await mw.$eval(".section:not(.mobile-box) .primaryButton span", (e) => e.textContent);
+  if (native !== "Open in Bambu Studio") throw new Error(`MakerWorld's button changed: ${native}`);
+  const meta = await mw.evaluate(`document.querySelector(".section:not(.mobile-box) [data-pn-button]").shadowRoot.textContent`);
+  if (!meta.includes("Flash Studio") || !meta.includes("temperatures")) throw new Error(`meta line: ${meta}`);
 
-  // 2. Selecting it shows every profile and turns the button into ours.
-  await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
-  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro");
-  const selected = await mw.$$eval(".section:not(.mobile-box) .chip.selected", (c) => c.map((x) => x.textContent));
-  if (selected.join() !== "Creator 5 Pro") throw new Error(`selected chips: ${selected}`);
-  // "All" was clicked once (one route change), not once per copy of the section.
-  const clicks = await mw.evaluate(() => window.chipClicks);
-  if (clicks !== 1) throw new Error(`MakerWorld's chips were clicked ${clicks} times`);
+  // 2. Its menu: the printers (the default with a check) and the link to the settings.
+  await click("[data-pn-chevron]");
+  await mw.waitForFunction(`${inButton('[role="menu"]')}`);
+  const items = await mw.evaluate(`[...${inButton('[role="menu"]')}.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)`);
+  if (items.length !== 3 || !items[0].includes("Creator 5 Pro") || !items[1].includes("P1S")) throw new Error(`menu: ${items}`);
+  await mw.keyboard.press("Escape");
+  await mw.waitForFunction(`!${inButton('[role="menu"]')}`);
 
-  // 3. The menu offers it too.
-  await mw.click(".section:not(.mobile-box) .icon-box");
-  await mw.waitForSelector("[data-pn-item]");
-  const item = await mw.$eval("[data-pn-item]", (e) => e.textContent.trim());
-  if (item !== "Download for Creator 5 Pro") throw new Error(`menu item: ${item}`);
-  const order = await mw.$$eval(".MuiPopper-root .list > *", (items) => items.map((i) => i.textContent.trim()));
-  if (order.join("|") !== "Download for Creator 5 Pro|Download 3MF|Download STL/CAD Files i") throw new Error(`menu: ${order}`);
-  await mw.click(".section:not(.mobile-box) .icon-box"); // close it
-
-  // 4. The button captures MakerWorld's download (through its menu the first time,
+  // 3. The button captures MakerWorld's download (through its menu the first time,
   //    then its button), converts it and saves only the result; MakerWorld's stored
   //    download preference is left as it was.
   const convertOnce = async (n) => {
@@ -95,55 +93,51 @@ try {
         if (menu && getComputedStyle(menu).clipPath === "none") window.menuSeen = true;
       }).observe(document.body, { childList: true });
     });
-    await mw.click(".section:not(.mobile-box) .primaryButton");
-    // A spinner while it works.
-    await mw.waitForSelector(".section:not(.mobile-box) .primaryButton [data-pn-loading]", { timeout: 10_000 });
-    await mw.waitForFunction(() => /Saved|Could not|Not saved|failed|answer|found/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
-      { timeout: 120_000 });
-    const status = await label();
-    if (status !== "Saved ✓") throw new Error(`status: ${status}`);
+    await click("[data-pn-main]");
+    // The button shows the work itself.
+    await mw.waitForFunction(`${inButton('[role="status"]')}`, { timeout: 10_000 });
+    await mw.waitForFunction(`${inButton("[data-pn-main]")}?.textContent === "Saved · Show in Finder"`, { timeout: 120_000 });
     if (await mw.evaluate(() => window.menuSeen)) throw new Error("MakerWorld's menu was visible during the conversion");
-    if (await mw.evaluate(() => "bbHiding" in document.documentElement.dataset)) throw new Error("menus still hidden");
-    await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 10_000 });
+    if (await mw.evaluate(() => "pnHiding" in document.documentElement.dataset)) throw new Error("menus still hidden");
     const complete = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
     if (complete.length !== n) throw new Error(`${complete.length} downloads after ${n} conversion(s): the original must not be saved`);
     const model = execFileSync("python3", ["-c",
       "import json,sys,zipfile; print(json.loads(zipfile.ZipFile(sys.argv[1]).read('Metadata/project_settings.config'))['printer_model'])",
       complete[0].filename]).toString().trim();
     if (model !== "Flashforge Creator 5 Pro") throw new Error(`the saved file is for ${model}, not the converted project`);
-
   };
   await convertOnce(1);
+  await mw.waitForFunction(`${inButton("[data-pn-main]")}?.textContent === "Download for Creator 5 Pro"`, { timeout: 30_000 });
   await convertOnce(2);
+  await mw.waitForFunction(`${inButton("[data-pn-main]")}?.textContent === "Download for Creator 5 Pro"`, { timeout: 30_000 });
   if (await mw.evaluate(() => window.openedInStudio)) throw new Error("MakerWorld's own action ran");
   if (await mw.evaluate(() => localStorage.getItem("model_operate_last_key")) !== null) {
     throw new Error("MakerWorld's stored download preference was changed");
   }
 
-  // 5. A native chip gives MakerWorld its button back.
-  await mw.click(".section:not(.mobile-box) .swiper-slide:last-child .chip");
-  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Open in Bambu Studio", { timeout: 10_000 });
-  // 6. A project with more colours on a plate than extruders: the assignment screen over
-  //    MakerWorld (shadow root), then the conversion without downloading again.
-  projectBytes = readFileSync(painted);
-  await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
+  // 4. MakerWorld's own button is still theirs.
+  const before = (await options.evaluate(() => chrome.downloads.search({}))).length;
   await mw.click(".section:not(.mobile-box) .primaryButton");
+  await mw.waitForFunction(() => window.nativeDownloadAttempted === true, { timeout: 10_000 });
+  console.log(`  native download left to MakerWorld (downloads before: ${before})`);
+
+  // 5. A project with more colours on a plate than extruders: the assignment screen over
+  //    the page, without downloading the project again, then the conversion.
+  projectBytes = readFileSync(painted);
+  await mw.waitForFunction(`${inButton("[data-pn-main]")}?.textContent === "Download for Creator 5 Pro"`, { timeout: 30_000 });
+  await click("[data-pn-main]");
   const modalButton = await mw.waitForFunction(
     () => document.querySelector("[data-pn-modal]")?.shadowRoot?.querySelector(".btn-primary"), { timeout: 120_000 });
   const title = await mw.evaluate(() => document.querySelector("[data-pn-modal]").shadowRoot.querySelector("h3").textContent);
   if (!/5 colours to the 4 extruders of Creator 5 Pro/.test(title)) throw new Error(`modal: ${title}`);
   await modalButton.asElement().click();
-  await mw.waitForFunction(() => /Saved|Could not|Not saved/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
-    { timeout: 120_000 });
-  if (await label() !== "Saved ✓") throw new Error(`after assignment: ${await label()}`);
-  const all = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
-  if (all.length !== 3) throw new Error(`${all.length} downloads after the assigned conversion`);
-  console.log("OK: chip, button, menu, capture, conversion, restore and assignment screen");
+  await mw.waitForFunction(`${inButton("[data-pn-main]")}?.textContent === "Saved · Show in Finder"`, { timeout: 120_000 });
+  console.log("OK: split button, menu, capture, conversion, native button and assignment screen");
 
   // 7. A damaged project: the code on the button, the panel, and the report sent in one click.
   projectBytes = Buffer.from("not a zip");
-  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 30_000 });
-  await mw.click(".section:not(.mobile-box) .primaryButton");
+  await mw.waitForFunction(`${inButton("[data-pn-main]")}?.textContent === "Download for Creator 5 Pro"`, { timeout: 30_000 });
+  await click("[data-pn-main]");
   const inModal = (field) => `document.querySelector("[data-pn-modal]")?.shadowRoot?.querySelector('[data-field="${field}"]')`;
   await mw.waitForFunction(inModal("send"), { timeout: 120_000 });
   if (await label() !== "Error PN102") throw new Error(`button after a damaged file: ${await label()}`);

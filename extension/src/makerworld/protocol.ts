@@ -29,16 +29,28 @@ export interface PagePrinter {
   label: string;
   brand: string;
   slicer: string;
+  slicerName: string;
+  /** "Flash Studio · Cool Plate" */
+  setup: string;
+}
+
+/** What the page's button needs: the printers, the default one and what is kept from the designer. */
+export interface PageState {
+  printers: PagePrinter[];
+  defaultId: string | null;
+  keeps: ("filament" | "cooling" | "tuning")[];
 }
 
 export type BridgeRequest =
   | { source: typeof CONTENT; id: number; type: "printers" }
   | { source: typeof CONTENT; id: number; type: "prepare" }
+  | { source: typeof CONTENT; id: number; type: "show-download"; downloadId: number }
   | { source: typeof CONTENT; id: number; type: "send-report"; report: string; comment: string; contact: string; code?: string }
   | { source: typeof CONTENT; id: number; type: "convert"; printerId: string; name?: string; data?: ArrayBuffer; map?: string };
 
 export type ConvertOutcome =
-  | { status: "saved"; fileName: string; warnings: number; convertMs: number }
+  /** `notes`: what came from the profile though the designer changed it. */
+  | { status: "saved"; fileName: string; warnings: number; convertMs: number; downloadId: number; notes: string[] }
   | { status: "cancelled" }
   | { status: "already" }
   /** A plate uses more filaments than extruders: the user assigns them (then convert again with `map`). */

@@ -185,20 +185,15 @@
   "result_stats": {
     "message": "$1 del modelo · $2 de tu impresora · $3 avisos"
   },
-  "mw_chip_title": {
-    "message": "$1 · convertido por PrintNomad"
-  },
   "mw_download_for": {
     "message": "Descargar para $1"
   },
   "mw_status_downloading": {
-    "message": "Obteniendo el 3MF…"
+    "message": "Obteniendo el archivo de MakerWorld…"
   },
   "mw_status_converting": {
-    "message": "Convirtiendo para $1…"
-  },
-  "mw_status_saved": {
-    "message": "Guardado ✓"
+    "message": "Convirtiendo para $1…",
+    "description": "$1 = value"
   },
   "mw_status_cancelled": {
     "message": "No se guardó"
@@ -553,5 +548,46 @@
   },
   "printers_edit": {
     "message": "Editar"
+  },
+  "mw_status_downloading_percent": {
+    "message": "Descargando… $1%",
+    "description": "$1 = value"
+  },
+  "mw_saved_show": {
+    "message": "Guardado · Mostrar en Finder"
+  },
+  "mw_menu_title": {
+    "message": "Descargar para"
+  },
+  "mw_menu_manage": {
+    "message": "Administrar impresoras y preferencias"
+  },
+  "mw_choose_printer": {
+    "message": "Elegir otra impresora"
+  },
+  "mw_meta_preferences": {
+    "message": "Preferencias"
+  },
+  "mw_meta_keeps": {
+    "message": "conserva del diseñador: $1",
+    "description": "$1 = value"
+  },
+  "mw_meta_keeps_none": {
+    "message": "usa el perfil de tu impresora"
+  },
+  "mw_keep_filament": {
+    "message": "temperaturas"
+  },
+  "mw_keep_cooling": {
+    "message": "enfriamiento"
+  },
+  "mw_keep_tuning": {
+    "message": "ajustes de impresora"
+  },
+  "mw_note_cooling": {
+    "message": "Enfriamiento tomado de tu perfil"
+  },
+  "mw_note_tuning": {
+    "message": "Ajustes de impresora tomados de tu perfil"
   }
 }

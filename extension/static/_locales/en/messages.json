@@ -195,20 +195,15 @@
     "message": "$1 from the model · $2 from your printer · $3 warnings",
     "description": "$1, $2, $3 = numbers of settings and warnings"
   },
-  "mw_chip_title": {
-    "message": "$1 · converted by PrintNomad"
-  },
   "mw_download_for": {
     "message": "Download for $1"
   },
   "mw_status_downloading": {
-    "message": "Getting the 3MF…"
+    "message": "Getting the file from MakerWorld…"
   },
   "mw_status_converting": {
-    "message": "Converting for $1…"
-  },
-  "mw_status_saved": {
-    "message": "Saved ✓"
+    "message": "Converting for $1…",
+    "description": "$1 = value"
   },
   "mw_status_cancelled": {
     "message": "Not saved"
@@ -563,5 +558,46 @@
   },
   "printers_edit": {
     "message": "Edit"
+  },
+  "mw_status_downloading_percent": {
+    "message": "Downloading… $1%",
+    "description": "$1 = value"
+  },
+  "mw_saved_show": {
+    "message": "Saved · Show in Finder"
+  },
+  "mw_menu_title": {
+    "message": "Download for"
+  },
+  "mw_menu_manage": {
+    "message": "Manage printers and preferences"
+  },
+  "mw_choose_printer": {
+    "message": "Choose another printer"
+  },
+  "mw_meta_preferences": {
+    "message": "Preferences"
+  },
+  "mw_meta_keeps": {
+    "message": "keeps the designer's $1",
+    "description": "$1 = value"
+  },
+  "mw_meta_keeps_none": {
+    "message": "uses your printer's profile"
+  },
+  "mw_keep_filament": {
+    "message": "temperatures"
+  },
+  "mw_keep_cooling": {
+    "message": "cooling"
+  },
+  "mw_keep_tuning": {
+    "message": "printer tuning"
+  },
+  "mw_note_cooling": {
+    "message": "Cooling taken from your profile"
+  },
+  "mw_note_tuning": {
+    "message": "Printer tuning taken from your profile"
   }
 }
