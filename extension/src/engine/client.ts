@@ -1,5 +1,5 @@
 // Promise API over the conversion worker. One worker per page, started on first use.
-import type { ConvertRequest, ConvertResult, OptionInfo, PrinterInfo, Request, Response, SourceInfo } from "./protocol.ts";
+import type { ConvertRequest, ConvertResult, PrinterInfo, Request, Response, SourceInfo } from "./protocol.ts";
 
 type Pending = { resolve(value: unknown): void; reject(error: Error): void };
 
@@ -50,9 +50,5 @@ export class Engine {
   /** Boot the engine now (it takes ~1 s) instead of on the first conversion. */
   warm(): Promise<null> {
     return this.call({ op: "warm", args: {} });
-  }
-
-  listOptions(lang?: string): Promise<OptionInfo[]> {
-    return this.call({ op: "listOptions", args: { lang } });
   }
 }

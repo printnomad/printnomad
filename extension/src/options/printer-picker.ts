@@ -99,11 +99,9 @@ export function slicersFor(model: ModelChoice, catalog: Catalog, nozzle?: string
   return [...seen].map(([slicer, name]) => ({ slicer, name })).sort((a, b) => rank(b.slicer) - rank(a.slicer));
 }
 
-/** The slicer a new printer gets: its brand's, or the general one for every printer when asked. */
-export function pickSlicer(model: ModelChoice, catalog: Catalog, generalForAll: boolean, nozzle?: string): string {
-  const options = slicersFor(model, catalog, nozzle);
-  const general = options.find((o) => catalog.slicers[o.slicer]?.general);
-  return (generalForAll && general ? general : options[0]).slicer;
+/** The slicer a new printer gets: its brand's, else the general one. */
+export function pickSlicer(model: ModelChoice, catalog: Catalog, nozzle?: string): string {
+  return slicersFor(model, catalog, nozzle)[0].slicer;
 }
 
 /** Nozzles available for the model in a slicer, smallest first; the default is 0.4 when offered. */

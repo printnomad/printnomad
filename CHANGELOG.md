@@ -20,6 +20,9 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - Bambu G-code from a Bambu target profile is no longer flagged; `retraction_distances_when_cut = 0` (rejected by the slicer, shipped in a Flash Studio profile) is dropped; Standard processes win layer-height ties.
 - **Filament diameter 2.85 mm instead of 1.75 mm** for Flashforge PLA profiles: profile inheritance now resolves parents within the same vendor, then the common filament library, as OrcaSlicer does. Projects converted with earlier versions must be converted again before printing.
 
+### Changed
+- **New design**: home page with the conversion preferences always visible, a default printer, first-run onboarding, and a split button on MakerWorld that shows its own progress, in a shadow root. Light theme only for now. The chips added to MakerWorld, advanced mode and the switch for one slicer on every printer are gone; settings saved by earlier versions are migrated.
+
 ### Added
 - **A short list of tested printers** (`supportedModels` in `extension/config.json`) and a simpler page; printers saved earlier keep working. Your printer not on the list? Ask for it in one click.
 - **Send report**: one click, no account or email, from the options page and from a panel on MakerWorld that also explains the error. The panel shows the exact text sent; the 3MF never leaves the browser. Reports become issues in a private repository through `tools/report-worker` (a Cloudflare Worker that keeps the token). While `reportUrl` is empty, only Copy report is offered. An optional email lets us answer; it is sent only with the report, not copied with it.

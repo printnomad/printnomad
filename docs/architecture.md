@@ -30,7 +30,7 @@ tools/build_profile_catalog.py  turns slicer releases into the profile catalog t
 
 ### MakerWorld integration
 
-- **Chips**: in *Print Files*, the printers of *My printers* that MakerWorld does not list get a chip cloned from MakerWorld's own, so it looks native (`src/makerworld/content.ts`). With one selected, every print profile is shown and the green button and its menu offer *Download for <printer>*.
+- **Button**: near MakerWorld's own button, a split button in a shadow root (`src/makerworld/content.ts`): *Download for <default printer>* and a menu with the other printers. MakerWorld's own button and menu keep working.
 - **Download**: MakerWorld's own *Download 3MF* is triggered, so the user's session is used and no credentials are handled. A script in the page's world (`main-world.ts`, `"world": "MAIN"`) reads the `/f3mf` JSON answer (file name and signed CDN URL, fetch or XHR) and keeps the page from saving the original; the content script downloads the CDN file. The idea comes from makerworld-to-snapmaker-u1 (MIT part); the code is ours.
 - **Conversion**: a hidden extension iframe (`bridge.html`, web-accessible only on the MakerWorld origins of `config.json`) runs the engine and `chrome.downloads`; the 3MF is transferred to it with `postMessage`, origins checked on both sides. Chromium does not apply the page's `frame-src` to iframes added by extensions.
 - MakerWorld's class names are generated: elements are found by structure (`span.primaryButton`, `.swiper-wrapper`, MUI menus) and by "3MF" in menu texts. Tested on a local stand-in page (`tests/fixtures/makerworld.html`) because MakerWorld blocks automated browsers.

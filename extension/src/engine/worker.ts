@@ -8,7 +8,6 @@ import type {
   ConvertRequest,
   ConvertResult,
   ListPrintersRequest,
-  OptionInfo,
   PrinterInfo,
   Request,
   Response,
@@ -112,11 +111,6 @@ async function listPrinters(args: ListPrintersRequest): Promise<PrinterInfo[]> {
   return toJs<PrinterInfo[]>(py.pyimport("printnomad.web").list_printers(pyBundles(py, args.bundles)));
 }
 
-async function listOptions(lang?: string): Promise<OptionInfo[]> {
-  const py = await engine();
-  return toJs<OptionInfo[]>(py.pyimport("printnomad.web").list_options(lang ?? null));
-}
-
 async function sourceInfo(name: string, data: ArrayBuffer): Promise<SourceInfo> {
   const py = await engine();
   const path = `${WORK}/${crypto.randomUUID()}-${name.replace(/[\\/]/g, "_")}`;
@@ -134,8 +128,6 @@ async function handle(request: Request): Promise<unknown> {
       return convert(request.args);
     case "listPrinters":
       return listPrinters(request.args);
-    case "listOptions":
-      return listOptions(request.args.lang);
     case "warm":
       // Start Pyodide and import the core ahead of the first conversion.
       return (await engine()).pyimport("printnomad.web") && null;

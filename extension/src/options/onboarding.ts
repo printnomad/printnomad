@@ -149,7 +149,7 @@ export function createOnboarding(host: OnboardingHost) {
     const m = model;
     pills("setup-nozzles", allNozzles(m).nozzles.map((n) => ({ value: n, label: t("printer_nozzle", n) })), nozzle, (n) => {
       nozzle = n;
-      if (!presetFor(m, slicer, n)) slicer = pickSlicer(m, host.catalog()!, false, n);
+      if (!presetFor(m, slicer, n)) slicer = pickSlicer(m, host.catalog()!, n);
       bed = keepBed(m, slicer, presetFor(m, slicer, n)!, bed);
       renderStep2();
     });
@@ -190,7 +190,7 @@ export function createOnboarding(host: OnboardingHost) {
   function toStep2() {
     if (!model) return;
     nozzle = allNozzles(model).preferred;
-    slicer = pickSlicer(model, host.catalog()!, false, nozzle);
+    slicer = pickSlicer(model, host.catalog()!, nozzle);
     bed = undefined;
     renderStep2();
     show(2);
@@ -199,7 +199,7 @@ export function createOnboarding(host: OnboardingHost) {
   async function finish() {
     const preset = model && presetFor(model, slicer, nozzle);
     if (!model || !preset) return;
-    const byRule = slicer === pickSlicer(model, host.catalog()!, false, nozzle);
+    const byRule = slicer === pickSlicer(model, host.catalog()!, nozzle);
     await host.save({
       id: editing?.id ?? crypto.randomUUID(),
       slicer,

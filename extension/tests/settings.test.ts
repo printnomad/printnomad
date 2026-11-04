@@ -13,6 +13,11 @@ test("options chosen in advanced mode stay", () => {
   assert.deepEqual(migrateSettings({ advanced: true, options: { map_mode: "exact" } }), { set: {}, remove: ["advanced"] });
 });
 
+test("the switch for one slicer on every printer goes; each printer keeps the slicer it gave", () => {
+  const printers = [{ id: "a", slicer: "orcaslicer", printer: "A", slicerAuto: true }];
+  assert.deepEqual(migrateSettings({ generalSlicerForAll: true, printers }), { set: {}, remove: ["generalSlicerForAll"] });
+});
+
 test("settings already up to date are left alone", () => {
   assert.deepEqual(migrateSettings({ options: { map_mode: "exact" } }), { set: {}, remove: [] });
 });

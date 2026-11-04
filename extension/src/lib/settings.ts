@@ -6,7 +6,7 @@ export interface MyPrinter {
   slicer: string;
   /** Machine preset name, e.g. "Flashforge Creator 5 Pro 0.4 nozzle". */
   printer: string;
-  /** The slicer was picked by the rule (brand's own / general for all), not by the user. */
+  /** The slicer is the one the rule picks (the brand's own), not another the user chose. */
   slicerAuto?: boolean;
   /** Build plate chosen for this printer (curr_bed_type); absent: the printer's default. */
   bedType?: string;
@@ -18,8 +18,6 @@ export interface Settings {
   defaultPrinterId?: string;
   /** Conversion options changed from their defaults (DEFAULT_OPTIONS). */
   options: Record<string, boolean | string>;
-  /** Use the general slicer (OrcaSlicer) for every printer instead of each brand's own. */
-  generalSlicerForAll: boolean;
 }
 
 /** The core's defaults (core/src/printnomad/options.py); a test keeps them in step. */
@@ -30,16 +28,18 @@ export const DEFAULT_OPTIONS: Record<string, boolean | string> = {
   keep_designer_printer_settings: false,
 };
 
-const DEFAULTS: Settings = { printers: [], options: {}, generalSlicerForAll: false };
+const DEFAULTS: Settings = { printers: [], options: {} };
 
 /**
- * Settings saved by earlier versions, updated. `advanced` is gone: options now always apply.
- * They used to apply only in advanced mode, so with it off they are dropped, and nobody's
- * conversions change. Returns what to write and to remove; nothing when already up to date.
+ * Settings saved by earlier versions, updated; nothing when already up to date.
+ * - `advanced` is gone: options now always apply. They used to apply only in advanced mode, so
+ *   with it off they are dropped, and nobody's conversions change.
+ * - `generalSlicerForAll` is gone: the slicer is chosen per printer, and each printer already
+ *   stores the one that switch gave it.
  */
 export function migrateSettings(stored: Record<string, unknown>): { set: Partial<Settings>; remove: string[] } {
-  if (!("advanced" in stored)) return { set: {}, remove: [] };
-  return { set: stored.advanced === true ? {} : { options: {} }, remove: ["advanced"] };
+  const remove = ["advanced", "generalSlicerForAll"].filter((key) => key in stored);
+  return { set: "advanced" in stored && stored.advanced !== true ? { options: {} } : {}, remove };
 }
 
 export async function loadSettings(): Promise<Settings> {

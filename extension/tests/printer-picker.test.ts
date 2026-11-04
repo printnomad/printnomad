@@ -75,12 +75,11 @@ test("the brand's own slicer first, 0.4 nozzle by default", () => {
 });
 
 
-test("the brand's slicer by default, the general one for all on request", () => {
+test("the brand's slicer by default, else the general one", () => {
   const [p1s, c5p] = models;
-  assert.equal(pickSlicer(c5p, catalog, false), "flashstudio");
-  assert.equal(pickSlicer(c5p, catalog, true), "orcaslicer");
-  assert.equal(pickSlicer(p1s, catalog, false), "orcaslicer");     // no Bambu Studio here: the general one
-  assert.deepEqual(slicersFor(c5p, catalog, "0.6").map((s) => s.slicer), ["flashstudio"]);
+  assert.equal(pickSlicer(c5p, catalog), "flashstudio");
+  assert.equal(pickSlicer(p1s, catalog), "orcaslicer");     // no Bambu Studio here: the general one
+  assert.deepEqual(slicersFor(c5p, catalog, "0.6").map((x) => x.slicer), ["flashstudio"]);
 });
 
 test("plates of each preset come from the catalog, and a chosen plate is kept only if on offer", () => {

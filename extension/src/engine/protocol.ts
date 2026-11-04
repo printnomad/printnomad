@@ -22,18 +22,6 @@ export interface ConvertRequest {
 
 export type OptionValues = Record<string, boolean | string>;
 
-/** One conversion option as described by the core (printnomad.options.describe). */
-export interface OptionInfo {
-  key: string;
-  kind: "bool" | "choice";
-  default: boolean | string;
-  label: string;
-  help: string;
-  choices?: { value: string; label: string }[];
-  warn_when?: boolean | string;
-  warning?: string;
-}
-
 /** What an assignment screen needs (printnomad.web.assignment_plan). */
 export interface AssignmentPlan {
   extruders: number;
@@ -90,7 +78,6 @@ export interface PrinterInfo {
 export type Request =
   | { id: number; op: "convert"; args: ConvertRequest }
   | { id: number; op: "listPrinters"; args: ListPrintersRequest }
-  | { id: number; op: "listOptions"; args: { lang?: string } }
   | { id: number; op: "warm"; args: Record<string, never> }
   | { id: number; op: "sourceInfo"; args: { name: string; data: ArrayBuffer } };
 

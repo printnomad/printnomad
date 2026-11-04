@@ -73,7 +73,7 @@ The same rule applies to every printer: PrintNomad does not keep per-printer
 exceptions, which would need someone to verify each machine. The printer maker's profile
 is the reference, and you decide when the model's values should win.
 
-Advanced mode can keep the model's cooling or printer settings anyway; each option
+The conversion preferences can keep the model's cooling or printer settings anyway; each option
 explains its risk.
 
 ## Your build plate
@@ -123,7 +123,7 @@ be needed again after picking it).
 
 Filament-to-extruder assignment uses the slicer's *automatic* mode by default, so the
 project slices in every Orca-based slicer (OrcaSlicer rejects a manual assignment on
-extruders 3–4). The planned assignment is kept as the suggestion. Advanced mode offers
+extruders 3–4). The planned assignment is kept as the suggestion. The conversion preferences offer
 *Exact* (manual) for Flash Studio, and an assignment you choose by hand is always kept.
 
 ## The right slicer for each printer
@@ -136,8 +136,8 @@ differ in 27 of 142 machine settings (end G-code included).
 
 So each printer uses its brand's own slicer when there is one (Flash Studio for
 Flashforge, Bambu Studio for Bambu Lab) and OrcaSlicer, which ships profiles for most
-brands, for the rest — nothing to choose. One switch uses OrcaSlicer for every printer,
-and a single printer's slicer can be changed on its card. Other converters made for one
+brands, for the rest — nothing to choose. A printer's slicer can be changed when setting it
+up or with Edit. Other converters made for one
 brand do the same implicitly (ForgeBridge targets Flash Studio; the Snapmaker U1
 converter targets Snapmaker Orca, with an OrcaSlicer compatibility switch).
 
@@ -151,11 +151,10 @@ slicers show "old vs new" values after a conversion.
 
 ## Right on MakerWorld
 
-Your printers appear in MakerWorld's *Print Files* as if MakerWorld supported them: a
-Creator 5 Pro chip next to A1, P1S… (printers MakerWorld already lists are left alone).
-Pick it and the green button becomes *Download for Creator 5 Pro*: the project is
-downloaded through MakerWorld as usual, converted in the browser and saved — only the
-converted file.
+A button appears above MakerWorld's own: *Download for Creator 5 Pro*, with a menu for your
+other printers. The project is downloaded through MakerWorld as usual, converted in the
+browser and saved — only the converted file. The button shows the progress, and a line under
+it says which slicer it is for and what is kept from the designer.
 
 ## Nothing silent
 
