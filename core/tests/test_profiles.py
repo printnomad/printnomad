@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from printnomad import rules
@@ -28,6 +30,20 @@ def test_misplaced_file_is_indexed_by_type(profiles_root):
     assert not lib.has("filament", "misplaced")
     # El perfil roto no impide listar los compatibles.
     assert "Generic PLA @FF C5P" in lib.instantiable("filament", MACHINE)
+
+
+def test_profiles_with_utf8_bom_are_read(tmp_path):
+    """Snapmaker Orca 2.4.1 saves its profiles with a BOM; they must not be skipped."""
+    def write_with_bom(path, data):
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"\xef\xbb\xbf" + json.dumps(data).encode("utf-8"))
+
+    system = tmp_path / "system"
+    write_with_bom(system / "Snapmaker/machine/u1.json", {"type": "machine", "name": "U1", "gcode_flavor": "klipper"})
+    account = tmp_path / "user" / "default"
+    write_with_bom(account / "machine/mine.json", {"type": "machine", "name": "Mine", "inherits": "U1"})
+    lib = ProfileLibrary.from_roots([system], [account])
+    assert lib.settings("machine", "Mine")["gcode_flavor"] == "klipper"
 
 
 def test_missing_parent_raises(profiles_root):

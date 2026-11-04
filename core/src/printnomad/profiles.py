@@ -105,7 +105,8 @@ class ProfileLibrary:
             return
         for f in sorted(folder.rglob("*.json")):
             try:
-                data = json.loads(f.read_text(encoding="utf-8"))
+                # utf-8-sig: Snapmaker Orca 2.4.1 saves its profiles with a BOM.
+                data = json.loads(f.read_text(encoding="utf-8-sig"))
             except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 continue
             self._add(data, kind, vendor, f.stem)
