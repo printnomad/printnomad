@@ -29,9 +29,6 @@
   "profiles_status_error": {
     "message": "Perfiles no disponibles: $1"
   },
-  "convert_title": {
-    "message": "Convertir un archivo"
-  },
   "convert_printer": {
     "message": "Para"
   },
@@ -110,20 +107,11 @@
   "convert_no_file": {
     "message": "Elige un archivo .3mf."
   },
-  "conversion_title": {
-    "message": "Conversión"
-  },
-  "conversion_advanced": {
-    "message": "Avanzado"
-  },
   "conversion_reset": {
     "message": "Restablecer valores por defecto"
   },
   "conversion_loading": {
     "message": "Cargando opciones…"
-  },
-  "profiles_hint": {
-    "message": "Los perfiles oficiales de cada laminador, actualizados automáticamente. Tus propios presets estarán disponibles con la app auxiliar de PrintNomad."
   },
   "convert_saving": {
     "message": "Guardando $1…"
@@ -137,23 +125,11 @@
   "nav_printers": {
     "message": "Mis impresoras"
   },
-  "hero_eyebrow": {
-    "message": "Proyectos 3MF para tu impresora"
-  },
   "hero_title": {
     "message": "Cualquier modelo, listo para tu impresora."
   },
   "hero_text": {
-    "message": "PrintNomad convierte proyectos de MakerWorld y Bambu Studio para tu impresora y tu laminador, manteniendo lo que el diseñador ajustó."
-  },
-  "hero_step1": {
-    "message": "Añade tu impresora una sola vez."
-  },
-  "hero_step2": {
-    "message": "Suelta el .3mf del modelo."
-  },
-  "hero_step3": {
-    "message": "Ábrelo en tu laminador y lamina."
+    "message": "Suelta un proyecto de MakerWorld o Bambu Studio: sale preparado para tu impresora y laminador, con lo que ajustó el diseñador."
   },
   "convert_drop_label": {
     "message": "Proyecto .3mf"
@@ -173,30 +149,6 @@
   "printers_add_title": {
     "message": "Añadir impresora"
   },
-  "conversion_hint": {
-    "message": "Cómo decide PrintNomad qué valores usar."
-  },
-  "conversion_basic_tab": {
-    "message": "Básico"
-  },
-  "basic_model_title": {
-    "message": "Lo que ajustó el diseñador"
-  },
-  "basic_model_text": {
-    "message": "Soportes, relleno, velocidades, planchado, torre de purga… todo lo que el diseñador cambió se mantiene."
-  },
-  "basic_printer_title": {
-    "message": "Lo que es de tu máquina"
-  },
-  "basic_printer_text": {
-    "message": "Plato, G-code, enfriamiento, aceleraciones y calibración vienen del perfil de tu impresora."
-  },
-  "basic_slicer_title": {
-    "message": "Listo en cualquier laminador"
-  },
-  "basic_slicer_text": {
-    "message": "Los filamentos se asignan en modo automático: el proyecto abre y lamina en OrcaSlicer, Flash Studio y otros."
-  },
   "picker_search_label": {
     "message": "Buscar impresoras"
   },
@@ -206,20 +158,11 @@
   "picker_close": {
     "message": "Cerrar"
   },
-  "picker_brands": {
-    "message": "Marcas"
-  },
   "picker_empty": {
     "message": "Ninguna impresora coincide. Prueba con otro nombre o marca."
   },
   "picker_nozzle": {
     "message": "Boquilla"
-  },
-  "picker_featured": {
-    "message": "Populares"
-  },
-  "picker_all": {
-    "message": "Todas ($1)"
   },
   "printer_nozzle": {
     "message": "$1 mm"
@@ -339,5 +282,23 @@
   },
   "map_cancel": {
     "message": "Cancelar"
+  },
+  "advanced_show": {
+    "message": "Opciones avanzadas"
+  },
+  "advanced_hide": {
+    "message": "Ocultar opciones avanzadas"
+  },
+  "printer_request_label": {
+    "message": "¿No está tu impresora? Dinos cuál"
+  },
+  "printer_request_send": {
+    "message": "Pedirla"
+  },
+  "printer_request_sent": {
+    "message": "Gracias, lo recibimos."
+  },
+  "printer_request_failed": {
+    "message": "No se pudo enviar. Inténtalo más tarde."
   }
 }

@@ -33,9 +33,6 @@
   "profiles_status_error": {
     "message": "Profiles unavailable: $1"
   },
-  "convert_title": {
-    "message": "Convert a file"
-  },
   "convert_printer": {
     "message": "For"
   },
@@ -115,20 +112,11 @@
   "convert_no_file": {
     "message": "Choose a .3mf file."
   },
-  "conversion_title": {
-    "message": "Conversion"
-  },
-  "conversion_advanced": {
-    "message": "Advanced"
-  },
   "conversion_reset": {
     "message": "Restore defaults"
   },
   "conversion_loading": {
     "message": "Loading options…"
-  },
-  "profiles_hint": {
-    "message": "The official profiles of each slicer, updated automatically. Your own presets will be available with the PrintNomad helper app."
   },
   "convert_saving": {
     "message": "Saving $1…",
@@ -143,23 +131,11 @@
   "nav_printers": {
     "message": "My printers"
   },
-  "hero_eyebrow": {
-    "message": "3MF projects for your printer"
-  },
   "hero_title": {
     "message": "Any model, ready for your printer."
   },
   "hero_text": {
-    "message": "PrintNomad converts MakerWorld and Bambu Studio projects for your printer and slicer, keeping what the designer tuned."
-  },
-  "hero_step1": {
-    "message": "Add your printer once."
-  },
-  "hero_step2": {
-    "message": "Drop the model's .3mf."
-  },
-  "hero_step3": {
-    "message": "Open it in your slicer and slice."
+    "message": "Drop a MakerWorld or Bambu Studio project: it comes out set up for your printer and slicer, keeping what the designer tuned."
   },
   "convert_drop_label": {
     "message": ".3mf project"
@@ -180,30 +156,6 @@
   "printers_add_title": {
     "message": "Add a printer"
   },
-  "conversion_hint": {
-    "message": "How PrintNomad decides which values to use."
-  },
-  "conversion_basic_tab": {
-    "message": "Basic"
-  },
-  "basic_model_title": {
-    "message": "What the designer tuned"
-  },
-  "basic_model_text": {
-    "message": "Supports, infill, speeds, ironing, purge tower… everything the designer changed is kept."
-  },
-  "basic_printer_title": {
-    "message": "What belongs to your machine"
-  },
-  "basic_printer_text": {
-    "message": "Bed, G-code, cooling, accelerations and calibration come from your printer's profile."
-  },
-  "basic_slicer_title": {
-    "message": "Ready in any slicer"
-  },
-  "basic_slicer_text": {
-    "message": "Filaments are assigned in automatic mode, so the project opens and slices in OrcaSlicer, Flash Studio and others."
-  },
   "picker_search_label": {
     "message": "Search printers"
   },
@@ -213,21 +165,11 @@
   "picker_close": {
     "message": "Close"
   },
-  "picker_brands": {
-    "message": "Brands"
-  },
   "picker_empty": {
     "message": "No printer matches. Try another name or brand."
   },
   "picker_nozzle": {
     "message": "Nozzle"
-  },
-  "picker_featured": {
-    "message": "Popular"
-  },
-  "picker_all": {
-    "message": "All ($1)",
-    "description": "$1 = number of printer models"
   },
   "printer_nozzle": {
     "message": "$1 mm",
@@ -350,5 +292,23 @@
   },
   "map_cancel": {
     "message": "Cancel"
+  },
+  "advanced_show": {
+    "message": "Advanced options"
+  },
+  "advanced_hide": {
+    "message": "Hide advanced options"
+  },
+  "printer_request_label": {
+    "message": "Your printer is not here? Tell us which one"
+  },
+  "printer_request_send": {
+    "message": "Ask for it"
+  },
+  "printer_request_sent": {
+    "message": "Thanks, we got it."
+  },
+  "printer_request_failed": {
+    "message": "Could not send it. Try again later."
   }
 }

@@ -3,7 +3,6 @@ import { test } from "node:test";
 
 import type { Catalog } from "../src/profiles/catalog.ts";
 import {
-  brands,
   buildModels,
   keepBed,
   matches,
@@ -12,6 +11,7 @@ import {
   pickSlicer,
   presetFor,
   slicersFor,
+  supportedOnly,
 } from "../src/options/printer-picker.ts";
 
 const printer = (name: string, model: string, nozzle: string) => ({ name, model, nozzle, extruders: 1 });
@@ -48,15 +48,18 @@ test("groups presets by model across slicers, without the brand in the label", (
   const c5p = models[1];
   assert.equal(c5p.variants.length, 3);
   assert.equal(c5p.cover, "https://example.test/profiles/fs/covers/c5p.webp");
-  assert.deepEqual(brands(models), [{ brand: "Bambu Lab", count: 1 }, { brand: "Flashforge", count: 1 }]);
 });
 
-test("search and brand filter", () => {
+test("search by brand or model", () => {
   const c5p = models[1];
-  assert.ok(matches(c5p, "creator 5", null));
-  assert.ok(matches(c5p, "flashforge pro", "Flashforge"));
-  assert.ok(!matches(c5p, "p1s", null));
-  assert.ok(!matches(c5p, "", "Bambu Lab"));
+  assert.ok(matches(c5p, "creator 5"));
+  assert.ok(matches(c5p, "flashforge pro"));
+  assert.ok(matches(c5p, ""));
+  assert.ok(!matches(c5p, "p1s"));
+});
+
+test("only tested models are offered", () => {
+  assert.deepEqual(supportedOnly(models, ["Bambu Lab P1S", "Not in the catalog"]).map((m) => m.label), ["P1S"]);
 });
 
 test("the brand's own slicer first, 0.4 nozzle by default", () => {
