@@ -42,7 +42,7 @@ export type ConvertOutcome =
   | { status: "already" }
   /** A plate uses more filaments than extruders: the user assigns them (then convert again with `map`). */
   | { status: "needs-map"; plan: AssignmentPlan }
-  | { status: "error"; message: string; needsMap?: boolean };
+  | { status: "error"; message: string; needsMap?: boolean; code?: string };
 
 export type BridgeMessage =
   | { source: typeof BRIDGE; type: "ready" }

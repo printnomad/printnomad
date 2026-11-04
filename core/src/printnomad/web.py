@@ -8,13 +8,15 @@ JSON (report included), so the caller needs no Python objects.
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from . import i18n, read_3mf, write_3mf
+from . import i18n, issues, read_3mf, write_3mf
 from . import options as conversion_options
 from .convert import convert
 from .profiles import ProfileError, ProfileLibrary
 from .remap_filaments import MapError, format_map, parse_map, suggest_map
+from .report import Report
 from .slicers import Slicer, registry, source_slicer
 from .target import Target, find_printer
 
@@ -91,27 +93,41 @@ def convert_file(
     """
     if lang:
         i18n.set_language(lang)
-    project = read_3mf.load(src)
+    try:
+        project = read_3mf.load(src)
+    except read_3mf.UNREADABLE_ERRORS as e:
+        return _failed(src, printer, issues.UNREADABLE_PROJECT, i18n.t("convert.error.unreadable", detail=e))
     try:
         user_map = parse_map(map_text) if map_text else None
+    except MapError as e:
+        return _failed(src, printer, issues.BAD_MAP, str(e))
+    try:
         chosen = conversion_options.resolve(options)
+    except conversion_options.OptionError as e:
+        return _failed(src, printer, issues.BAD_OPTION, str(e))
+    try:
         lib = ProfileLibrary.from_bundles(bundles)
         name = find_printer(lib, printer)
         if not name:
             raise ProfileError(i18n.t("target.error.unknown_printer", name=printer))
         known = registry(platform=platform) if slicer else {}
         target = Target(lib, name, known.get(slicer))
-    except (MapError, ProfileError, conversion_options.OptionError) as e:
-        return {"ok": False, "output": None, "needs_map": False, "report": None, "text": str(e),
-                "already_target": False}
+    except ProfileError as e:
+        return _failed(src, printer, issues.UNKNOWN_PRINTER, str(e))
     source_lib = None
     if source_bundles:
         try:
             source_lib = ProfileLibrary.from_bundles(source_bundles)
         except ProfileError:
             source_lib = None  # optional: only enriches the report
-    result = convert(project, target, nozzle=nozzle, user_map=user_map, source_lib=source_lib, bed_type=bed_type,
-                     **chosen)
+    try:
+        result = convert(project, target, nozzle=nozzle, user_map=user_map, source_lib=source_lib, bed_type=bed_type,
+                         **chosen)
+    except ET.ParseError as e:
+        return _failed(src, printer, issues.UNREADABLE_PROJECT, i18n.t("convert.error.unreadable", detail=e))
+    except Exception as e:  # noqa: BLE001 (last resort: the user gets a code and a report to send)
+        detail = f"{type(e).__name__}: {e}"
+        return _failed(src, printer, issues.INTERNAL, i18n.t("convert.error.internal", detail=detail))
     report = result.report
     if report.already_target and not result.files:
         # Not an error when converting for several printers: this one needs nothing.
@@ -122,10 +138,11 @@ def convert_file(
         try:
             write_3mf.write(project, dest, result.files, result.removed, force=True)
         except write_3mf.WriteError as e:
-            report.errors.append(str(e))
+            report.fail(issues.WRITE_FAILED, str(e))
         else:
             report.output = str(dest)
-            report.errors.extend(write_3mf.verify(project, dest, result.files))
+            for problem in write_3mf.verify(project, dest, result.files):
+                report.fail(issues.VERIFY_FAILED, problem)
     output = report.output or None
     # Paths in the embedder's virtual file system mean nothing to the user: names only.
     report.source = Path(src).name
@@ -135,6 +152,14 @@ def convert_file(
     if report.needs_map:
         result_dict["plan"] = assignment_plan(project, result.usage, target.extruders)
     return result_dict
+
+
+def _failed(src: str, printer: str, code: str, message: str) -> dict:
+    """The result of a conversion that could not start: a report with only the error."""
+    report = Report(source=Path(src).name, target=printer)
+    report.fail(code, message)
+    return {"ok": False, "output": None, "needs_map": False, "already_target": False,
+            "report": report.to_dict(), "text": report.to_text()}
 
 
 def assignment_plan(project, usage: dict[str, set[int] | None], extruders: int) -> dict:

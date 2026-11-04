@@ -12,6 +12,9 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+# What reading a damaged or foreign file raises (JSONDecodeError and UnicodeDecodeError are ValueError).
+UNREADABLE_ERRORS = (zipfile.BadZipFile, ET.ParseError, ValueError)
+
 PROJECT_SETTINGS = "Metadata/project_settings.config"
 MODEL_SETTINGS = "Metadata/model_settings.config"
 PRUSA_CONFIG = "Metadata/Slic3r_PE.config"

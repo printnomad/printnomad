@@ -11,7 +11,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import i18n, read_3mf, rules, write_3mf
+from . import i18n, issues, read_3mf, rules, write_3mf
 from .convert import convert
 from .i18n import t
 from .profiles import USER_VENDOR, ProfileError
@@ -128,7 +128,11 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
 
     before = write_3mf.sha256_file(src)
-    project = read_3mf.load(src)
+    try:
+        project = read_3mf.load(src)
+    except read_3mf.UNREADABLE_ERRORS as e:
+        print(t("cli.error", message=t("convert.error.unreadable", detail=e)), file=sys.stderr)
+        return EXIT_ERROR
     result = convert(project, target, nozzle=args.nozzle, user_map=user_map, bed_type=args.bed_type,
                      source_lib=source_library(read_3mf.detect_source(project)),
                      keep_designer_filament=not args.no_designer_filament,
@@ -141,17 +145,18 @@ def main(argv: list[str] | None = None) -> int:
     report_path = args.report or dest.with_suffix(".report.json")
 
     if report.ok and dest.exists() and not args.force:
-        report.errors.append(t("cli.error.exists", path=dest))
+        report.fail(issues.WRITE_FAILED, t("cli.error.exists", path=dest))
     if report.ok:
         try:
             write_3mf.write(project, dest, result.files, result.removed, force=args.force)
         except write_3mf.WriteError as e:
-            report.errors.append(str(e))
+            report.fail(issues.WRITE_FAILED, str(e))
         else:
             report.output = str(dest)
-            report.errors.extend(write_3mf.verify(project, dest, result.files))
+            for problem in write_3mf.verify(project, dest, result.files):
+                report.fail(issues.VERIFY_FAILED, problem)
     if write_3mf.sha256_file(src) != before:
-        report.errors.append(t("cli.error.original_changed"))
+        report.fail(issues.VERIFY_FAILED, t("cli.error.original_changed"))
 
     report_path.write_text(report.to_json(), encoding="utf-8")
     print(report.to_text(verbose=args.verbose))

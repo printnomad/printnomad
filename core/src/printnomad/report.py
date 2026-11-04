@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass, field
 
+from . import issues
 from .i18n import t
 
 
@@ -46,6 +47,16 @@ class FilamentMapping:
 
 
 @dataclass
+class Issue:
+    """An error with its code (issues.py), the stage that failed and what the user can do."""
+
+    code: str
+    stage: str
+    message: str
+    suggestion: str
+
+
+@dataclass
 class Report:
     source: str = ""
     output: str = ""
@@ -76,6 +87,8 @@ class Report:
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)  # informativo: no requiere acción
     errors: list[str] = field(default_factory=list)
+    # The errors added with fail(), with code, stage and suggestion.
+    issues: list[Issue] = field(default_factory=list)
     # Hace falta que el usuario asigne filamentos a extrusores (CLI --map o tabla del plugin).
     needs_map: bool = False
     # The project was already set up for the target: only reviewed (repair.py).
@@ -84,6 +97,11 @@ class Report:
     @property
     def ok(self) -> bool:
         return not self.errors
+
+    def fail(self, code: str, message: str) -> None:
+        """Record an error: `message` says what happened, the catalog what to do about it."""
+        self.errors.append(message)
+        self.issues.append(Issue(code, issues.STAGES[code], message, t(f"issue.{code}.suggestion")))
 
     def change(self, key, original, final, reason):
         self.changed.append(FieldChange(key, original, final, reason))
@@ -155,5 +173,12 @@ class Report:
             lines += [f"  ! {w}" for w in self.warnings]
         if self.errors:
             lines.append(t("report.errors", count=len(self.errors)))
-            lines += [f"  ✗ {e}" for e in self.errors]
+            known = {i.message: i for i in self.issues}
+            for e in self.errors:
+                issue = known.get(e)
+                if issue:
+                    lines.append(f"  ✗ [{issue.code} · {t('stage.' + issue.stage)}] {e}")
+                    lines.append(f"    → {issue.suggestion}")
+                else:
+                    lines.append(f"  ✗ {e}")
         return "\n".join(lines)

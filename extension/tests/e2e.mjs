@@ -8,7 +8,7 @@
 //
 // The browser comes from CHROME_PATH or a usual install location; without one the test
 // is skipped (exit 0) so CI machines without Chrome still pass.
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { allowDownloads, buildExtension, buildFixtures, findBrowser, launch, projectSetting, workDir } from "./support.mjs";
 
@@ -115,6 +115,23 @@ try {
     await page.waitForFunction(() => /Saved/.test(document.querySelector('#convert-results [data-field="status"]').textContent),
       { timeout: 120_000 });
     console.log("OK: assignment screen and conversion with the chosen extruders");
+
+    // A damaged file: code, suggestion and "Copy report".
+    const damaged = join(work, "damaged.3mf");
+    writeFileSync(damaged, "not a zip");
+    await (await page.$("#convert-file")).uploadFile(damaged);
+    await page.click("#convert-button");
+    await page.waitForFunction(() => /PN102/.test(document.querySelector('#convert-results [data-field="issue-message"]')?.textContent ?? ""),
+      { timeout: 120_000 });
+    await browser.defaultBrowserContext().overridePermissions(`chrome-extension://${id}`, ["clipboard-read", "clipboard-write", "clipboard-sanitized-write"]);
+    await page.bringToFront();
+    await page.click('#convert-results [data-field="copy"]');
+    await page.waitForFunction(() => document.querySelector('#convert-results [data-field="copy"]').textContent !== "Copy report");
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    for (const expected of ["PrintNomad ", "File: damaged.3mf", "PN102"]) {
+      if (!copied.includes(expected)) throw new Error(`copied report lacks ${expected}:\n${copied}`);
+    }
+    console.log("OK: damaged file shows its code and the report can be copied");
   }
 } finally {
   await browser.close();

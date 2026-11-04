@@ -44,6 +44,14 @@ export interface AssignmentPlan {
   suggestion: string | null;
 }
 
+/** An error with its code (core/src/printnomad/issues.py). */
+export interface Issue {
+  code: string;
+  stage: string;
+  message: string;
+  suggestion: string;
+}
+
 export interface ConvertResult {
   ok: boolean;
   needsMap: boolean;
@@ -51,7 +59,7 @@ export interface ConvertResult {
   plan?: AssignmentPlan;
   /** The project is already set up for this printer: nothing to convert. */
   alreadyTarget: boolean;
-  /** Report as produced by printnomad.report.Report.to_dict(), or null on input errors. */
+  /** Report as produced by printnomad.report.Report.to_dict() (`issues`: see Issue), or null. */
   report: Record<string, unknown> | null;
   /** Human-readable report in `lang`. */
   text: string;

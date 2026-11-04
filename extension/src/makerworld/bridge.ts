@@ -4,6 +4,7 @@
 // origin) nor use chrome.downloads; this extension page can. It only talks to the
 // MakerWorld origins listed in config.json, and only to the page that embeds it.
 import { CONFIG } from "../config.ts";
+import type { Issue } from "../engine/protocol.ts";
 import { Converter, saveOutput } from "../lib/conversion.ts";
 import { loadSettings, platformKey } from "../lib/settings.ts";
 import { buildModels, modelOfPreset } from "../options/printer-picker.ts";
@@ -51,7 +52,10 @@ async function convert(printerId: string, name?: string, data?: ArrayBuffer, map
   const res = await converter.convert(printer, project.name, project.data, settings, platform, sourceBundles, map);
   if (res.alreadyTarget) return { status: "already" };
   if (!res.output && res.needsMap && res.plan) return { status: "needs-map", plan: res.plan };
-  if (!res.output) return { status: "error", message: res.text, needsMap: res.needsMap };
+  if (!res.output) {
+    const code = (res.report?.issues as Issue[] | undefined)?.[0]?.code;
+    return { status: "error", message: res.text, needsMap: res.needsMap, code };
+  }
   const download = await saveOutput(res.output);
   if (!download.saved) return { status: "cancelled" };
   const warnings = Array.isArray(res.report?.warnings) ? (res.report.warnings as unknown[]).length : 0;

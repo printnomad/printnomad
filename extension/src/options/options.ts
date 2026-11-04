@@ -1,10 +1,11 @@
 // Options page: My printers, profile status, conversion options and a manual "Convert a file".
 import { CONFIG } from "../config.ts";
-import type { OptionInfo } from "../engine/protocol.ts";
+import type { Issue, OptionInfo } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
 import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
 import { mapEditor } from "../lib/map-editor.ts";
+import { clipboardReport } from "../lib/report-copy.ts";
 import type { Catalog } from "../profiles/catalog.ts";
 import {
   allNozzles,
@@ -465,6 +466,35 @@ function resultRow(printer: MyPrinter, fileName: string) {
   field("printer").title = fileName;
   showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
   $("convert-results").append(node);
+  let reportText = "";
+  const copy = field<HTMLButtonElement>("copy");
+  copy.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(clipboardReport({
+        version: CONFIG.version,
+        printer: printer.printer,
+        slicer: slicerName(printer.slicer),
+        plate: printer.bedType,
+        file: fileName,
+        browser: navigator.userAgent,
+      }, reportText));
+      copy.textContent = t("convert_copied");
+    } catch {
+      copy.textContent = t("convert_copy_failed");
+    }
+    setTimeout(() => (copy.textContent = t("convert_copy_report")), 2_000);
+  };
+  const showReport = (text: string) => {
+    reportText = text;
+    field("report").textContent = text;
+    field("details").hidden = !text;
+  };
+  const showIssue = (issue: Pick<Issue, "code" | "message" | "suggestion"> | null) => {
+    field("issue").hidden = !issue;
+    if (!issue) return;
+    field("issue-message").textContent = `${issue.code} · ${issue.message}`;
+    field("issue-suggestion").textContent = issue.suggestion;
+  };
   const count = (report: Record<string, unknown>, key: string) =>
     (Array.isArray(report[key]) ? (report[key] as unknown[]).length : 0);
   return {
@@ -473,8 +503,7 @@ function resultRow(printer: MyPrinter, fileName: string) {
       field("status").textContent = text;
     },
     report(text: string, report: Record<string, unknown> | null) {
-      field("report").textContent = text;
-      field("details").hidden = !text;
+      showReport(text);
       if (!report) return;
       field("stats").textContent = t("result_stats", count(report, "kept_author"),
         count(report, "changed") + count(report, "source_defaults"), count(report, "warnings"));
@@ -488,6 +517,13 @@ function resultRow(printer: MyPrinter, fileName: string) {
     openDetails() {
       (field("details") as HTMLDetailsElement).open = true;
     },
+    issue: showIssue,
+    /** The engine itself failed: there is no report from the core, only this message. */
+    engineFailed(message: string) {
+      const issue = { code: ENGINE_ERROR, message, suggestion: t("issue_engine_suggestion") };
+      showIssue(issue);
+      showReport(`✗ [${issue.code}] ${message}`);
+    },
     /** Show (or hide, with null) the filament → extruder assignment screen. */
     map(editor: HTMLElement | null) {
       field("map").replaceChildren(...(editor ? [editor] : []));
@@ -498,10 +534,14 @@ function resultRow(printer: MyPrinter, fileName: string) {
 
 type ResultRow = ReturnType<typeof resultRow>;
 
+/** Next to the core's codes (issues.py): the engine did not start or stopped responding. */
+const ENGINE_ERROR = "PN902";
+
 async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: ArrayBuffer, platform: string,
   sourceBundles: string[], map?: string): Promise<boolean> {
   row.status("info", t("convert_busy"));
   row.map(null);
+  row.issue(null);
   try {
     const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles, map);
     row.report(res.alreadyTarget ? "" : res.text, res.report);
@@ -526,6 +566,7 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
     }
     if (!res.output) {
       row.status("error", res.needsMap ? t("convert_needs_map") : t("convert_failed"));
+      row.issue((res.report?.issues as Issue[] | undefined)?.[0] ?? null);
       row.openDetails();
       return false;
     }
@@ -540,7 +581,9 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
     row.status(warned ? "warn" : "ok", t("convert_ok", download.fileName, (res.ms / 1000).toFixed(1)));
     return true;
   } catch (e) {
-    row.status("error", (e as Error).message);
+    row.status("error", t("convert_failed"));
+    row.engineFailed((e as Error).message);
+    row.openDetails();
     return false;
   }
 }

@@ -11,7 +11,7 @@ import math
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
-from . import model_edit, renumber, repair, rules
+from . import issues, model_edit, renumber, repair, rules
 from .i18n import t
 from .profiles import ProfileError, ProfileLibrary
 from .read_3mf import (
@@ -195,7 +195,7 @@ def _review(project: Project3MF, target: Target) -> ConversionResult:
     report, files = repair.review(project, target)
     report.already_target = True
     if not files:
-        report.errors.append(t("convert.error.already_target", target=target.display_name))
+        report.fail(issues.ALREADY_TARGET, t("convert.error.already_target", target=target.display_name))
     return ConversionResult(report=report, files=files)
 
 
@@ -258,13 +258,13 @@ def _convert(
     kind = detect_source(project)
     report.source_kind = kind
     if kind == SOURCE_UNKNOWN:
-        report.errors.append(t("convert.error.unknown_source"))
+        report.fail(issues.UNKNOWN_SOURCE, t("convert.error.unknown_source"))
         return result
 
     src = _prusa_settings(project) if kind == SOURCE_PRUSA else copy.deepcopy(project.project_settings)
     out = copy.deepcopy(src)
     if target.is_same_printer(src):
-        report.errors.append(t("convert.error.already_target", target=target.display_name))
+        report.fail(issues.ALREADY_TARGET, t("convert.error.already_target", target=target.display_name))
         return result
 
     # --- Impresora -------------------------------------------------------
@@ -274,7 +274,7 @@ def _convert(
     try:
         target = target.with_nozzle(wanted)
     except ProfileError as e:
-        report.errors.append(str(e))
+        report.fail(issues.NOZZLE_UNAVAILABLE, str(e))
         return result
     if target.nozzle != src_nozzle:
         report.warnings.append(t("convert.warn.nozzle_changed", source=src_nozzle, target=target.nozzle))
@@ -311,7 +311,7 @@ def _convert(
         process_cfg = lib.settings("process", process)
         report.presets["process"] = process
     except ProfileError as e:
-        report.errors.append(str(e))
+        report.fail(issues.NO_PROCESS, str(e))
         return result
     for k, v in process_cfg.items():
         if k in author_process and k in src and keep_process_key(k):
@@ -361,7 +361,8 @@ def _convert(
     report.warnings.extend(assignment.warnings)
     report.needs_map = assignment.needs_map
     if assignment.errors:
-        report.errors.extend(assignment.errors)
+        for error in assignment.errors:
+            report.fail(issues.NEEDS_MAP if assignment.needs_map else issues.BAD_MAP, error)
         for i in range(n):
             report.filaments.append(FilamentMapping(
                 i + 1, fids[i], ftypes[i], colours[i], target.pick_filament(ftypes[i], fids[i])))
@@ -381,7 +382,7 @@ def _convert(
             msg = t("convert.warn.filament_no_equivalent", index=i + 1, profile=fids[i], type=ftypes[i],
                     target=target.display_name)
             if i + 1 in used_anywhere:
-                report.errors.append(msg)
+                report.fail(issues.NO_FILAMENT, msg)
             else:
                 report.warnings.append(t("convert.warn.filament_unused", message=msg))
     if report.errors:

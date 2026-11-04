@@ -61,6 +61,18 @@
   "convert_report": {
     "message": "Conversion report"
   },
+  "convert_copy_report": {
+    "message": "Copy report"
+  },
+  "convert_copied": {
+    "message": "Copied"
+  },
+  "convert_copy_failed": {
+    "message": "Could not copy"
+  },
+  "issue_engine_suggestion": {
+    "message": "Reload this page and try again. If it fails again, send this report."
+  },
   "convert_no_printers": {
     "message": "Add a printer first."
   },
@@ -259,6 +271,10 @@
   },
   "mw_status_error": {
     "message": "Could not convert"
+  },
+  "mw_status_error_code": {
+    "message": "Error $1",
+    "description": "$1 = error code"
   },
   "mw_error_timeout": {
     "message": "MakerWorld did not answer: are you signed in?"

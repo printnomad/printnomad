@@ -441,7 +441,10 @@ async function showOutcome(printer: PagePrinter, outcome: ConvertOutcome) {
     await showOutcome(printer, await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, map }));
     return;
   }
-  setStatus(outcomeText(outcome.status), RESULT_VISIBLE_MS);
+  // The status replaces the button's label, so an error shows only its code; the full report
+  // goes to the console.
+  const coded = outcome.status === "error" && outcome.code;
+  setStatus(coded ? t("mw_status_error_code", coded) : outcomeText(outcome.status), RESULT_VISIBLE_MS);
   if (outcome.status === "error") console.warn("[PrintNomad]", outcome.message);
 }
 
