@@ -91,6 +91,26 @@ def test_chosen_plate_goes_to_the_project(multi_bed_lib, tmp_path, bed):
     assert result.report.ok and not any("placa" in w for w in result.report.warnings)
 
 
+def test_a_printer_with_a_fixed_plate_does_not_keep_the_projects(lib, tmp_path):
+    """A Bambu project on a Cool Plate must not print PLA at 35 °C on a printer without one."""
+    del lib.raw[("machine_model", "Flashforge Creator 5 Pro")]["default_bed_type"]
+    _, _, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"curr_bed_type": "Cool Plate"}))
+    assert s["curr_bed_type"] == "High Temp Plate"
+
+
+def test_a_printer_that_lets_choose_and_names_no_default_keeps_the_projects_plate(multi_bed_lib, tmp_path):
+    del multi_bed_lib.raw[("machine_model", "Flashforge Creator 5 Pro")]["default_bed_type"]
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"curr_bed_type": "Cool Plate"})
+    _, _, s = run(multi_bed_lib, path)
+    assert s["curr_bed_type"] == "Cool Plate"
+
+
+@pytest.mark.parametrize(("named", "expected"), [("4", "Textured PEI Plate"), ("1", "Cool Plate"), ("99", None)])
+def test_default_plate_given_as_the_slicers_number(lib, named, expected):
+    lib.raw[("machine", MACHINE)]["default_bed_type"] = named
+    assert Target(lib, MACHINE, ORCA).bed_type == expected
+
+
 def test_without_a_choice_the_printers_default_plate_applies(multi_bed_lib, tmp_path):
     _, _, s = run(multi_bed_lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
     assert s["curr_bed_type"] == "Textured PEI Plate"

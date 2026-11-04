@@ -117,7 +117,8 @@ function renderPrinters() {
     const bed = p.bedType ?? variant?.defaultBed;
     const values: Record<string, string> = {
       nozzle: variant ? t("printer_nozzle", variant.nozzle) : "—",
-      bed: bed ? bedLabel(bed) : "—",
+      // Fixed plate without a name in the profile: the slicer's own (rules.FIXED_PLATE_DEFAULT).
+      bed: bed ? bedLabel(bed) : variant && variant.bedTypes.length < 2 ? t("printers_bed_fixed") : t("printers_bed_from_project"),
       slicer: slicerName(p.slicer),
     };
     for (const [name, value] of Object.entries(values)) {

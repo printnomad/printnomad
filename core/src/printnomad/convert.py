@@ -467,7 +467,7 @@ def _convert(
     if bed_type and not chosen_bed:
         report.warnings.append(t("convert.warn.bed_not_available", bed=bed_type, target=target.display_name,
                                  options=", ".join(offered) or "-"))
-    bed = chosen_bed or target.bed_type
+    bed = chosen_bed or target.bed_type or (None if offered else rules.FIXED_PLATE_DEFAULT)
     if bed and (chosen_bed or "curr_bed_type" in out) and out.get("curr_bed_type") != bed:
         put("curr_bed_type", bed, t("reason.chosen_bed") if chosen_bed else t("reason.target_bed"))
     if offered:

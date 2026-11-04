@@ -594,5 +594,8 @@
   "printers_edit_done_named": {
     "message": "Terminar de editar $1",
     "description": "$1 = printer"
+  },
+  "printers_bed_fixed": {
+    "message": "La define tu laminador"
   }
 }

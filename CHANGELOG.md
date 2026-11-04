@@ -8,6 +8,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Renamed from BetterBridge to PrintNomad** (the old name was taken on GitHub). Python packages are now `printnomad` and `printnomad_orca`; environment variables `PRINTNOMAD_PROFILES` and `PRINTNOMAD_LANG` replace `BETTERBRIDGE_*`.
 
 ### Fixed
+- **Bed temperature on printers with a fixed plate** (Prusa, Neptune, Kobra 3…): they kept the project's plate, so a Bambu project on a Cool Plate printed PLA at 35 °C. They now use the plate the slicer would pick. A default plate given as a number (Elegoo Centauri Carbon) is understood; it also printed at 35 °C.
 - **Printers whose profiles use conditions** (`compatible_printers_condition`: Prusa MK4S, CORE One…) are now offered: the expressions are evaluated (`conditions.py`). Filaments of the common library back up printers that have none of a material (Voron, Sovol SV06).
 - **Purge tower kept on smaller beds**, moved like the objects: its position in the project made the slicer refuse to slice. An empty `filament_notes` no longer stops Prusa's start G-code.
 - **Layer height kept when the printer has no process for it**: a 0.16 mm project on a printer with 0.12 and 0.20 processes was silently printed at 0.12 mm. The project's layer height is now kept over the nearest process and listed apart in the report; every other setting comes from that process.
