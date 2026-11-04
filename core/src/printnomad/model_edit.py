@@ -340,20 +340,46 @@ def shift_items(
 
 # Height range options naming a filament by number, 0 = inherit (apply_to_print_region_config
 # in PrintObject.cpp: `extruder` plus keys_extruders of Bambu Studio and of OrcaSlicer).
-RANGE_FILAMENT_KEYS = frozenset({
-    "extruder", "wall_filament", "sparse_infill_filament", "solid_infill_filament",
-    "outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
-    "internal_solid_filament_id", "top_surface_filament_id", "bottom_surface_filament_id",
-})
+RANGE_FILAMENT_KEYS = rules.REGION_FILAMENT_KEYS | {"extruder"}
 
 
 def _range_filament_options(root: ET.Element):
     """(object index, option, filament) of each height range option choosing a filament."""
     for obj in root.findall("object"):
         for option in obj.iterfind("range/option"):
-            value = (option.text or "").strip()
-            if option.get("opt_key") in RANGE_FILAMENT_KEYS and value.isdigit() and int(value) > 0:
-                yield obj.get("id", ""), option, int(value)
+            key = option.get("opt_key")
+            filament = rules.chosen_filament(key, option.text or "") if key in RANGE_FILAMENT_KEYS else None
+            if filament is not None:
+                yield obj.get("id", ""), option, filament
+
+
+def _prints_support(config: dict) -> bool:
+    """Print::has_support_material: support on, enforced support layers or a raft."""
+    if str(config.get("enable_support", "")).strip().lower() in ("1", "true"):
+        return True
+    return any(str(config.get(k, "0")).strip() not in ("", "0") for k in ("enforce_support_layers", "raft_layers"))
+
+
+def feature_filaments(root: ET.Element | None, settings: dict) -> dict[str, set[int]]:
+    """Filaments chosen per feature for each object of model_settings.config: {object id: {filament, …}}.
+
+    Each level overrides the one above: project, object, part. Support settings belong to
+    the object, so parts do not change them.
+    """
+    out: dict[str, set[int]] = {}
+    if root is None:
+        return out
+    for obj in root.findall("object"):
+        object_config = {**settings, **meta(obj)}
+        used: set[int] = set()
+        if _prints_support(object_config):
+            used |= {rules.chosen_filament(k, object_config.get(k, 0)) for k in rules.SUPPORT_FILAMENT_KEYS}
+        for config in [object_config] + [{**object_config, **meta(p)} for p in obj.findall("part")]:
+            used |= {rules.chosen_filament(k, config.get(k, 0)) for k in rules.REGION_FILAMENT_KEYS}
+        used.discard(None)
+        if used:
+            out[obj.get("id", "")] = used
+    return out
 
 
 def range_filaments(ranges_xml: bytes) -> dict[str, set[int]]:

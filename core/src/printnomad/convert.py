@@ -86,8 +86,15 @@ def _prusa_settings(project: Project3MF) -> dict:
 
 
 def plate_usage(project: Project3MF, count: int) -> dict[str, set[int]]:
-    """Filaments each plate uses: objects' and parts' own, painted ones, per-layer changes and height ranges."""
-    info = model_edit.read_model_info(project.model_settings())
+    """Filaments each plate uses: objects' and parts' own, painted ones, per-layer changes,
+    height ranges and those chosen per feature (walls, infill, support, purge tower)."""
+    root = project.model_settings()
+    info = model_edit.read_model_info(root)
+    settings = project.project_settings or {}
+    features = model_edit.feature_filaments(root, settings)
+    tower = rules.chosen_filament(rules.WIPE_TOWER_FILAMENT_KEY, settings.get(rules.WIPE_TOWER_FILAMENT_KEY, 0))
+    if str(settings.get("enable_prime_tower", "1")).strip().lower() in ("0", "false"):
+        tower = None
     painted: dict[str, set[int]] = {}
     if project.has(MODEL_FILE):
         geometry = {name: project.read(name) for name in project.geometry_names()}
@@ -100,8 +107,13 @@ def plate_usage(project: Project3MF, count: int) -> dict[str, set[int]]:
     for pid, objects in (info.plates or {"1": list(info.object_names)}).items():
         used: set[int] = per_layer.get(pid, set()) | any_plate
         for o in objects:
-            used |= info.object_filaments.get(o, {1}) | painted.get(o, set()) | in_ranges.get(o, set())
-        usage[pid] = {f for f in used if 1 <= f <= count} or {1}
+            used |= (info.object_filaments.get(o, {1}) | painted.get(o, set()) | in_ranges.get(o, set())
+                     | features.get(o, set()))
+        used = {f for f in used if 1 <= f <= count} or {1}
+        # The slicer only adds the tower's filament when the plate already changes filament (Print.cpp).
+        if tower is not None and tower <= count and len(used) > 1:
+            used.add(tower)
+        usage[pid] = used
     return usage
 
 

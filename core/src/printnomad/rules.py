@@ -145,6 +145,31 @@ GENERIC_TOKENS = frozenset({"bambu", "lab", "generic", "basic", "flashforge", "p
                             "abs", "asa", "tpu", "hf"})
 
 
+# Settings choosing a filament by number for one feature; 0 = the object's own. Region
+# settings can be set on the project, objects, parts and height ranges; support settings
+# only count when the object prints support or a raft (Print::has_support_material).
+LEGACY_REGION_FILAMENT_KEYS = frozenset({"wall_filament", "sparse_infill_filament", "solid_infill_filament"})
+REGION_FILAMENT_KEYS = LEGACY_REGION_FILAMENT_KEYS | {
+    "outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
+    "internal_solid_filament_id", "top_surface_filament_id", "bottom_surface_filament_id",
+}
+SUPPORT_FILAMENT_KEYS = frozenset({"support_filament", "support_interface_filament"})
+WIPE_TOWER_FILAMENT_KEY = "wipe_tower_filament"
+SCALAR_FILAMENT_KEYS = REGION_FILAMENT_KEYS | SUPPORT_FILAMENT_KEYS | {WIPE_TOWER_FILAMENT_KEY}
+
+
+def chosen_filament(key: str, value) -> int | None:
+    """The filament `key` explicitly chooses, or None when it inherits the object's.
+
+    In the legacy keys "1" was the default and means inherit (OrcaSlicer handle_legacy
+    maps it to 0): 10 of 38 real projects carry it without using filament 1 on purpose.
+    """
+    text = str(value).strip()
+    if not text.isdigit() or int(text) == 0 or (key in LEGACY_REGION_FILAMENT_KEYS and int(text) == 1):
+        return None
+    return int(text)
+
+
 # Line widths. OrcaSlicer takes mm or a % of the nozzle diameter (coFloatOrPercent,
 # Flow::new_from_config_width); Bambu Studio only takes mm (coFloat, PrintConfig.cpp) and
 # reads "100%" as 100 mm, as does QIDI Studio ("too large line width"). A value in mm means

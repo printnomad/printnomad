@@ -16,7 +16,7 @@ import json
 import re
 from dataclasses import dataclass, field
 
-from . import model_edit
+from . import model_edit, rules
 from .read_3mf import (
     CUSTOM_GCODE_PER_LAYER,
     LAYER_CONFIG_RANGES,
@@ -26,11 +26,6 @@ from .read_3mf import (
     Project3MF,
 )
 
-# Settings naming one filament by number (0 = the object's own).
-SCALAR_FILAMENT_KEYS = frozenset({
-    "wall_filament", "sparse_infill_filament", "solid_infill_filament",
-    "support_filament", "support_interface_filament", "wipe_tower_filament",
-})
 # Lists of [process, filament 1…n, machine].
 PRESET_GROUP_KEYS = frozenset({"different_settings_to_system", "inherits_group"})
 # Plate metadata with one value per filament.
@@ -92,6 +87,12 @@ def _pick(values: list, reps: list[int]) -> list:
     return [values[r - 1] for r in reps]
 
 
+def _feature_filament(key: str, value, r: Renumbering) -> int:
+    """The new number of a filament chosen for a feature. One that was removed was not printing
+    (e.g. support filament with support off): back to 0, the object's own."""
+    return r.new_of.get(rules.chosen_filament(key, value), 0)
+
+
 def _settings(settings: dict, count: int, r: Renumbering) -> dict:
     out = copy.deepcopy(settings)
     n_new = len(r.reps)
@@ -113,8 +114,8 @@ def _settings(settings: dict, count: int, r: Renumbering) -> dict:
             out[key] = [v for rep in r.reps for v in value[2 * (rep - 1): 2 * rep]]
         elif key in filament_keys and isinstance(value, list) and len(value) == count:
             out[key] = _pick(value, r.reps)
-        elif key in SCALAR_FILAMENT_KEYS and str(value).isdigit() and int(value) > 0:
-            out[key] = str(r.new_of.get(int(value), 1))
+        elif key in rules.SCALAR_FILAMENT_KEYS and rules.chosen_filament(key, value) is not None:
+            out[key] = str(_feature_filament(key, value, r))
     if len(out.get("filament_colour") or []) != n_new:
         raise RenumberError("filament list length mismatch")
     return out
@@ -126,6 +127,15 @@ def _model_settings(xml: bytes, count: int, r: Renumbering) -> bytes:
         return m.group(1) + str(r.new_of.get(value, value) if value else 0).encode() + m.group(3)
 
     xml = re.sub(rb'(key="extruder"\s+value=")(\d+)(")', remap_extruder, xml)
+
+    def remap_feature(m: re.Match) -> bytes:
+        key, value = m.group(1).decode(), m.group(3).decode()
+        if rules.chosen_filament(key, value) is None:
+            return m.group(0)
+        return b'key="' + m.group(1) + m.group(2) + str(_feature_filament(key, value, r)).encode() + b'"'
+
+    feature_keys = b"|".join(k.encode() for k in sorted(rules.SCALAR_FILAMENT_KEYS))
+    xml = re.sub(rb'key="(' + feature_keys + rb')("\s+value=")(\d+)"', remap_feature, xml)
     for key in PLATE_FILAMENT_KEYS:
         def pick(m: re.Match) -> bytes:
             values = m.group(2).decode().split()
