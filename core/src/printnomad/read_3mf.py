@@ -17,6 +17,7 @@ MODEL_SETTINGS = "Metadata/model_settings.config"
 PRUSA_CONFIG = "Metadata/Slic3r_PE.config"
 MODEL_FILE = "3D/3dmodel.model"
 CUSTOM_GCODE_PER_LAYER = "Metadata/custom_gcode_per_layer.xml"
+LAYER_CONFIG_RANGES = "Metadata/layer_config_ranges.xml"
 OBJECTS_PREFIX = "3D/Objects/"
 
 SOURCE_BAMBU = "bambu"

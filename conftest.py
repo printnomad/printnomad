@@ -57,9 +57,11 @@ def make_bambu_3mf(
     paint: tuple[int, ...] = (),
     plate_map_mode: str = "Auto For Flush",
     plate_maps: list[int] | None = None,
+    extra_files: dict[str, str] | None = None,
 ) -> Path:
     """filaments: [(tipo, id de perfil, color)]; plates: ids de objeto por placa.
-    plate_map_mode / plate_maps: asignación de cada placa (por defecto automática, todo en E1)."""
+    plate_map_mode / plate_maps: asignación de cada placa (por defecto automática, todo en E1).
+    extra_files: otras entradas del ZIP (nombre -> contenido)."""
     object_extruders = object_extruders or {}
     part_overrides = part_overrides or {}
     n = len(filaments)
@@ -132,6 +134,8 @@ def make_bambu_3mf(
             zf.writestr(f"3D/Objects/object_{oid}.model", cube)
         zf.writestr("Metadata/project_settings.config", json.dumps(project, indent=4))
         zf.writestr("Metadata/model_settings.config", "\n".join(ms))
+        for name, content in (extra_files or {}).items():
+            zf.writestr(name, content)
     return path
 
 

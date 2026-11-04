@@ -12,6 +12,8 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
+from . import rules
+
 # Bambu/Orca separan las placas virtuales por un 20 % del tamaño del plato.
 PLATE_GAP = 0.2
 
@@ -334,6 +336,39 @@ def shift_items(
         return tag[: tr_m.start(1)] + after.encode() + tag[tr_m.end(1):]
 
     return _ITEM_RE.sub(fix, model_xml), changes
+
+
+@dataclass
+class RangeWidthChange:
+    object_index: str  # 1-based position of the object in the model, as the slicers number it
+    min_z: str
+    max_z: str
+    key: str
+    original: str
+    final: str
+
+
+def percent_widths_in_ranges(ranges_xml: bytes, nozzle: str) -> tuple[bytes, list[RangeWidthChange]]:
+    """Line widths in % of `Metadata/layer_config_ranges.xml` (height range modifiers) to mm.
+
+    Format (bbs_3mf.cpp): <objects><object id><range min_z max_z><option opt_key>value.
+    A file that cannot be parsed is left as it is.
+    """
+    try:
+        root = ET.fromstring(ranges_xml)
+    except ET.ParseError:
+        return ranges_xml, []
+    changes = []
+    for obj in root.findall("object"):
+        for z_range in obj.findall("range"):
+            for option in z_range.findall("option"):
+                key, value = option.get("opt_key", ""), (option.text or "").strip()
+                final = rules.percent_width_to_mm(key, value, nozzle)
+                if final is not None:
+                    option.text = final
+                    changes.append(RangeWidthChange(obj.get("id", ""), z_range.get("min_z", ""),
+                                                    z_range.get("max_z", ""), key, value, final))
+    return (serialize(root), changes) if changes else (ranges_xml, [])
 
 
 def serialize(root: ET.Element) -> bytes:

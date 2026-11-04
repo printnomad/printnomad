@@ -16,6 +16,7 @@ from .i18n import t
 from .profiles import ProfileError, ProfileLibrary
 from .read_3mf import (
     CUSTOM_GCODE_PER_LAYER,
+    LAYER_CONFIG_RANGES,
     MODEL_FILE,
     MODEL_SETTINGS,
     PROJECT_SETTINGS,
@@ -459,6 +460,11 @@ def _convert(
             report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.invalid_in_orca")))
         else:
             put(k, fixed if isinstance(value, list) else fixed[0], t("reason.orca_equivalent"))
+    width_reason = t("reason.line_width_mm", nozzle=target.nozzle)
+    for k, v in list(out.items()):
+        in_mm = rules.percent_width_to_mm(k, v, target.nozzle)
+        if in_mm is not None:
+            put(k, in_mm, width_reason)
     for k, v in out.items():
         if k in machine_cfg and v == machine_cfg[k]:
             continue  # viene del perfil destino (p. ej. una impresora Bambu): es su G-code legítimo
@@ -477,6 +483,17 @@ def _convert(
     if ms_root is not None:
         _edit_model_settings(ms_root, info, assignment.per_plate, slicer_map_mode, target, limits, report)
         result.files[MODEL_SETTINGS] = model_edit.serialize(ms_root)
+
+    # --- Rangos de altura -------------------------------------------------
+    if project.has(LAYER_CONFIG_RANGES):
+        new_ranges, width_changes = model_edit.percent_widths_in_ranges(
+            project.read(LAYER_CONFIG_RANGES), target.nozzle)
+        if width_changes:
+            result.files[LAYER_CONFIG_RANGES] = new_ranges
+        for c in width_changes:
+            report.object_overrides.append(ObjectOverride(
+                t("report.range_object", index=c.object_index), t("report.range_z", min=c.min_z, max=c.max_z),
+                c.key, c.original, c.final, width_reason))
 
     # --- Posición en plato ------------------------------------------------
     if project.has(MODEL_FILE) and src.get("printable_area") and machine_cfg.get("printable_area"):
@@ -641,6 +658,12 @@ def _edit_model_settings(root, info, per_plate, map_mode, target, limits, report
                     model_edit.set_meta(el, key, fixes[value])
                     report.object_overrides.append(ObjectOverride(
                         oname, part_name, key, value, fixes[value], t("reason.orca_equivalent")))
+                    continue
+                in_mm = rules.percent_width_to_mm(key, value, target.nozzle)
+                if in_mm is not None:
+                    model_edit.set_meta(el, key, in_mm)
+                    report.object_overrides.append(ObjectOverride(
+                        oname, part_name, key, value, in_mm, t("reason.line_width_mm", nozzle=target.nozzle)))
                     continue
                 msg = rules.check_value(key, value, limits)
                 reason = t("reason.kept_warning", message=msg) if msg else t("reason.kept")

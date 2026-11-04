@@ -145,6 +145,34 @@ GENERIC_TOKENS = frozenset({"bambu", "lab", "generic", "basic", "flashforge", "p
                             "abs", "asa", "tpu", "hf"})
 
 
+# Line widths. OrcaSlicer takes mm or a % of the nozzle diameter (coFloatOrPercent,
+# Flow::new_from_config_width); Bambu Studio only takes mm (coFloat, PrintConfig.cpp) and
+# reads "100%" as 100 mm, as does QIDI Studio ("too large line width"). A value in mm means
+# the same in all of them.
+LINE_WIDTH_KEY = re.compile(r"^(\w+_)?line_width$")
+_PERCENT = re.compile(r"^\s*(\d+(?:\.\d*)?|\.\d+)\s*%\s*$")
+
+
+def percent_width_to_mm(key: str, value, nozzle: str):
+    """`value` in mm if `key` is a line width given as a % of `nozzle`, else None.
+
+    Lists (one value per variant or extruder) are converted item by item.
+    """
+    if not LINE_WIDTH_KEY.match(key):
+        return None
+    try:
+        diameter = float(nozzle)
+    except (TypeError, ValueError):
+        return None
+
+    def convert(item):
+        match = _PERCENT.match(item) if isinstance(item, str) else None
+        return f"{round(float(match.group(1)) * diameter / 100, 4):g}" if match else item
+
+    converted = [convert(v) for v in value] if isinstance(value, list) else convert(value)
+    return None if converted == value else converted
+
+
 def speed_limits(machine_settings: dict) -> dict[str, float]:
     def first(key: str) -> float | None:
         v = machine_settings.get(key)

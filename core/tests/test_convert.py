@@ -76,6 +76,105 @@ def test_value_fixes_for_orca(lib, tmp_path):
     assert o and o[0].final == "ensure_all"
 
 
+@pytest.mark.parametrize(("key", "value", "expected"), [
+    ("skin_infill_line_width", "100%", "0.4"),
+    ("skeleton_infill_line_width", " 100 % ", "0.4"),
+    ("line_width", "110%", "0.44"),
+    ("top_surface_line_width", "93.75%", "0.375"),
+    ("inner_wall_line_width", ["100%", "0.45"], ["0.4", "0.45"]),
+    ("inner_wall_line_width", "0.45", None),            # already in mm
+    ("inner_wall_line_width", ["0.45"], None),
+    ("sparse_infill_density", "15%", None),             # a real percentage, not a width
+    ("line_width", "auto%", None),
+])
+def test_percent_width_to_mm(key, value, expected):
+    assert rules.percent_width_to_mm(key, value, "0.4") == expected
+
+
+def test_percent_width_without_valid_nozzle_is_left_alone():
+    assert rules.percent_width_to_mm("line_width", "100%", "") is None
+
+
+def _designer_widths(**widths):
+    """Project settings where the designer changed these line widths."""
+    return {**widths, "different_settings_to_system": [";".join(widths), "", ""]}
+
+
+def test_percent_line_widths_become_mm_in_project_settings(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings=_designer_widths(
+        skin_infill_line_width="100%", outer_wall_line_width="0.42"))
+    _, result, s = run(lib, path)
+    assert s["skin_infill_line_width"] == "0.4"
+    assert s["outer_wall_line_width"] == "0.42"
+    change = next(c for c in result.report.changed if c.key == "skin_infill_line_width")
+    assert (change.original, change.final) == ("100%", "0.4")
+    assert "0.4 mm" in change.reason
+
+
+def test_percent_line_widths_use_the_target_nozzle(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings=_designer_widths(skin_infill_line_width="100%"))
+    _, _, s = run(lib, path, nozzle="0.6")
+    assert s["nozzle_diameter"][0] == "0.6"
+    assert s["skin_infill_line_width"] == "0.6"
+
+
+def test_percent_line_width_of_target_profile_becomes_mm(lib, tmp_path):
+    lib.raw[("process", "0.20mm Standard @FF C5")]["skeleton_infill_line_width"] = "110%"
+    _, _, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
+    assert s["skeleton_infill_line_width"] == "0.44"
+
+
+def test_percent_line_width_without_change_list_becomes_mm(lib, tmp_path):
+    """Without different_settings_to_system the project's own values stay: they are converted too."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "skin_infill_line_width": "100%", "different_settings_to_system": []})
+    _, _, s = run(lib, path)
+    assert s["skin_infill_line_width"] == "0.4"
+
+
+def test_percent_line_widths_become_mm_in_object_and_part_overrides(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
+                          part_overrides={"2": {"skin_infill_line_width": "100%", "outer_wall_speed": "100"}})
+    project, result, _ = run(lib, path)
+    root = ET.fromstring(result.files[read_3mf.MODEL_SETTINGS])
+    part = meta(root.find("object/part"))
+    assert part["skin_infill_line_width"] == "0.4"
+    assert part["outer_wall_speed"] == "100"
+    override = next(o for o in result.report.object_overrides if o.key == "skin_infill_line_width")
+    assert (override.part, override.original, override.final) == ("part2", "100%", "0.4")
+
+
+RANGES = """<?xml version="1.0" encoding="utf-8"?>
+<objects>
+ <object id="1">
+  <range min_z="0" max_z="1.5">
+   <option opt_key="layer_height">0.2</option>
+   <option opt_key="skeleton_infill_line_width">150%</option>
+  </range>
+ </object>
+</objects>
+"""
+
+
+def test_percent_line_widths_become_mm_in_height_ranges(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], extra_files={read_3mf.LAYER_CONFIG_RANGES: RANGES})
+    _, result, _ = run(lib, path)
+    ranges = ET.fromstring(result.files[read_3mf.LAYER_CONFIG_RANGES])
+    options = {o.get("opt_key"): o.text for o in ranges.iter("option")}
+    assert options == {"layer_height": "0.2", "skeleton_infill_line_width": "0.6"}
+    override = next(o for o in result.report.object_overrides if o.key == "skeleton_infill_line_width")
+    assert (override.original, override.final) == ("150%", "0.6")
+    assert "0–1.5 mm" in override.part
+
+
+@pytest.mark.parametrize("ranges", [RANGES.replace("150%", "0.5"), "not xml"])
+def test_height_ranges_without_percent_widths_are_not_rewritten(lib, tmp_path, ranges):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], extra_files={read_3mf.LAYER_CONFIG_RANGES: ranges})
+    _, result, _ = run(lib, path)
+    assert result.report.ok
+    assert read_3mf.LAYER_CONFIG_RANGES not in result.files
+
+
 def test_author_process_override_kept_and_limits_warned(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"sparse_infill_speed": "700", "line_width": "0.42"})

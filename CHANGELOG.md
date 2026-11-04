@@ -8,6 +8,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Renamed from BetterBridge to PrintNomad** (the old name was taken on GitHub). Python packages are now `printnomad` and `printnomad_orca`; environment variables `PRINTNOMAD_PROFILES` and `PRINTNOMAD_LANG` replace `BETTERBRIDGE_*`.
 
 ### Fixed
+- **Line widths in % become mm**: `*_line_width` values such as `skin_infill_line_width = 100%` are converted with the target nozzle's diameter in the project settings, object and part overrides and height ranges. Bambu Studio and QIDI Studio read them as 100 mm ("too large line width").
 - **Faster verification of the written 3MF**: copied entries are checked by the CRC-32 and size the ZIP records for them instead of decompressing the whole file and hashing the geometry twice (half of the conversion time in the browser: SpeedBoat 435 → 217 ms in Pyodide). Replaced entries are still compared byte by byte.
 - Bambu G-code from a Bambu target profile is no longer flagged; `retraction_distances_when_cut = 0` (rejected by the slicer, shipped in a Flash Studio profile) is dropped; Standard processes win layer-height ties.
 - **Filament diameter 2.85 mm instead of 1.75 mm** for Flashforge PLA profiles: profile inheritance now resolves parents within the same vendor, then the common filament library, as OrcaSlicer does. Projects converted with earlier versions must be converted again before printing.
