@@ -109,9 +109,9 @@ def bundle_files(vendor_dir: Path) -> dict[str, dict]:
     return files
 
 
-def printers_by_vendor(lib: ProfileLibrary) -> dict[str, list[dict]]:
+def printers_by_vendor(lib: ProfileLibrary, slicer=None) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
-    for printer in usable_printers(lib):
+    for printer in usable_printers(lib, slicer):
         out.setdefault(printer.pop("vendor"), []).append(printer)
     return out
 
@@ -124,7 +124,7 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path, 
     # What reports show as the profile source.
     source = f"{repo}@{ref}" if repo else f"{known[slicer].name} {ref}"
     lib = ProfileLibrary.from_roots([profiles])
-    printers = printers_by_vendor(lib)
+    printers = printers_by_vendor(lib, known[slicer])
     has_library = (profiles / LIBRARY_VENDOR).is_dir()
 
     vendors: dict[str, dict] = {}

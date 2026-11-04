@@ -185,6 +185,34 @@
     "message": "$1 mm",
     "description": "$1 = nozzle diameter"
   },
+  "printers_bed": {
+    "message": "Build plate"
+  },
+  "printers_bed_default": {
+    "message": "$1 (default)",
+    "description": "$1 = build plate name"
+  },
+  "printers_bed_from_project": {
+    "message": "Build plate of the project"
+  },
+  "bed_cool_plate": {
+    "message": "Cool Plate"
+  },
+  "bed_engineering_plate": {
+    "message": "Engineering Plate"
+  },
+  "bed_high_temp_plate": {
+    "message": "Smooth High Temp Plate"
+  },
+  "bed_textured_pei_plate": {
+    "message": "Textured PEI Plate"
+  },
+  "bed_textured_cool_plate": {
+    "message": "Textured Cool Plate"
+  },
+  "bed_supertack_plate": {
+    "message": "Cool Plate SuperTack"
+  },
   "convert_all_printers": {
     "message": "All my printers ($1)",
     "description": "$1 = number of printers"

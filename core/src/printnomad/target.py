@@ -18,6 +18,7 @@ from .profiles import USER_VENDOR, ProfileError, ProfileLibrary
 from .slicers import Slicer
 
 DEFAULT_EXTRUDER_VARIANT = "Direct Drive Standard"
+BAMBU_VENDOR = "BBL"  # profile folder of Bambu Lab printers
 
 
 def _first(value, default=None):
@@ -120,6 +121,22 @@ class Target:
             return str(own)
         model = self.lib.raw.get(("machine_model", self.printer_model)) or {}
         return model.get("default_bed_type") or None
+
+    @property
+    def bed_types(self) -> list[str]:
+        """Plates the user can choose, as the slicer offers them; empty when the plate is fixed.
+
+        The slicer enables the choice for Bambu printers or with support_multi_bed_types
+        (Plater.cpp) and hides what the model's not_support_bed_types lists.
+        """
+        multi = str(_first(self.settings.get("support_multi_bed_types"), "0")).strip().lower() in ("1", "true")
+        if not multi and self.vendor != BAMBU_VENDOR:
+            return []
+        model = self.lib.raw.get(("machine_model", self.printer_model)) or {}
+        hidden = model.get("not_support_bed_types") or []
+        hidden = {x.strip().strip('"') for x in hidden.split(";")} if isinstance(hidden, str) else set(hidden)
+        missing = (self.slicer.quirk("bed_types_missing") if self.slicer else None) or ()
+        return [b for b in rules.BED_TYPES if b not in missing and not hidden & set(rules.BED_LABELS[b])]
 
     @property
     def shared_nozzle(self) -> bool:

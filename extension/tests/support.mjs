@@ -30,10 +30,14 @@ export function buildFixtures(work) {
   const python = process.env.PYTHON ?? (existsSync(join(repo, ".venv/bin/python")) ? join(repo, ".venv/bin/python") : "python3");
   execFileSync(python, ["-c", `
 import sys; sys.path[:0] = [${JSON.stringify(repo)}, ${JSON.stringify(join(repo, "core/src"))}]
+import json
 from pathlib import Path
 from conftest import build_profiles_tree, make_bambu_3mf
 work = Path(${JSON.stringify(work)})
 build_profiles_tree(work)
+# The build plate can be chosen on this printer, as on the real Creator 5 Pro.
+machine = work / "profiles/Flashforge/machine/c5p.json"
+machine.write_text(json.dumps({**json.loads(machine.read_text()), "support_multi_bed_types": "1"}))
 make_bambu_3mf(work / "boat.3mf", [("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")], [["2"]])
 # 5 colours painted on one plate: more than the 4 extruders, needs an assignment.
 colours = ["#000000", "#2A2E32", "#FFFFFF", "#FF6A13", "#136935"]
@@ -42,6 +46,15 @@ make_bambu_3mf(work / "painted.3mf", [("PLA", "Bambu PLA Basic @BBL A1", c) for 
   execFileSync(python, [join(repo, "tools/build_profile_catalog.py"), "--slicer", "flashstudio",
     "--profiles", join(work, "profiles"), "--ref", "test", "--out", join(work, "catalog")]);
   return { project: join(work, "boat.3mf"), painted: join(work, "painted.3mf"), catalog: join(work, "catalog") };
+}
+
+/** A value of a converted project's project_settings.config. */
+export function projectSetting(file, key) {
+  const python = process.env.PYTHON ?? (existsSync(join(repo, ".venv/bin/python")) ? join(repo, ".venv/bin/python") : "python3");
+  return execFileSync(python, ["-c", `
+import json, sys, zipfile
+print(json.loads(zipfile.ZipFile(sys.argv[1]).read("Metadata/project_settings.config")).get(sys.argv[2]))
+`, file, key], { encoding: "utf8" }).trim();
 }
 
 export function buildExtension(env = {}) {

@@ -10,7 +10,7 @@
 // is skipped (exit 0) so CI machines without Chrome still pass.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { allowDownloads, buildExtension, buildFixtures, findBrowser, launch, workDir } from "./support.mjs";
+import { allowDownloads, buildExtension, buildFixtures, findBrowser, launch, projectSetting, workDir } from "./support.mjs";
 
 const browserPath = findBrowser();
 if (!browserPath) {
@@ -44,6 +44,13 @@ try {
   await page.evaluate((printers) => chrome.storage.sync.set({ printers }), printers);
   await page.reload();
   await page.waitForFunction(() => document.querySelectorAll("#convert-printer option").length > 0);
+
+  if (!process.env.PN_E2E_FILE) {
+    // The build plate menu of the printer's card reaches the conversion (checked below).
+    await page.select('[data-field="bed-select"]', "Supertack Plate");
+    await page.waitForFunction(async () =>
+      (await chrome.storage.sync.get("printers")).printers[0].bedType === "Supertack Plate");
+  }
 
   const started = Date.now();
   const input = await page.$("#convert-file");
@@ -91,6 +98,11 @@ try {
     if (readFileSync(d.filename).readUInt32LE(0) !== 0x04034b50) throw new Error(`${d.filename} is not a ZIP file`);
   }
   console.log(`OK: downloaded ${complete.length} file(s)`);
+  if (!process.env.PN_E2E_FILE) {
+    const bed = projectSetting(complete[0].filename, "curr_bed_type");
+    if (bed !== "Supertack Plate") throw new Error(`build plate in the converted project: ${bed}`);
+    console.log("OK: chosen build plate in the converted project");
+  }
 
   if (painted) {
     // More colours on a plate than extruders: the assignment screen, then the conversion.

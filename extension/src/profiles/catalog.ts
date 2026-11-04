@@ -8,6 +8,10 @@ export interface Printer {
   model: string;
   nozzle: string;
   extruders: number;
+  /** Build plates that can be chosen; empty or absent (older catalogs): fixed by the printer. */
+  bed_types?: string[];
+  /** The printer's default build plate, if its profile names one. */
+  bed_type?: string | null;
 }
 
 export interface VendorEntry {

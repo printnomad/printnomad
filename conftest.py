@@ -58,10 +58,12 @@ def make_bambu_3mf(
     plate_map_mode: str = "Auto For Flush",
     plate_maps: list[int] | None = None,
     extra_files: dict[str, str] | None = None,
+    plate_bed: str | None = None,
 ) -> Path:
     """filaments: [(tipo, id de perfil, color)]; plates: ids de objeto por placa.
     plate_map_mode / plate_maps: asignación de cada placa (por defecto automática, todo en E1).
-    extra_files: otras entradas del ZIP (nombre -> contenido)."""
+    extra_files: otras entradas del ZIP (nombre -> contenido).
+    plate_bed: placa propia de cada placa (`bed_type` en model_settings.config)."""
     object_extruders = object_extruders or {}
     part_overrides = part_overrides or {}
     n = len(filaments)
@@ -105,6 +107,8 @@ def make_bambu_3mf(
     for i, plate in enumerate(plates, 1):
         ms.append("  <plate>")
         ms.append(f'    <metadata key="plater_id" value="{i}"/>')
+        if plate_bed:
+            ms.append(f'    <metadata key="bed_type" value="{plate_bed}"/>')
         ms.append(f'    <metadata key="filament_map_mode" value="{plate_map_mode}"/>')
         ms.append(f'    <metadata key="filament_maps" value="{" ".join(str(e) for e in plate_maps or [1] * n)}"/>')
         for oid in plate:

@@ -41,7 +41,10 @@
     "source_of": ["bambu"],
     "_source_of": "Projects of these kinds (read_3mf.detect_source) start from this slicer's system presets: used to show the original value of each designer change.",
     "profile_repo": {"github": "bambulab/BambuStudio", "path": "resources/profiles"},
-    "quirks": {},
+    "quirks": {
+      "bed_types_missing": ["Textured Cool Plate"],
+      "_bed_types_missing": "Plates of rules.BED_TYPES this slicer does not have (s_keys_map_BedType, PrintConfig.cpp)."
+    },
     "macos": {
       "app": "/Applications/BambuStudio.app",
       "system": ["~/Library/Application Support/BambuStudio/system"],

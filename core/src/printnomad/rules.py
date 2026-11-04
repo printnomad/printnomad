@@ -145,6 +145,28 @@ GENERIC_TOKENS = frozenset({"bambu", "lab", "generic", "basic", "flashforge", "p
                             "abs", "asa", "tpu", "hf"})
 
 
+# Build plates (curr_bed_type), in the slicers' order: value -> filament temperature key.
+# A temperature of 0 makes the slicer refuse the filament on that plate (Print.cpp: "Plate %d:
+# %s does not support filament %s").
+BED_TEMP_KEYS = {
+    "Cool Plate": "cool_plate_temp",
+    "Engineering Plate": "eng_plate_temp",
+    "High Temp Plate": "hot_plate_temp",
+    "Textured PEI Plate": "textured_plate_temp",
+    "Textured Cool Plate": "textured_cool_plate_temp",
+    "Supertack Plate": "supertack_plate_temp",
+}
+BED_TYPES = tuple(BED_TEMP_KEYS)
+# The model's not_support_bed_types lists the slicers' labels, which differ from the values.
+BED_LABELS = {
+    "Cool Plate": ("Cool Plate", "Smooth Cool Plate"),
+    "Engineering Plate": ("Engineering Plate",),
+    "High Temp Plate": ("High Temp Plate", "Smooth High Temp Plate", "Smooth PEI Plate / High Temp Plate"),
+    "Textured PEI Plate": ("Textured PEI Plate",),
+    "Textured Cool Plate": ("Textured Cool Plate",),
+    "Supertack Plate": ("Supertack Plate", "Cool Plate (SuperTack)", "Bambu Cool Plate SuperTack"),
+}
+
 # Settings choosing a filament by number for one feature; 0 = the object's own. Region
 # settings can be set on the project, objects, parts and height ranges; support settings
 # only count when the object prints support or a raft (Print::has_support_material).

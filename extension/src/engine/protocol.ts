@@ -10,6 +10,8 @@ export interface ConvertRequest {
   slicer?: string;
   platform?: string;
   nozzle?: string;
+  /** Build plate chosen for this printer; missing: the printer's default. */
+  bedType?: string;
   map?: string;
   /** Advanced options (core/src/printnomad/options.py); missing ones take their defaults. */
   options?: OptionValues;

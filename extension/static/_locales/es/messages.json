@@ -176,6 +176,34 @@
   "printer_nozzle": {
     "message": "$1 mm"
   },
+  "printers_bed": {
+    "message": "Placa de impresión"
+  },
+  "printers_bed_default": {
+    "message": "$1 (por defecto)",
+    "description": "$1 = build plate name"
+  },
+  "printers_bed_from_project": {
+    "message": "La placa del proyecto"
+  },
+  "bed_cool_plate": {
+    "message": "Cool Plate"
+  },
+  "bed_engineering_plate": {
+    "message": "Placa de ingeniería"
+  },
+  "bed_high_temp_plate": {
+    "message": "Placa lisa de alta temperatura"
+  },
+  "bed_textured_pei_plate": {
+    "message": "PEI texturizada"
+  },
+  "bed_textured_cool_plate": {
+    "message": "Cool Plate texturizada"
+  },
+  "bed_supertack_plate": {
+    "message": "Cool Plate SuperTack"
+  },
   "convert_all_printers": {
     "message": "Todas mis impresoras ($1)"
   },

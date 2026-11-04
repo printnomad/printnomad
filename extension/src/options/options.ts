@@ -10,12 +10,14 @@ import {
   allNozzles,
   brands,
   buildModels,
+  keepBed,
   matches,
   modelOfPreset,
   pickSlicer,
   presetFor,
   slicersFor,
   type ModelChoice,
+  type Variant,
 } from "./printer-picker.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -62,6 +64,32 @@ function slicerName(key: string): string {
 }
 
 // --- My printers ------------------------------------------------------------
+/** Plate names for people; the values are the slicers' (rules.BED_TYPES in the core). */
+function bedLabel(bed: string): string {
+  switch (bed) {
+    case "Cool Plate": return t("bed_cool_plate");
+    case "Engineering Plate": return t("bed_engineering_plate");
+    case "High Temp Plate": return t("bed_high_temp_plate");
+    case "Textured PEI Plate": return t("bed_textured_pei_plate");
+    case "Textured Cool Plate": return t("bed_textured_cool_plate");
+    case "Supertack Plate": return t("bed_supertack_plate");
+    default: return bed;
+  }
+}
+
+/** The plate menu of a printer's card: its default first, then what else the slicer offers. */
+function bedOptions(variant: Variant, chosen: string | undefined): HTMLOptionElement[] {
+  const first = variant.defaultBed
+    ? t("printers_bed_default", bedLabel(variant.defaultBed))
+    : t("printers_bed_from_project");
+  return [
+    new Option(first, "", false, !chosen),
+    ...variant.bedTypes
+      .filter((bed) => bed !== variant.defaultBed)
+      .map((bed) => new Option(bedLabel(bed), bed, false, bed === chosen)),
+  ];
+}
+
 function showCover(img: HTMLImageElement, placeholder: HTMLElement, url: string | undefined) {
   if (url) {
     img.src = url;
@@ -92,10 +120,20 @@ function renderPrinters() {
       select.title = t("printers_change_slicer");
       select.onchange = () => {
         const preset = presetFor(model, select.value, variant.nozzle);
-        if (preset) void replacePrinter(p.id, { ...p, slicer: select.value, printer: preset, slicerAuto: false });
+        if (preset) {
+          void replacePrinter(p.id, { ...p, slicer: select.value, printer: preset, slicerAuto: false,
+            bedType: keepBed(model, select.value, preset, p.bedType) });
+        }
       };
       field("slicer").hidden = true;
       field("slicer-menu").hidden = false;
+    }
+    if (variant && variant.bedTypes.length > 1) {
+      const select = field<HTMLSelectElement>("bed-select");
+      select.replaceChildren(...bedOptions(variant, p.bedType));
+      select.title = t("printers_bed");
+      select.onchange = () => void replacePrinter(p.id, { ...p, bedType: select.value || undefined });
+      field("bed-menu").hidden = false;
     }
     showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
     const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
@@ -142,7 +180,7 @@ async function setGeneralSlicerForAll(on: boolean) {
     if (!model || !nozzle) return p;
     const slicer = pickSlicer(model, catalog!, on, nozzle);
     const preset = presetFor(model, slicer, nozzle);
-    return preset ? { ...p, slicer, printer: preset, slicerAuto: true } : p;
+    return preset ? { ...p, slicer, printer: preset, slicerAuto: true, bedType: keepBed(model, slicer, preset, p.bedType) } : p;
   }));
 }
 

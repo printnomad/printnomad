@@ -11,6 +11,9 @@ export interface Variant {
   /** Machine preset name, what My printers stores. */
   preset: string;
   nozzle: string;
+  /** Build plates that can be chosen for this preset in this slicer. */
+  bedTypes: string[];
+  defaultBed?: string;
 }
 
 export interface ModelChoice {
@@ -52,7 +55,14 @@ export function buildModels(catalog: Catalog, catalogUrl: string): ModelChoice[]
         }
         const cover = v.covers?.[p.model];
         if (cover && !choice.cover) choice.cover = new URL(cover, catalogUrl).href;
-        choice.variants.push({ slicer, slicerName: entry.name, preset: p.name, nozzle: p.nozzle });
+        choice.variants.push({
+          slicer,
+          slicerName: entry.name,
+          preset: p.name,
+          nozzle: p.nozzle,
+          bedTypes: p.bed_types ?? [],
+          defaultBed: p.bed_type ?? undefined,
+        });
       }
     }
   }
@@ -109,6 +119,12 @@ export function allNozzles(model: ModelChoice): { nozzles: string[]; preferred: 
 
 export function presetFor(model: ModelChoice, slicer: string, nozzle: string): string | undefined {
   return model.variants.find((v) => v.slicer === slicer && v.nozzle === nozzle)?.preset;
+}
+
+/** The chosen plate when the printer changes slicer or preset: kept only if still on offer. */
+export function keepBed(model: ModelChoice, slicer: string, preset: string, bed: string | undefined): string | undefined {
+  const variant = model.variants.find((v) => v.slicer === slicer && v.preset === preset);
+  return bed && variant?.bedTypes.includes(bed) ? bed : undefined;
 }
 
 /** The model a saved preset belongs to (for its thumbnail in My printers). */

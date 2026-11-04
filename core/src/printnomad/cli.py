@@ -29,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--slicer", help=t("cli.help.slicer"))
     p.add_argument("--map", help=t("cli.help.map"))
     p.add_argument("--nozzle", help=t("cli.help.nozzle"))
+    p.add_argument("--bed-type", choices=rules.BED_TYPES, help=t("cli.help.bed_type"))
     p.add_argument("--out", type=Path, help=t("cli.help.out"))
     p.add_argument("--profiles-dir", help=t("cli.help.profiles_dir"))
     p.add_argument("--report", type=Path, help=t("cli.help.report"))
@@ -128,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
 
     before = write_3mf.sha256_file(src)
     project = read_3mf.load(src)
-    result = convert(project, target, nozzle=args.nozzle, user_map=user_map,
+    result = convert(project, target, nozzle=args.nozzle, user_map=user_map, bed_type=args.bed_type,
                      source_lib=source_library(read_3mf.detect_source(project)),
                      keep_designer_filament=not args.no_designer_filament,
                      keep_designer_cooling=args.designer_cooling, map_mode=args.map_mode)

@@ -80,6 +80,7 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
         slicer: args.slicer ?? null,
         platform: args.platform ?? null,
         nozzle: args.nozzle ?? null,
+        bed_type: args.bedType ?? null,
         map_text: args.map ?? null,
         options: py.toPy(args.options ?? {}),
         source_bundles: args.sourceBundles?.length ? pyBundles(py, args.sourceBundles) : null,

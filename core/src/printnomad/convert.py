@@ -146,6 +146,7 @@ def convert(
     keep_designer_printer_settings: bool = False,
     map_mode: str = rules.MAP_COMPATIBLE,
     source_lib: ProfileLibrary | None = None,
+    bed_type: str | None = None,
 ) -> ConversionResult:
     """Convierte `project` para `target` (opciones: ver `_convert`).
 
@@ -157,7 +158,7 @@ def convert(
     """
     options = {"keep_designer_filament": keep_designer_filament, "keep_designer_cooling": keep_designer_cooling,
                "keep_designer_printer_settings": keep_designer_printer_settings, "map_mode": map_mode,
-               "source_lib": source_lib}
+               "source_lib": source_lib, "bed_type": bed_type}
     settings = project.project_settings
     if settings and detect_source(project) not in (SOURCE_PRUSA, SOURCE_UNKNOWN) and target.is_same_printer(settings):
         return _review(project, target)
@@ -220,6 +221,7 @@ def _convert(
     map_mode: str = rules.MAP_COMPATIBLE,
     source_lib: ProfileLibrary | None = None,
     known_usage: dict[str, set[int]] | None = None,
+    bed_type: str | None = None,
 ) -> ConversionResult:
     """Convierte `project` para la impresora `target`.
 
@@ -236,6 +238,7 @@ def _convert(
     `source_lib`: perfiles del laminador de origen (p. ej. Bambu Studio). Con ellos el
     reporte muestra el valor original de cada cambio del diseñador, y los "cambios" que
     en realidad tienen el valor original se tratan como no cambiados.
+    `bed_type`: placa elegida entre `target.bed_types`; por defecto, la de la impresora.
     """
     if map_mode not in rules.MAP_MODES:
         raise ValueError(f"map_mode must be one of {rules.MAP_MODES}, not {map_mode!r}")
@@ -451,8 +454,16 @@ def _convert(
         [";".join(sorted(c.key for c in report.kept_author if c.key in out))]
         + [";".join(sorted(kept_filament.get(i, ()))) for i in range(n)] + [""],
         t("reason.author_on_presets"))
-    if target.bed_type and "curr_bed_type" in out and out["curr_bed_type"] != target.bed_type:
-        put("curr_bed_type", target.bed_type, t("reason.target_bed"))
+    offered = target.bed_types
+    chosen_bed = bed_type if bed_type in offered else None
+    if bed_type and not chosen_bed:
+        report.warnings.append(t("convert.warn.bed_not_available", bed=bed_type, target=target.display_name,
+                                 options=", ".join(offered) or "-"))
+    bed = chosen_bed or target.bed_type
+    if bed and (chosen_bed or "curr_bed_type" in out) and out.get("curr_bed_type") != bed:
+        put("curr_bed_type", bed, t("reason.chosen_bed") if chosen_bed else t("reason.target_bed"))
+    if offered:
+        _warn_bed_temperatures(out, ftypes, used_anywhere, report)
     report.presets["filaments"] = fprofiles
 
     # --- Eliminar específico de Bambu --------------------------------------
@@ -658,6 +669,18 @@ def _note_volumetric(out: dict, report: Report, used: list[int]) -> None:
         report.notes.append(t("convert.note.volumetric", cap=f"{cap:g}", items=", ".join(capped)))
 
 
+def _warn_bed_temperatures(out: dict, types: list[str], used: set[int], report: Report) -> None:
+    """The slicer refuses a filament whose temperature for the plate is 0 (e.g. PETG on a Cool Plate)."""
+    bed = out.get("curr_bed_type")
+    temps = out.get(rules.BED_TEMP_KEYS.get(bed, ""))
+    if not isinstance(temps, list):
+        return
+    refused = [f"#{i + 1} ({types[i]})" for i, temp in enumerate(temps)
+               if i + 1 in used and i < len(types) and str(temp).strip() == "0"]
+    if refused:
+        report.warnings.append(t("convert.warn.bed_refuses_filament", bed=bed, filaments=", ".join(refused)))
+
+
 def _slicer_map_mode(map_mode: str, user_map, over_limit: bool, extruders: int, report: Report) -> str:
     """Slicer's `filament_map_mode` for the `map_mode` option.
 
@@ -717,8 +740,9 @@ def _edit_model_settings(root, info, per_plate, map_mode, target, limits, report
         if old != map_mode:
             report.plates.append(FieldChange(t("report.plate_key", plate=pid, key="filament_map_mode"), old, map_mode,
                                              t("reason.map_mode")))
-        bed = model_edit.meta(plate).get("curr_bed_type")
-        if target.bed_type and bed and bed != target.bed_type:
-            model_edit.set_meta(plate, "curr_bed_type", target.bed_type)
-            report.plates.append(FieldChange(t("report.plate_key", plate=pid, key="curr_bed_type"), bed,
-                                             target.bed_type, t("reason.target_bed")))
+        # Without its own plate type a plate follows the project's: changing it in the slicer
+        # updates them all (PartPlate::get_bed_type). The file's key is bed_type (bbs_3mf.cpp).
+        old = model_edit.del_meta(plate, "bed_type")
+        if old is not None:
+            report.plates.append(FieldChange(t("report.plate_key", plate=pid, key="bed_type"), old,
+                                             t("value.project_bed"), t("reason.plate_follows_project")))

@@ -51,6 +51,15 @@ def set_meta(el: ET.Element, key: str, value: str) -> str | None:
     return None
 
 
+def del_meta(el: ET.Element, key: str) -> str | None:
+    """Quita `<metadata key=...>`; devuelve el valor que tenía (None si no existía)."""
+    for m in el.findall("metadata"):
+        if m.get("key") == key:
+            el.remove(m)
+            return m.get("value")
+    return None
+
+
 def read_model_info(root: ET.Element | None) -> ModelInfo:
     info = ModelInfo()
     if root is None:

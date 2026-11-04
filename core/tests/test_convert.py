@@ -59,6 +59,69 @@ def test_bambu_specifics_removed_and_reported(lib, tmp_path):
     assert not any("M1007" in w or "G392" in w for w in result.report.warnings)
 
 
+@pytest.fixture
+def multi_bed_lib(lib):
+    """Profiles of a printer that lets the user choose the plate, like the Creator 5 Pro."""
+    lib.raw[("machine", MACHINE)]["support_multi_bed_types"] = "1"
+    return lib
+
+
+def test_plates_on_offer(lib, multi_bed_lib):
+    assert Target(multi_bed_lib, MACHINE, ORCA).bed_types == list(rules.BED_TYPES)
+    bambu = Slicer(key="bambustudio", name="Bambu Studio", quirks={"bed_types_missing": ["Textured Cool Plate"]})
+    assert "Textured Cool Plate" not in Target(multi_bed_lib, MACHINE, bambu).bed_types
+    multi_bed_lib.raw[("machine_model", "Flashforge Creator 5 Pro")]["not_support_bed_types"] = \
+        "Smooth Cool Plate;Cool Plate (SuperTack)"
+    offered = Target(multi_bed_lib, MACHINE, ORCA).bed_types
+    assert "Cool Plate" not in offered and "Supertack Plate" not in offered and "Textured PEI Plate" in offered
+
+
+def test_plate_is_fixed_without_multi_bed_support(lib, tmp_path):
+    assert Target(lib, MACHINE, ORCA).bed_types == []
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]), bed_type="Cool Plate")
+    assert s["curr_bed_type"] == "Textured PEI Plate"
+    assert any("Cool Plate" in w and "no está disponible" in w for w in result.report.warnings)
+
+
+@pytest.mark.parametrize("bed", ["Cool Plate", "Supertack Plate"])
+def test_chosen_plate_goes_to_the_project(multi_bed_lib, tmp_path, bed):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"curr_bed_type": "Textured PEI Plate"})
+    _, result, s = run(multi_bed_lib, path, bed_type=bed)
+    assert s["curr_bed_type"] == bed
+    assert result.report.ok and not any("placa" in w for w in result.report.warnings)
+
+
+def test_without_a_choice_the_printers_default_plate_applies(multi_bed_lib, tmp_path):
+    _, _, s = run(multi_bed_lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
+    assert s["curr_bed_type"] == "Textured PEI Plate"
+
+
+def test_plates_lose_their_own_type_and_follow_the_project(multi_bed_lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"], ["5"]], plate_bed="High Temp Plate")
+    _, result, s = run(multi_bed_lib, path, bed_type="Cool Plate")
+    plates = ET.fromstring(result.files[read_3mf.MODEL_SETTINGS]).findall("plate")
+    assert len(plates) == 2 and all("bed_type" not in meta(p) for p in plates)
+    assert s["curr_bed_type"] == "Cool Plate"
+    changes = [c for c in result.report.plates if "bed_type" in c.key]
+    assert len(changes) == 2 and changes[0].original == "High Temp Plate"
+
+
+def test_warns_when_the_slicer_will_refuse_a_filament_on_the_plate(multi_bed_lib, tmp_path):
+    for name, temp in (("Flashforge PETG Basic @FF C5P", "0"), ("Flashforge PLA Basic @FF C5P", "40")):
+        multi_bed_lib.raw[("filament", name)]["cool_plate_temp"] = [temp]
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PETG], [["2"]], paint=(2,))
+    _, result, _ = run(multi_bed_lib, path, bed_type="Cool Plate")
+    warnings = [w for w in result.report.warnings if "rechazará" in w]
+    assert len(warnings) == 1 and "#2 (PETG)" in warnings[0] and "#1" not in warnings[0]
+
+
+def test_no_plate_warning_for_a_filament_that_is_not_used(multi_bed_lib, tmp_path):
+    multi_bed_lib.raw[("filament", "Flashforge PETG Basic @FF C5P")]["cool_plate_temp"] = ["0"]
+    multi_bed_lib.raw[("filament", "Flashforge PLA Basic @FF C5P")]["cool_plate_temp"] = ["40"]
+    _, result, _ = run(multi_bed_lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PETG], [["2"]]), bed_type="Cool Plate")
+    assert result.report.ok and not any("rechazará" in w for w in result.report.warnings)
+
+
 def test_value_fixes_for_orca(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"raft_first_layer_expansion": "-1",

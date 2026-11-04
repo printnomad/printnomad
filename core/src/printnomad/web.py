@@ -15,7 +15,7 @@ from . import options as conversion_options
 from .convert import convert
 from .profiles import ProfileError, ProfileLibrary
 from .remap_filaments import MapError, format_map, parse_map, suggest_map
-from .slicers import registry, source_slicer
+from .slicers import Slicer, registry, source_slicer
 from .target import Target, find_printer
 
 
@@ -42,19 +42,23 @@ def list_printers(bundles: list[dict]) -> list[dict]:
     return usable_printers(ProfileLibrary.from_bundles(bundles))
 
 
-def usable_printers(lib: ProfileLibrary) -> list[dict]:
-    """Instantiable machine presets whose profiles are complete (see Target.is_usable)."""
+def usable_printers(lib: ProfileLibrary, slicer: Slicer | None = None) -> list[dict]:
+    """Instantiable machine presets whose profiles are complete (see Target.is_usable).
+
+    `bed_types`: plates that can be chosen in `slicer` (empty: fixed); `bed_type`: the default.
+    """
     out = []
     for name in lib.names("machine"):
         if str(lib.raw[("machine", name)].get("instantiation", "true")).lower() != "true":
             continue
         try:
-            target = Target(lib, name)
+            target = Target(lib, name, slicer)
         except ProfileError:
             continue
         if target.is_usable():
             out.append({"name": name, "model": target.printer_model, "nozzle": target.nozzle,
-                        "extruders": target.extruders, "vendor": lib.vendors[("machine", name)]})
+                        "extruders": target.extruders, "vendor": lib.vendors[("machine", name)],
+                        "bed_types": target.bed_types, "bed_type": target.bed_type})
     return out
 
 
@@ -71,6 +75,7 @@ def convert_file(
     options: dict | None = None,
     source_bundles: list[dict] | None = None,
     lang: str | None = None,
+    bed_type: str | None = None,
 ) -> dict:
     """Convert `src` for `printer` and write the result into `out_dir`.
 
@@ -81,7 +86,8 @@ def convert_file(
     options.py; missing ones take their defaults). Errors in the input (unknown
     printer, bad map or option) come back in the report instead of raising.
     `source_bundles`: profiles of the slicer the project comes from (see source_info),
-    to compare the designer's changes with their original values.
+    to compare the designer's changes with their original values. `bed_type`: the build
+    plate chosen for this printer (see usable_printers).
     """
     if lang:
         i18n.set_language(lang)
@@ -104,7 +110,8 @@ def convert_file(
             source_lib = ProfileLibrary.from_bundles(source_bundles)
         except ProfileError:
             source_lib = None  # optional: only enriches the report
-    result = convert(project, target, nozzle=nozzle, user_map=user_map, source_lib=source_lib, **chosen)
+    result = convert(project, target, nozzle=nozzle, user_map=user_map, source_lib=source_lib, bed_type=bed_type,
+                     **chosen)
     report = result.report
     if report.already_target and not result.files:
         # Not an error when converting for several printers: this one needs nothing.

@@ -70,6 +70,15 @@ is the reference, and you decide when the model's values should win.
 Advanced mode can keep the model's cooling or printer settings anyway; each option
 explains its risk.
 
+## Your build plate
+
+Each printer in *My printers* can have its own build plate, when its slicer lets you choose
+one: the menu lists the plates that slicer offers for that printer, such as Cool Plate and
+Cool Plate SuperTack on the Flashforge Creator 5 Pro. Without a choice, the printer's default
+applies. The plates of a converted project all follow that choice, so changing it in the slicer
+updates every plate. If the slicer would refuse a filament on the chosen plate (PETG on a Cool
+Plate, for example), the report says so.
+
 ## Painted colours are read, not guessed
 
 Many MakerWorld projects define more colours than a printer has extruders but paint only

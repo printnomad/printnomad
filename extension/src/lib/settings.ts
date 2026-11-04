@@ -8,6 +8,8 @@ export interface MyPrinter {
   printer: string;
   /** The slicer was picked by the rule (brand's own / general for all), not by the user. */
   slicerAuto?: boolean;
+  /** Build plate chosen for this printer (curr_bed_type); absent: the printer's default. */
+  bedType?: string;
 }
 
 export interface Settings {
