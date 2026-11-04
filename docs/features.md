@@ -85,8 +85,8 @@ never uses are removed, and when you send several colours to one extruder (a pla
 more colours than extruders) they become one filament. A 12-colour project for a
 4-extruder printer opens with 4 filaments, not 12 — and the slicer does not keep 12
 filament slots after you close it. Every place that names a filament is renumbered:
-filament settings, the purge table, objects and parts, plates, per-layer colour changes
-and the colour painting of each triangle (the meshes themselves are untouched; each
+filament settings, the purge table, objects and parts, plates, per-layer colour changes,
+height ranges and the colour painting of each triangle (the meshes themselves are untouched; each
 rewritten paint code is checked to keep its shape and its new colours).
 
 ## A project that will not slice gets fixed

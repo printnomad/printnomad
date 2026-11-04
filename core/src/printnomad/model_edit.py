@@ -338,6 +338,51 @@ def shift_items(
     return _ITEM_RE.sub(fix, model_xml), changes
 
 
+# Height range options naming a filament by number, 0 = inherit (apply_to_print_region_config
+# in PrintObject.cpp: `extruder` plus keys_extruders of Bambu Studio and of OrcaSlicer).
+RANGE_FILAMENT_KEYS = frozenset({
+    "extruder", "wall_filament", "sparse_infill_filament", "solid_infill_filament",
+    "outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
+    "internal_solid_filament_id", "top_surface_filament_id", "bottom_surface_filament_id",
+})
+
+
+def _range_filament_options(root: ET.Element):
+    """(object index, option, filament) of each height range option choosing a filament."""
+    for obj in root.findall("object"):
+        for option in obj.iterfind("range/option"):
+            value = (option.text or "").strip()
+            if option.get("opt_key") in RANGE_FILAMENT_KEYS and value.isdigit() and int(value) > 0:
+                yield obj.get("id", ""), option, int(value)
+
+
+def range_filaments(ranges_xml: bytes) -> dict[str, set[int]]:
+    """Filaments the height ranges of each object choose: {object index: {filament, …}}."""
+    try:
+        root = ET.fromstring(ranges_xml)
+    except ET.ParseError:
+        return {}
+    out: dict[str, set[int]] = {}
+    for index, _, filament in _range_filament_options(root):
+        out.setdefault(index, set()).add(filament)
+    return out
+
+
+def remap_range_filaments(ranges_xml: bytes, new_of: dict[int, int]) -> bytes:
+    """The height ranges with their filaments renumbered (a file that cannot be parsed stays)."""
+    try:
+        root = ET.fromstring(ranges_xml)
+    except ET.ParseError:
+        return ranges_xml
+    changed = False
+    for _, option, filament in _range_filament_options(root):
+        new = new_of.get(filament, filament)
+        if new != filament:
+            option.text = str(new)
+            changed = True
+    return serialize(root) if changed else ranges_xml
+
+
 @dataclass
 class RangeWidthChange:
     object_index: str  # 1-based position of the object in the model, as the slicers number it

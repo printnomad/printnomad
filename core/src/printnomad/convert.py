@@ -86,7 +86,7 @@ def _prusa_settings(project: Project3MF) -> dict:
 
 
 def plate_usage(project: Project3MF, count: int) -> dict[str, set[int]]:
-    """Filaments each plate uses: objects' and parts' own, painted ones and per-layer changes."""
+    """Filaments each plate uses: objects' and parts' own, painted ones, per-layer changes and height ranges."""
     info = model_edit.read_model_info(project.model_settings())
     painted: dict[str, set[int]] = {}
     if project.has(MODEL_FILE):
@@ -95,13 +95,33 @@ def plate_usage(project: Project3MF, count: int) -> dict[str, set[int]]:
         painted = model_edit.painted_filaments(project.read(MODEL_FILE), geometry)
     per_layer = model_edit.layer_change_filaments(
         project.read(CUSTOM_GCODE_PER_LAYER) if project.has(CUSTOM_GCODE_PER_LAYER) else None)
+    in_ranges, any_plate = _range_usage(project, list(info.object_names))
     usage: dict[str, set[int]] = {}
     for pid, objects in (info.plates or {"1": list(info.object_names)}).items():
-        used: set[int] = set(per_layer.get(pid, set()))
+        used: set[int] = per_layer.get(pid, set()) | any_plate
         for o in objects:
-            used |= info.object_filaments.get(o, {1}) | painted.get(o, set())
+            used |= info.object_filaments.get(o, {1}) | painted.get(o, set()) | in_ranges.get(o, set())
         usage[pid] = {f for f in used if 1 <= f <= count} or {1}
     return usage
+
+
+def _range_usage(project: Project3MF, object_ids: list[str]) -> tuple[dict[str, set[int]], set[int]]:
+    """Filaments of the height ranges: by object id, and those of ranges whose object is unknown.
+
+    The file numbers objects by position (1-based), not by id (bbs_3mf.cpp). A range that
+    matches no object counts on every plate: keeping a filament is safer than losing it.
+    """
+    if not project.has(LAYER_CONFIG_RANGES):
+        return {}, set()
+    by_object: dict[str, set[int]] = {}
+    any_plate: set[int] = set()
+    for index, filaments in model_edit.range_filaments(project.read(LAYER_CONFIG_RANGES)).items():
+        position = int(index) - 1 if index.isdigit() else -1
+        if 0 <= position < len(object_ids):
+            by_object.setdefault(object_ids[position], set()).update(filaments)
+        else:
+            any_plate |= filaments
+    return by_object, any_plate
 
 
 def convert(

@@ -3,11 +3,14 @@
 import io
 import json
 import re
+import xml.etree.ElementTree as ET
 import zipfile
+
+import pytest
 
 from conftest import FAKE_PRINTER, make_bambu_3mf
 from printnomad import model_edit, read_3mf, renumber, write_3mf
-from printnomad.convert import convert
+from printnomad.convert import convert, plate_usage
 from printnomad.profiles import ProfileLibrary
 from printnomad.target import Target
 
@@ -30,6 +33,67 @@ def project_with_everything(tmp_path):
         out.writestr("Metadata/custom_gcode_per_layer.xml", LAYERS)
     path.write_bytes(buffer.getvalue())
     return read_3mf.load(path)
+
+
+def _ranges(*objects):
+    """Height ranges file: each object is {option: value} of one range; position = its index."""
+    body = "".join(
+        f'<object id="{i}"><range min_z="0" max_z="1">'
+        + "".join(f'<option opt_key="{k}">{v}</option>' for k, v in options.items())
+        + "</range></object>" for i, options in objects)
+    return f'<?xml version="1.0" encoding="utf-8"?><objects>{body}</objects>'
+
+
+THREE_PLA = [("PLA", "Bambu PLA Basic @BBL A1", c) for c in ("#FF0000", "#00FF00", "#0000FF")]
+
+
+def test_filament_chosen_in_a_height_range_counts_on_the_plate_of_its_object(tmp_path):
+    ranges = _ranges((2, {"layer_height": "0.2", "extruder": "3"}))
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"], ["5"]],
+                          extra_files={read_3mf.LAYER_CONFIG_RANGES: ranges})
+    # The file counts by position: index 2 is the second object (id 5), on plate 2.
+    assert plate_usage(read_3mf.load(path), 3) == {"1": {1}, "2": {1, 3}}
+
+
+@pytest.mark.parametrize(("key", "value", "used"), [
+    ("extruder", "0", {1}),                        # 0 = inherit
+    ("sparse_infill_filament", "2", {1, 2}),       # Bambu Studio
+    ("outer_wall_filament_id", "2", {1, 2}),       # OrcaSlicer
+    ("extruder", "9", {1}),                        # no such filament
+    ("layer_height", "2", {1}),                    # not a filament
+])
+def test_height_range_options_that_choose_a_filament(tmp_path, key, value, used):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]],
+                          extra_files={read_3mf.LAYER_CONFIG_RANGES: _ranges((1, {key: value}))})
+    assert plate_usage(read_3mf.load(path), 3) == {"1": used}
+
+
+def test_height_range_of_unknown_object_counts_on_every_plate(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"], ["5"]],
+                          extra_files={read_3mf.LAYER_CONFIG_RANGES: _ranges((7, {"extruder": "2"}))})
+    assert plate_usage(read_3mf.load(path), 3) == {"1": {1, 2}, "2": {1, 2}}
+
+
+def test_unreadable_height_ranges_change_nothing(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]],
+                          extra_files={read_3mf.LAYER_CONFIG_RANGES: "not xml"})
+    project = read_3mf.load(path)
+    assert plate_usage(project, 3) == {"1": {1}}
+    assert model_edit.remap_range_filaments(b"not xml", {1: 2}) == b"not xml"
+
+
+def test_height_range_filaments_survive_the_conversion_renumbered(profiles_root, tmp_path):
+    """Filament 2 is listed but unused, 3 only in a range: 2 goes, 3 becomes 2 with its width in mm."""
+    ranges = _ranges((1, {"extruder": "3", "skin_infill_line_width": "100%"}))
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]], extra_files={read_3mf.LAYER_CONFIG_RANGES: ranges})
+    target = Target(ProfileLibrary.load(profiles_root), FAKE_PRINTER)
+    result = convert(read_3mf.load(path), target)
+    assert result.report.ok, result.report.errors
+    settings = json.loads(result.files[read_3mf.PROJECT_SETTINGS])
+    assert settings["filament_colour"] == ["#FF0000", "#0000FF"]
+    written = ET.fromstring(result.files[read_3mf.LAYER_CONFIG_RANGES])
+    options = {o.get("opt_key"): o.text for o in written.iter("option")}
+    assert options == {"extruder": "2", "skin_infill_line_width": "0.4"}
 
 
 def test_plan():

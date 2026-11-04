@@ -3,8 +3,8 @@
 A converted project should list the filaments it really prints, one per extruder when
 the user merged colours (12 designer colours on 4 extruders → 4 filaments). Every
 place that names a filament by its number is rewritten: per-filament settings, the purge
-table, object and part filaments, plate maps, per-layer colour changes and the colour
-painting of every triangle. Meshes are not touched: only paint attribute values change
+table, object and part filaments, plate maps, per-layer colour changes, height ranges and
+the colour painting of every triangle. Meshes are not touched: only paint attribute values change
 inside the geometry files, and each rewritten paint code is checked to keep its tree and
 to map exactly to the new numbers.
 """
@@ -17,7 +17,14 @@ import re
 from dataclasses import dataclass, field
 
 from . import model_edit
-from .read_3mf import CUSTOM_GCODE_PER_LAYER, MODEL_SETTINGS, PROJECT_SETTINGS, Entry, Project3MF
+from .read_3mf import (
+    CUSTOM_GCODE_PER_LAYER,
+    LAYER_CONFIG_RANGES,
+    MODEL_SETTINGS,
+    PROJECT_SETTINGS,
+    Entry,
+    Project3MF,
+)
 
 # Settings naming one filament by number (0 = the object's own).
 SCALAR_FILAMENT_KEYS = frozenset({
@@ -145,6 +152,8 @@ def apply(project: Project3MF, r: Renumbering) -> tuple[Project3MF, dict[str, by
         changed[MODEL_SETTINGS] = _model_settings(project.read(MODEL_SETTINGS), count, r)
     if project.has(CUSTOM_GCODE_PER_LAYER):
         changed[CUSTOM_GCODE_PER_LAYER] = _layer_changes(project.read(CUSTOM_GCODE_PER_LAYER), r)
+    if project.has(LAYER_CONFIG_RANGES):
+        changed[LAYER_CONFIG_RANGES] = model_edit.remap_range_filaments(project.read(LAYER_CONFIG_RANGES), r.new_of)
     mapping = {0: 0, **r.new_of}
     for name in [*project.geometry_names(), "3D/3dmodel.model"]:
         if project.has(name):
