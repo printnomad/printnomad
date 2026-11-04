@@ -185,7 +185,7 @@ class Target:
         """
         try:
             self.lib.resolve("machine", self.machine)
-            return bool(self.lib.instantiable("process", self.compatible))
+            return bool(self.lib.instantiable("process", self.compatible, self.settings))
         except ProfileError:
             return False
 
@@ -225,18 +225,22 @@ class Target:
 
     # --- procesos y filamentos ----------------------------------------------
     def pick_process(self, layer_height: float) -> str:
-        names = self.lib.instantiable("process", self.compatible)
+        names = self.lib.instantiable("process", self.compatible, self.settings)
         if not names:
             raise ProfileError(t("profiles.error.no_process", machine=self.machine))
+
+        default = _first(self.settings.get("default_print_profile"))
 
         def key(name: str):
             lh = float(self.lib.resolve("process", name).get("layer_height", 0) or 0)
             user = self.lib.vendors.get(("process", name)) == USER_VENDOR
-            # A igual altura de capa: el de sistema y, entre ellos, el "Standard"
-            # (no "Draft", "Fine", "Strength"…, que cambian otros ajustes).
-            standard = "standard" in name.lower()
+            # A igual altura de capa: el de sistema y, entre ellos, el "Standard" (no "Draft",
+            # "Fine", "Strength"…, que cambian otros ajustes); si no hay, el que propone el perfil
+            # de la impresora. "Soluble" pide un filamento de soporte que quizá no hay.
+            lowered = name.lower()
+            standard = "standard" in lowered
             # Rounded: 0.12 and 0.20 are equally near 0.16, whatever the floats say (the name decides).
-            return round(abs(lh - layer_height), 6), user, not standard, name
+            return (round(abs(lh - layer_height), 6), user, not standard, name != default, "soluble" in lowered, name)
 
         return min(names, key=key)
 
@@ -250,28 +254,32 @@ class Target:
         is_generic = "generic" in _tokens(source_id)
         own_brand = _tokens(self.printer_model.split(" ")[0]) | ({self.vendor.lower()} if self.vendor else set())
         best: tuple[int, str] | None = None
-        for name in self.lib.instantiable("filament", self.compatible):
-            types = self.lib.resolve("filament", name).get("filament_type") or [""]
-            ctype = str(_first(types, "")).upper()
-            if ctype not in wanted:
-                continue
-            cand = _tokens(name)
-            score = 4 * len(source_tokens & cand)
-            if ctype == ftype.upper():
-                score += 3
-            if not source_tokens:
-                if "basic" in cand:
-                    score += 2
-                if "generic" in cand and is_generic:
+        # The printer's own profiles first; the common library only when they have no such material.
+        for names in (self.lib.instantiable("filament", self.compatible, self.settings), self.lib.library_filaments()):
+            for name in names:
+                types = self.lib.resolve("filament", name).get("filament_type") or [""]
+                ctype = str(_first(types, "")).upper()
+                if ctype not in wanted:
+                    continue
+                cand = _tokens(name)
+                score = 4 * len(source_tokens & cand)
+                if ctype == ftype.upper():
                     score += 3
-            if not cand & (own_brand | {"generic"}):
-                score -= 2  # otras marcas solo si el nombre coincide
-            if cand & {"hs", "pro", "transparent", "lw"} and not source_tokens & cand:
-                score -= 1
-            if self.lib.vendors.get(("filament", name)) == USER_VENDOR:
-                score += 10 if name == source_id else -1   # preset propio del usuario: solo si es el mismo
-            if best is None or score > best[0] or (score == best[0] and name < best[1]):
-                best = (score, name)
+                if not source_tokens:
+                    if "basic" in cand:
+                        score += 2
+                    if "generic" in cand and is_generic:
+                        score += 3
+                if not cand & (own_brand | {"generic"}):
+                    score -= 2  # otras marcas solo si el nombre coincide
+                if cand & {"hs", "pro", "transparent", "lw"} and not source_tokens & cand:
+                    score -= 1
+                if self.lib.vendors.get(("filament", name)) == USER_VENDOR:
+                    score += 10 if name == source_id else -1   # preset propio del usuario: solo si es el mismo
+                if best is None or score > best[0] or (score == best[0] and name < best[1]):
+                    best = (score, name)
+            if best:
+                break
         return best[1] if best else None
 
 

@@ -34,6 +34,7 @@
   "reason.target_process_preset": "target process preset",
   "reason.target_presets": "target presets",
   "reason.author_on_presets": "model's settings on top of the target presets",
+  "reason.wipe_tower_moved": "kept on the target's bed",
   "reason.target_bed": "target printer's build plate",
   "reason.chosen_bed": "build plate chosen for this printer",
   "reason.plate_follows_project": "follows the project's build plate: changing it in the slicer updates every plate",

@@ -34,6 +34,7 @@
   "reason.target_process_preset": "preset de proceso destino",
   "reason.target_presets": "presets destino",
   "reason.author_on_presets": "valores del modelo sobre los presets destino",
+  "reason.wipe_tower_moved": "se mantiene dentro de la cama destino",
   "reason.target_bed": "placa de la impresora destino",
   "reason.chosen_bed": "placa elegida para esta impresora",
   "reason.plate_follows_project": "sigue la placa del proyecto: cambiarla en el laminador actualiza todas las placas",

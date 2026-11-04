@@ -511,6 +511,11 @@ def _convert(
             report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.invalid_in_orca")))
         else:
             put(k, fixed if isinstance(value, list) else fixed[0], t("reason.orca_equivalent"))
+    # Some slicers' start G-code reads filament_notes[i]; a project's empty text is an empty list.
+    if "filament_notes" in out and (not isinstance(out["filament_notes"], list) or not out["filament_notes"]):
+        put("filament_notes", [""] * n, t("reason.target_filament"))
+    if src.get("printable_area") and machine_cfg.get("printable_area"):
+        _fit_wipe_tower(out, src["printable_area"], machine_cfg["printable_area"], put)
     width_reason = t("reason.line_width_mm", nozzle=target.nozzle)
     for k, v in list(out.items()):
         in_mm = rules.percent_width_to_mm(k, v, target.nozzle)
@@ -622,6 +627,31 @@ def _drop_unchanged(author: set[str], src: dict, preset: dict, report: Report, i
         if same:
             author.discard(k)
             report.not_changed.append(k if index is None else t("report.filament_key", key=k, index=index + 1))
+
+
+def _fit_wipe_tower(out: dict, src_area: list[str], dst_area: list[str], put) -> None:
+    """Move the purge tower like the objects (same place from the bed's centre), keeping it on
+    the bed: on a smaller one, the project's position makes the slicer refuse to slice."""
+    src, dst = model_edit.bed_box(src_area), model_edit.bed_box(dst_area)
+    if src == dst:
+        return
+    width = _num(out.get("prime_tower_width")) or 35.0
+    margin = 5.0
+
+    def moved(value, delta: float, low: float, high: float):
+        try:
+            return f"{min(max(float(value) + delta, low + margin), max(low + margin, high - width - margin)):g}"
+        except (TypeError, ValueError):
+            return value
+
+    for key, axis in (("wipe_tower_x", 0), ("wipe_tower_y", 1)):
+        value = out.get(key)
+        if value is None:
+            continue
+        low, high = dst[axis], dst[axis + 2]
+        delta = (low + high - src[axis] - src[axis + 2]) / 2
+        new = [moved(v, delta, low, high) for v in value] if isinstance(value, list) else moved(value, delta, low, high)
+        put(key, new, t("reason.wipe_tower_moved"))
 
 
 def _same_layer_height(process: dict, layer_height: float) -> bool:

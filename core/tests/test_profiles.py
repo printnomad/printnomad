@@ -46,6 +46,66 @@ def test_profiles_with_utf8_bom_are_read(tmp_path):
     assert lib.settings("machine", "Mine")["gcode_flavor"] == "klipper"
 
 
+def _conditioned_process(lib, name, condition, layer="0.2"):
+    lib.raw[("process", name)] = {"type": "process", "name": name, "instantiation": "true", "layer_height": layer,
+                                  "compatible_printers_condition": condition}
+    lib.vendors[("process", name)] = "Flashforge"
+
+
+def test_process_compatible_by_condition(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    lib.raw[("machine", MACHINE)]["printer_notes"] = "PRINTER_MODEL_X"
+    _conditioned_process(lib, "A @X", "printer_notes=~/.*MODEL_X.*/ and nozzle_diameter[0]==0.4")
+    _conditioned_process(lib, "B @Y", "printer_notes=~/.*MODEL_Y.*/")
+    names = Target(lib, MACHINE).lib.instantiable("process", [MACHINE], Target(lib, MACHINE).settings)
+    assert "A @X" in names and "B @Y" not in names
+    assert "A @X" not in lib.instantiable("process", [MACHINE])         # without the printer's settings
+
+
+def test_a_printer_whose_processes_only_have_conditions_is_usable(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    lib.raw[("machine", MACHINE)]["printer_notes"] = "PRINTER_MODEL_X"
+    for key in [k for k in lib.raw if k[0] == "process"]:
+        del lib.raw[key]
+    assert not Target(lib, MACHINE).is_usable()
+    _conditioned_process(lib, "A @X", "printer_notes=~/.*MODEL_X.*/")
+    assert Target(lib, MACHINE).is_usable()
+
+
+def test_process_the_printer_proposes_wins_a_tie(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    for key in [k for k in lib.raw if k[0] == "process"]:
+        del lib.raw[key]
+    lib.raw[("machine", MACHINE)].update(default_print_profile="0.20mm SPEED", printer_notes="X")
+    for name in ("0.20mm SOLUBLE", "0.20mm SPEED", "0.20mm AAA"):
+        _conditioned_process(lib, name, "printer_notes=~/X/")
+    assert Target(lib, MACHINE).pick_process(0.2) == "0.20mm SPEED"
+
+
+def test_soluble_process_only_if_nothing_else(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    for key in [k for k in lib.raw if k[0] == "process"]:
+        del lib.raw[key]
+    lib.raw[("machine", MACHINE)]["printer_notes"] = "X"
+    for name in ("0.20mm SOLUBLE", "0.20mm SPEED"):
+        _conditioned_process(lib, name, "printer_notes=~/X/")
+    assert Target(lib, MACHINE).pick_process(0.2) == "0.20mm SPEED"
+
+
+def test_library_filaments_only_when_the_printer_has_none_of_that_material(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    target = Target(lib, MACHINE)
+    lib.raw[("filament", "Generic ASA @System")] = {"type": "filament", "name": "Generic ASA @System",
+                                                     "instantiation": "true", "filament_type": ["ASA"]}
+    lib.vendors[("filament", "Generic ASA @System")] = "OrcaFilamentLibrary"
+    lib.raw[("filament", "Generic PLA @Lib")] = {"type": "filament", "name": "Generic PLA @Lib",
+                                                  "instantiation": "true", "filament_type": ["PLA"]}
+    lib.vendors[("filament", "Generic PLA @Lib")] = "OrcaFilamentLibrary"
+    assert target.pick_filament("ASA", "Bambu ASA @BBL A1") == "Generic ASA @System"
+    assert target.pick_filament("PLA", "Bambu PLA Basic @BBL A1") == "Flashforge PLA Basic @FF C5P"
+    assert target.pick_filament("PC", "Bambu PC @BBL A1") is None
+
+
 def test_process_tie_goes_to_the_finer_one(profiles_root):
     lib = ProfileLibrary.load(profiles_root)
     target = Target(lib, MACHINE)

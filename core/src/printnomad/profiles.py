@@ -10,6 +10,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import conditions
 from .i18n import t
 
 ENV_PROFILES = "PRINTNOMAD_PROFILES"
@@ -182,12 +183,13 @@ class ProfileLibrary:
         """Solo las claves de configuración (sin metadatos del perfil)."""
         return {k: v for k, v in self.resolve(kind, name).items() if k not in META_KEYS}
 
-    def instantiable(self, kind: str, compatible_with: str | list[str]) -> list[str]:
+    def instantiable(self, kind: str, compatible_with: str | list[str], printer: dict | None = None) -> list[str]:
         """Presets elegibles compatibles con una impresora.
 
         `compatible_with` puede ser el nombre del preset de máquina o la lista con sus
         ancestros: un preset de usuario es compatible con lo que lo sea su preset padre.
-        Nota: `compatible_printers_condition` (expresiones de Orca) aún no se evalúa.
+        `printer`: ajustes de la impresora, para evaluar `compatible_printers_condition` en los
+        presets sin lista (Prusa MK4S, CORE One…), como el laminador (Preset.cpp).
         """
         machines = {compatible_with} if isinstance(compatible_with, str) else set(compatible_with)
         out = []
@@ -195,9 +197,31 @@ class ProfileLibrary:
             if k != kind or str(data.get("instantiation", "true")).lower() != "true":
                 continue
             try:
-                compatible = self.resolve(kind, name).get("compatible_printers", [])
+                resolved = self.resolve(kind, name)
             except ProfileError:
                 continue
-            if machines & set(compatible):
+            compatible = resolved.get("compatible_printers") or []
+            condition = resolved.get("compatible_printers_condition")
+            if machines & set(compatible) or (
+                    not compatible and condition and printer is not None and conditions.matches(condition, printer)):
+                out.append(name)
+        return sorted(out)
+
+    def library_filaments(self) -> list[str]:
+        """Filaments of the common library that name no printer: for every printer (Preset.cpp).
+
+        A printer's own profiles often stop at these (Voron, Sovol SV06).
+        """
+        out = []
+        for (kind, name), data in self.raw.items():
+            if kind != "filament" or self.vendors.get((kind, name)) != LIBRARY_VENDOR:
+                continue
+            if str(data.get("instantiation", "true")).lower() != "true":
+                continue
+            try:
+                resolved = self.resolve(kind, name)
+            except ProfileError:
+                continue
+            if not resolved.get("compatible_printers") and not resolved.get("compatible_printers_condition"):
                 out.append(name)
         return sorted(out)

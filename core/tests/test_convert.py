@@ -296,6 +296,30 @@ def test_kept_layer_height_outside_the_printers_limits_warns(lib, tmp_path):
     assert any("0.32" in w for w in result.report.warnings)
 
 
+def test_purge_tower_stays_on_a_smaller_bed(lib, tmp_path):
+    lib.raw[("machine", MACHINE)]["printable_area"] = ["0x0", "180x0", "180x180", "0x180"]
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "wipe_tower_x": ["15", "90"], "wipe_tower_y": ["217.697", "128"]})
+    _, _, s = run(lib, path)
+    assert s["wipe_tower_x"] == ["5", "52"]    # 256 → 180: 38 mm closer, not past the edge
+    assert s["wipe_tower_y"] == ["140", "90"]  # 180 - 35 wide (slicer's default) - 5 margin
+
+
+def test_purge_tower_stays_where_it_was_on_the_same_bed(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
+                          settings={"wipe_tower_x": ["15"], "wipe_tower_y": ["217"]})
+    _, _, s = run(lib, path)
+    assert (s["wipe_tower_x"], s["wipe_tower_y"]) == (["15"], ["217"])
+
+
+def test_empty_filament_notes_become_a_list(lib, tmp_path):
+    """Prusa's start G-code reads filament_notes[0]: an empty value stops the slicer."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PETG], [["2"]], paint=(2,), settings={
+        "filament_notes": "", "different_settings_to_system": ["filament_notes", "", "", ""]})
+    _, _, s = run(lib, path)
+    assert s["filament_notes"] == ["", ""]
+
+
 def test_author_process_override_kept_and_limits_warned(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"sparse_infill_speed": "700", "line_width": "0.42"})

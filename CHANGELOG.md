@@ -8,6 +8,8 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Renamed from BetterBridge to PrintNomad** (the old name was taken on GitHub). Python packages are now `printnomad` and `printnomad_orca`; environment variables `PRINTNOMAD_PROFILES` and `PRINTNOMAD_LANG` replace `BETTERBRIDGE_*`.
 
 ### Fixed
+- **Printers whose profiles use conditions** (`compatible_printers_condition`: Prusa MK4S, CORE One…) are now offered: the expressions are evaluated (`conditions.py`). Filaments of the common library back up printers that have none of a material (Voron, Sovol SV06).
+- **Purge tower kept on smaller beds**, moved like the objects: its position in the project made the slicer refuse to slice. An empty `filament_notes` no longer stops Prusa's start G-code.
 - **Layer height kept when the printer has no process for it**: a 0.16 mm project on a printer with 0.12 and 0.20 processes was silently printed at 0.12 mm. The project's layer height is now kept over the nearest process and listed apart in the report; every other setting comes from that process.
 - **First layer height comes from the target's process**, unless the designer changed it; it used to be kept from the project and declared a designer change. Very thin objects may need it lowered in the slicer.
 - **Line widths in % become mm**: `*_line_width` values such as `skin_infill_line_width = 100%` are converted with the target nozzle's diameter in the project settings, object and part overrides and height ranges. Bambu Studio and QIDI Studio read them as 100 mm ("too large line width").
