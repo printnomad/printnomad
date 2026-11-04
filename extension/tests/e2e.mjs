@@ -60,7 +60,7 @@ try {
   const rows = await page.$$eval("#convert-results > li", (items) => items.map((li) => ({
     printer: li.querySelector('[data-field="printer"]').textContent,
     status: li.querySelector('[data-field="status"]').textContent,
-    report: li.querySelector('[data-field="report"]').textContent,
+    report: li.querySelector('[data-field="report"]')?.textContent ?? "",
     // No report: the project was already set up for that printer (nothing converted).
     already: li.querySelector('[data-field="details"]').hidden,
   })));

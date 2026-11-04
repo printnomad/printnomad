@@ -18,11 +18,24 @@ if (!browserPath) {
 
 const work = workDir();
 const { project, painted, catalog } = buildFixtures(work);
-buildExtension({ PN_PROFILES_DIR: catalog, PN_TEST_ORIGINS: ORIGIN });
+buildExtension({ PN_PROFILES_DIR: catalog, PN_TEST_ORIGINS: ORIGIN, PN_REPORT_URL: `${ORIGIN}/report` });
 
 const page = readFileSync(join(ext, "tests/fixtures/makerworld.html"));
 let projectBytes = readFileSync(project);
+const reports = [];
 const server = createServer((req, res) => {
+  if (req.url === "/report") {
+    // Stands in for tools/report-worker: the extension has no host permission, only CORS.
+    const cors = { "access-control-allow-origin": req.headers.origin ?? "*", "access-control-allow-headers": "content-type" };
+    if (req.method === "OPTIONS") return res.writeHead(204, cors).end();
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      reports.push({ origin: req.headers.origin, ...JSON.parse(body) });
+      res.writeHead(201, cors).end("{}");
+    });
+    return;
+  }
   if (req.url === "/") return res.writeHead(200, { "content-type": "text/html" }).end(page);
   if (req.url.startsWith("/api/v1/design-service/instance/1/f3mf")) {
     return res.writeHead(200, { "content-type": "application/json" })
@@ -126,6 +139,24 @@ try {
   const all = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
   if (all.length !== 3) throw new Error(`${all.length} downloads after the assigned conversion`);
   console.log("OK: chip, button, menu, capture, conversion, restore and assignment screen");
+
+  // 7. A damaged project: the code on the button, the panel, and the report sent in one click.
+  projectBytes = Buffer.from("not a zip");
+  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 30_000 });
+  await mw.click(".section:not(.mobile-box) .primaryButton");
+  const inModal = (field) => `document.querySelector("[data-pn-modal]")?.shadowRoot?.querySelector('[data-field="${field}"]')`;
+  await mw.waitForFunction(inModal("send"), { timeout: 120_000 });
+  if (await label() !== "Error PN102") throw new Error(`button after a damaged file: ${await label()}`);
+  await mw.evaluate(`Object.assign(${inModal("comment")}, { value: "from the test" })`);
+  await mw.evaluate(`${inModal("send")}.click()`);
+  await mw.waitForFunction(`${inModal("send-result")}.textContent.includes("thank you")`, { timeout: 30_000 });
+  const [sent] = reports;
+  if (reports.length !== 1 || sent.code !== "PN102" || sent.comment !== "from the test" || !sent.report.includes("PN102")
+    || !sent.origin?.startsWith("chrome-extension://")) {
+    throw new Error(`report received: ${JSON.stringify(reports)}`);
+  }
+  await mw.evaluate(`${inModal("close")}.click()`);
+  console.log("OK: damaged project shows its code and the report is sent with one click");
 } finally {
   await browser.close();
   server.close();

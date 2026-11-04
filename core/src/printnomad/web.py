@@ -156,7 +156,7 @@ def convert_file(
 
 def _failed(src: str, printer: str, code: str, message: str) -> dict:
     """The result of a conversion that could not start: a report with only the error."""
-    report = Report(source=Path(src).name, target=printer)
+    report = Report(source=Path(src).name, target=printer, source_kind="-")
     report.fail(code, message)
     return {"ok": False, "output": None, "needs_map": False, "already_target": False,
             "report": report.to_dict(), "text": report.to_text()}

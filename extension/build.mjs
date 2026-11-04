@@ -34,6 +34,8 @@ const shared = {
   define: {
     __PN_CONFIG__: JSON.stringify({
       catalogUrl: config.catalogUrl,
+      // PN_REPORT_URL: a local stand-in for the worker (tests/e2e-makerworld.mjs).
+      reportUrl: process.env.PN_REPORT_URL ?? config.reportUrl ?? "",
       featuredModels: config.featuredModels ?? [],
       makerworldOrigins,
       version: pkg.version ?? "0.0.0",

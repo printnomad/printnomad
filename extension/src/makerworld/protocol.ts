@@ -1,4 +1,4 @@
-import type { AssignmentPlan } from "../engine/protocol.ts";
+import type { AssignmentPlan, Issue } from "../engine/protocol.ts";
 
 // Messages between the MakerWorld content script, the page script (main world) and the
 // bridge page (engine iframe). Every message carries `source` so unrelated postMessage
@@ -34,6 +34,7 @@ export interface PagePrinter {
 export type BridgeRequest =
   | { source: typeof CONTENT; id: number; type: "printers" }
   | { source: typeof CONTENT; id: number; type: "prepare" }
+  | { source: typeof CONTENT; id: number; type: "send-report"; report: string; comment: string; code?: string }
   | { source: typeof CONTENT; id: number; type: "convert"; printerId: string; name?: string; data?: ArrayBuffer; map?: string };
 
 export type ConvertOutcome =
@@ -42,7 +43,7 @@ export type ConvertOutcome =
   | { status: "already" }
   /** A plate uses more filaments than extruders: the user assigns them (then convert again with `map`). */
   | { status: "needs-map"; plan: AssignmentPlan }
-  | { status: "error"; message: string; needsMap?: boolean; code?: string };
+  | { status: "error"; message: string; needsMap?: boolean; issue?: Issue; report?: string };
 
 export type BridgeMessage =
   | { source: typeof BRIDGE; type: "ready" }

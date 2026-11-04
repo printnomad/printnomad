@@ -1,6 +1,7 @@
 {
-  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. Empty until the catalog is published (catalogUrlWhenPublished): only the profiles shipped with the extension are used and no request fails. fallbackProfiles: target printers to offer offline, plus the source profiles of Bambu projects (original values in reports). featuredModels: printer_model names shown first in the printer picker (the rest by search or brand); names missing from the catalog are ignored. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page).",
+  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. Empty until the catalog is published (catalogUrlWhenPublished): only the profiles shipped with the extension are used and no request fails. fallbackProfiles: target printers to offer offline, plus the source profiles of Bambu projects (original values in reports). featuredModels: printer_model names shown first in the printer picker (the rest by search or brand); names missing from the catalog are ignored. reportUrl: the report worker (tools/report-worker); empty: only Copy report. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page).",
   "catalogUrl": "",
+  "reportUrl": "https://printnomad-reports.printnomad.workers.dev",
   "fallbackProfiles": {
     "flashstudio": "*",
     "bambustudio": "*",

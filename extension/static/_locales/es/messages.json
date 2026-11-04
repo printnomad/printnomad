@@ -65,6 +65,36 @@
   "convert_copy_failed": {
     "message": "No se pudo copiar"
   },
+  "report_comment": {
+    "message": "¿Algo que añadir? (opcional)"
+  },
+  "report_send": {
+    "message": "Enviar reporte"
+  },
+  "report_sending": {
+    "message": "Enviando…"
+  },
+  "report_sent": {
+    "message": "¡Enviado, gracias!"
+  },
+  "report_send_failed": {
+    "message": "No se pudo enviar. Puedes copiar el reporte."
+  },
+  "report_send_hint": {
+    "message": "Envía solo este texto, nunca tu archivo 3MF."
+  },
+  "report_what_is_sent": {
+    "message": "Qué se envía"
+  },
+  "report_close": {
+    "message": "Cerrar"
+  },
+  "mw_error_title": {
+    "message": "No se pudo convertir este modelo"
+  },
+  "issue_makerworld_suggestion": {
+    "message": "Intenta la descarga de nuevo. Si sigue fallando, puede que MakerWorld haya cambiado: envía este reporte."
+  },
   "issue_engine_suggestion": {
     "message": "Recarga esta página e inténtalo de nuevo. Si vuelve a fallar, envía este reporte."
   },

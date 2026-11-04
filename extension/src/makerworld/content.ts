@@ -7,13 +7,18 @@
 //
 // MakerWorld's class names are generated (mw-css-…): elements are found by structure
 // (span.primaryButton, .swiper-wrapper, MUI menus) and by "3MF" in menu texts.
-import type { AssignmentPlan } from "../engine/protocol.ts";
+import { CONFIG } from "../config.ts";
+import type { AssignmentPlan, Issue } from "../engine/protocol.ts";
 import { mapEditor } from "../lib/map-editor.ts";
+import { clipboardReport } from "../lib/report-copy.ts";
+import { reportPanel } from "../lib/report-panel.ts";
 import { BRIDGE, CONTENT, type BridgeMessage, type ConvertOutcome, type FromMain, type PagePrinter } from "./protocol.ts";
 
 const CAPTURE_TIMEOUT_MS = 30_000;
 const MENU_TIMEOUT_MS = 4_000;
 const RESULT_VISIBLE_MS = 5_000;
+/** Next to the core's codes (issues.py): MakerWorld's download could not be captured or fetched. */
+const MAKERWORLD_ERROR = "PN903";
 
 const t = (key: string, ...subs: (string | number)[]) => chrome.i18n.getMessage(key, subs.map(String)) || key;
 const normalize = (text: string | null | undefined) => (text ?? "").trim().replace(/\s+/g, " ").toLowerCase();
@@ -418,7 +423,17 @@ async function download() {
     await showOutcome(printer, outcome);
   } catch (e) {
     console.warn("[PrintNomad]", e);
-    setStatus(e instanceof Error ? e.message : t("mw_status_error"), RESULT_VISIBLE_MS);
+    // Most likely MakerWorld changed its page or the download failed: worth reporting.
+    const message = e instanceof Error ? e.message : String(e);
+    const issue = { code: MAKERWORLD_ERROR, stage: "makerworld", message, suggestion: t("issue_makerworld_suggestion") };
+    setStatus(t("mw_status_error_code", issue.code), RESULT_VISIBLE_MS);
+    showError(issue, clipboardReport({
+      version: CONFIG.version,
+      printer: printer.label,
+      slicer: printer.slicer,
+      file: location.pathname,
+      browser: navigator.userAgent,
+    }, `✗ [${issue.code}] ${message}`));
   } finally {
     busy = false;
   }
@@ -441,44 +456,93 @@ async function showOutcome(printer: PagePrinter, outcome: ConvertOutcome) {
     await showOutcome(printer, await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, map }));
     return;
   }
-  // The status replaces the button's label, so an error shows only its code; the full report
-  // goes to the console.
-  const coded = outcome.status === "error" && outcome.code;
-  setStatus(coded ? t("mw_status_error_code", coded) : outcomeText(outcome.status), RESULT_VISIBLE_MS);
-  if (outcome.status === "error") console.warn("[PrintNomad]", outcome.message);
+  // The status replaces the button's label: an error shows its code, and the details in a panel.
+  const code = outcome.status === "error" ? outcome.issue?.code : undefined;
+  setStatus(code ? t("mw_status_error_code", code) : outcomeText(outcome.status), RESULT_VISIBLE_MS);
+  if (outcome.status === "error") {
+    console.warn("[PrintNomad]", outcome.message);
+    showError(outcome.issue, outcome.report ?? outcome.message);
+  }
 }
 
 /**
  * The assignment screen in a modal over MakerWorld, isolated in a shadow root with the
  * extension's own styles. Resolves with the chosen map, or null when cancelled.
  */
+function openModal(onClose: () => void) {
+  const host = document.createElement("div");
+  host.dataset.pnModal = "1";
+  const shadow = host.attachShadow({ mode: "open" });
+  const style = document.createElement("link");
+  style.rel = "stylesheet";
+  style.href = chrome.runtime.getURL("styles.css");
+  const overlay = document.createElement("div");
+  overlay.className = "fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/50 p-4 font-sans text-fg";
+  const panel = document.createElement("div");
+  panel.className = "max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-bg p-2 shadow-2xl";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  const close = () => {
+    document.removeEventListener("keydown", onKey, true);
+    host.remove();
+    onClose();
+  };
+  const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+  document.addEventListener("keydown", onKey, true);
+  overlay.append(panel);
+  overlay.addEventListener("click", (e) => e.target === overlay && close());
+  shadow.append(style, overlay);
+  document.documentElement.append(host);
+  return { panel, close };
+}
+
 function askAssignment(printer: PagePrinter, plan: AssignmentPlan): Promise<string | null> {
   return new Promise((resolve) => {
-    const host = document.createElement("div");
-    host.dataset.pnModal = "1";
-    const shadow = host.attachShadow({ mode: "open" });
-    const style = document.createElement("link");
-    style.rel = "stylesheet";
-    style.href = chrome.runtime.getURL("styles.css");
-    const overlay = document.createElement("div");
-    overlay.className = "fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/50 p-4 font-sans text-fg";
-    const panel = document.createElement("div");
-    panel.className = "max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-bg p-2 shadow-2xl";
-    panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-modal", "true");
-    const close = (map: string | null) => {
-      document.removeEventListener("keydown", onKey, true);
-      host.remove();
-      resolve(map);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close(null);
-    document.addEventListener("keydown", onKey, true);
-    panel.append(mapEditor({ plan, printerLabel: printer.label, onConvert: close, onCancel: () => close(null) }));
-    overlay.append(panel);
-    overlay.addEventListener("click", (e) => e.target === overlay && close(null));
-    shadow.append(style, overlay);
-    document.documentElement.append(host);
+    let chosen: string | null = null;
+    const { panel, close } = openModal(() => resolve(chosen));
+    panel.append(mapEditor({
+      plan,
+      printerLabel: printer.label,
+      onConvert: (map) => {
+        chosen = map;
+        close();
+      },
+      onCancel: close,
+    }));
   });
+}
+
+/** Why it failed and what to do, with the report to copy or send. */
+function showError(issue: Pick<Issue, "code" | "message" | "suggestion"> | undefined, report: string) {
+  const { panel, close } = openModal(() => {});
+  const card = document.createElement("div");
+  card.className = "card flex flex-col gap-3 p-5";
+  const title = document.createElement("h3");
+  title.className = "font-display text-xl font-extrabold";
+  title.textContent = t("mw_error_title");
+  card.append(title);
+  if (issue) {
+    const box = document.createElement("div");
+    box.className = "flex flex-col gap-1 rounded-xl bg-err-soft p-3 text-sm";
+    const message = document.createElement("span");
+    message.className = "font-semibold text-err";
+    message.textContent = `${issue.code} · ${issue.message}`;
+    const suggestion = document.createElement("span");
+    suggestion.textContent = issue.suggestion;
+    box.append(message, suggestion);
+    card.append(box);
+  }
+  const send = CONFIG.reportUrl
+    ? (comment: string) => bridge.call<void>({ type: "send-report", report, comment, code: issue?.code })
+    : undefined;
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "btn-ghost self-end";
+  closeButton.dataset.field = "close";
+  closeButton.textContent = t("report_close");
+  closeButton.onclick = close;
+  card.append(reportPanel({ text: report, send, collapsed: true }), closeButton);
+  panel.append(card);
 }
 
 // --- wiring -------------------------------------------------------------------------

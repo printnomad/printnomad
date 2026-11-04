@@ -6,6 +6,8 @@ import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings 
 import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
 import { mapEditor } from "../lib/map-editor.ts";
 import { clipboardReport } from "../lib/report-copy.ts";
+import { reportPanel } from "../lib/report-panel.ts";
+import { sendReport } from "../lib/report-send.ts";
 import type { Catalog } from "../profiles/catalog.ts";
 import {
   allNozzles,
@@ -466,30 +468,27 @@ function resultRow(printer: MyPrinter, fileName: string) {
   field("printer").title = fileName;
   showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
   $("convert-results").append(node);
-  let reportText = "";
-  const copy = field<HTMLButtonElement>("copy");
-  copy.onclick = async () => {
-    try {
-      await navigator.clipboard.writeText(clipboardReport({
-        version: CONFIG.version,
-        printer: printer.printer,
-        slicer: slicerName(printer.slicer),
-        plate: printer.bedType,
-        file: fileName,
-        browser: navigator.userAgent,
-      }, reportText));
-      copy.textContent = t("convert_copied");
-    } catch {
-      copy.textContent = t("convert_copy_failed");
-    }
-    setTimeout(() => (copy.textContent = t("convert_copy_report")), 2_000);
-  };
+  let reportCode: string | undefined;
   const showReport = (text: string) => {
-    reportText = text;
-    field("report").textContent = text;
     field("details").hidden = !text;
+    if (!text) return field("report-panel").replaceChildren();
+    const copied = clipboardReport({
+      version: CONFIG.version,
+      printer: printer.printer,
+      slicer: slicerName(printer.slicer),
+      plate: printer.bedType,
+      file: fileName,
+      browser: navigator.userAgent,
+    }, text);
+    field("report-panel").replaceChildren(reportPanel({
+      text: copied,
+      send: CONFIG.reportUrl
+        ? (comment) => sendReport(CONFIG.reportUrl, { report: copied, comment, code: reportCode, version: CONFIG.version })
+        : undefined,
+    }));
   };
   const showIssue = (issue: Pick<Issue, "code" | "message" | "suggestion"> | null) => {
+    reportCode = issue?.code;
     field("issue").hidden = !issue;
     if (!issue) return;
     field("issue-message").textContent = `${issue.code} · ${issue.message}`;
