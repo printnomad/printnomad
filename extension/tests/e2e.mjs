@@ -79,14 +79,24 @@ try {
       (await chrome.storage.sync.get("printers")).printers[0].printer === "Flashforge Creator 5 Pro 0.4 nozzle");
     await page.waitForFunction(() => document.querySelector('[data-edit="nozzle"]')?.value === "0.4");
 
-    // Adding opens in the same section; a printer already there opens for editing.
+    await page.click('[data-action="edit"]'); // Done
+
+    // Adding has its own screen under the same header; picking a model is all it takes.
     await page.click("#add-printer");
-    await page.waitForSelector('#add-picker [data-model="Flashforge Creator 5 Pro"]', { visible: true });
-    await page.click('#add-picker [data-model="Flashforge Creator 5 Pro"]');
-    await page.waitForFunction(() => document.querySelector("#add-panel").hidden);
+    await page.waitForSelector('#add-view:not([hidden]) [data-model="Flashforge Creator 5 Pro"]', { visible: true });
+    if (!(await page.$eval("#home", (e) => e.hidden))) throw new Error("the home page shows behind the add screen");
+    if (await page.$eval("header", (e) => getComputedStyle(e).display === "none")) throw new Error("the add screen lost the header");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#home:not([hidden])");
+    await page.click("#add-printer");
+    await page.waitForSelector('#add-view:not([hidden]) [data-model="Flashforge Creator 5 Pro"]', { visible: true });
+    await page.click('#add-view [data-model="Flashforge Creator 5 Pro"]');
+    await page.waitForSelector("#home:not([hidden])");
+    await page.waitForFunction(() => document.querySelector('[data-action="edit"]')?.ariaPressed === "true");
     const count = await page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers.length);
     if (count !== 1) throw new Error(`${count} printers after adding one already there`);
-    console.log("OK: edit and add inside My printers");
+    await page.click('[data-action="edit"]'); // Done
+    console.log("OK: edit in the card, add on its own screen");
   }
 
   const started = Date.now();

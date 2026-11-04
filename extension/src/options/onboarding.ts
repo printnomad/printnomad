@@ -1,5 +1,5 @@
 // First run (which printer, is this your setup, you're ready). The printer picker also adds
-// printers afterwards, inside the My printers section.
+// printers afterwards, on its own screen.
 import { t } from "../lib/i18n.ts";
 import type { MyPrinter } from "../lib/settings.ts";
 import type { Catalog } from "../profiles/catalog.ts";
@@ -24,7 +24,7 @@ export interface OnboardingHost {
   /** The models offered for new printers. */
   pickable(): ModelChoice[];
   save(printer: MyPrinter): Promise<void>;
-  /** A model picked in the My printers section. */
+  /** A model picked on the add screen. */
   picked(model: ModelChoice): void;
   showHome(anchor?: string): void;
   sendRequest?(name: string): Promise<void>;
@@ -42,7 +42,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
 }
 
 export function createOnboarding(host: OnboardingHost) {
-  /** The picker is inside My printers: a click adds the printer at once. */
+  /** On the add screen: a click adds the printer at once. */
   let adding = false;
   let brand: string | null = null;
   let model: ModelChoice | null = null;
@@ -248,7 +248,7 @@ export function createOnboarding(host: OnboardingHost) {
       renderStep1();
       show(1);
     },
-    /** The picker inside My printers. */
+    /** The picker on the add screen. */
     openPicker(list: HTMLElement, request: HTMLElement) {
       adding = true;
       resetPicker();

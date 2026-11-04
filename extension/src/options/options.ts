@@ -103,30 +103,55 @@ function renderPrinters() {
     const model = modelOfPreset(models, p.slicer, p.printer);
     const variant = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer);
     const isDefault = p.id === fallback?.id;
+    const editing = editingId === p.id;
+    const label = model?.label ?? p.printer;
+    const card = field("card");
+    card.dataset.editing = String(editing);
+    card.ariaLabel = label;
+    card.dataset.printer = p.id;
     field("brand").textContent = model?.brand ?? "";
-    field("name").textContent = model?.label ?? p.printer;
-    field("setup").textContent = setupLine(p, variant);
+    field("name").textContent = label;
     field("default").hidden = !isDefault;
     showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
-    const makeDefault = node.querySelector<HTMLButtonElement>('[data-action="default"]')!;
-    makeDefault.hidden = isDefault;
-    makeDefault.onclick = () => void setDefaultPrinter(p.id);
-    const editing = editingId === p.id;
+
+    const bed = p.bedType ?? variant?.defaultBed;
+    const values: Record<string, string> = {
+      nozzle: variant ? t("printer_nozzle", variant.nozzle) : "—",
+      bed: bed ? bedLabel(bed) : "—",
+      slicer: slicerName(p.slicer),
+    };
+    for (const [name, value] of Object.entries(values)) {
+      const shown = node.querySelector(`[data-value="${name}"]`) as HTMLElement;
+      shown.textContent = value;
+      const select = node.querySelector(`[data-edit="${name}"]`) as HTMLSelectElement;
+      select.id = `${p.id}-${name}`;
+      select.closest(".card-row")!.querySelector("label")!.htmlFor = select.id;
+    }
+    if (editing && model && variant) wireEditor(node, p, model, variant);
+
     const edit = node.querySelector<HTMLButtonElement>('[data-action="edit"]')!;
-    edit.textContent = editing ? t("printers_edit_done") : t("printers_edit");
-    edit.ariaExpanded = String(editing);
+    edit.ariaPressed = String(editing);
+    edit.ariaLabel = editing ? t("printers_edit_done_named", label) : t("printers_edit_named", label);
+    field("pencil").toggleAttribute("hidden", editing);
+    field("done").toggleAttribute("hidden", !editing);
     edit.onclick = () => {
       editingId = editing ? null : p.id;
       renderPrinters();
+      document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(p.id)}"] [data-action="edit"]`)?.focus();
     };
-    field("editor").hidden = !editing;
-    if (model && variant) wireEditor(node, p, model, variant);
-    else for (const name of ["nozzle-field", "bed-field", "slicer-field"]) field(name).hidden = true;
-    node.querySelector<HTMLButtonElement>('[data-action="remove"]')!.onclick = () => void removePrinter(p.id);
+    field("used-by").hidden = editing || !isDefault;
+    const makeDefault = node.querySelector<HTMLButtonElement>('[data-action="default"]')!;
+    makeDefault.hidden = editing || isDefault;
+    makeDefault.onclick = () => void setDefaultPrinter(p.id);
+    const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
+    remove.hidden = !editing;
+    remove.onclick = () => void removePrinter(p.id);
+    field("saved").hidden = !editing;
     return node;
   });
-  $("printers").replaceChildren(...items);
-  $("printers").hidden = !items.length;
+  const add = fromTemplate("tpl-add-card");
+  add.node.querySelector("button")!.onclick = openAddView;
+  $("printers").replaceChildren(...items, add.node);
 
   const select = $<HTMLSelectElement>("convert-printer");
   const selected = select.value;
@@ -189,9 +214,28 @@ function showHome(anchor?: string) {
   else window.scrollTo(0, 0);
 }
 
-function closeAddPanel() {
-  $("add-panel").hidden = true;
-  $("add-printer").hidden = false;
+/** Adding a printer has its own screen, under the same header. */
+function openAddView() {
+  editingId = null;
+  $("home").hidden = true;
+  $("home-footer").hidden = true;
+  $("add-view").hidden = false;
+  onboarding.openPicker($("add-picker"), $("add-request"));
+  window.scrollTo(0, 0);
+  history.pushState({ adding: true }, "");
+  $("picker-search").focus();
+}
+
+function closeAddView() {
+  if ($("add-view").hidden) return;
+  $("add-view").hidden = true;
+  $("home").hidden = false;
+  $("home-footer").hidden = false;
+}
+
+function backToPrinters() {
+  closeAddView();
+  $("printers-section").scrollIntoView({ behavior: "instant" });
 }
 
 /** Added with the model's usual setup, and open to change it right there. */
@@ -202,19 +246,16 @@ async function addPrinter(model: ModelChoice) {
   if (!printer) return;
   const existing = settings.printers.find((p) => p.printer === printer.printer && p.slicer === printer.slicer);
   editingId = existing?.id ?? printer.id;
-  closeAddPanel();
+  backToPrinters();
   if (existing) renderPrinters();
   else await updatePrinters([...settings.printers, printer]);
-  focusEditor();
+  const card = document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(editingId)}"]`);
+  card?.scrollIntoView({ behavior: "instant", block: "center" });
+  card?.querySelector("select")?.focus();
 }
 
-function focusEditor() {
-  document.querySelector<HTMLElement>('#printers [data-field="editor"]:not([hidden]) select')?.focus();
-}
-
-/** Edit: the same card opens with what can change; every change is saved at once. */
+/** Edit: in the card itself, each value becomes a select; every change is saved at once. */
 function wireEditor(node: HTMLElement, p: MyPrinter, model: ModelChoice, variant: Variant) {
-  const field = <T extends HTMLElement = HTMLElement>(name: string) => node.querySelector(`[data-field="${name}"]`) as T;
   const select = (name: string) => node.querySelector(`[data-edit="${name}"]`) as HTMLSelectElement;
   const setup: Setup = { nozzle: variant.nozzle, slicer: p.slicer, bed: p.bedType };
   const apply = async (next: Setup, focus: string) => {
@@ -223,20 +264,29 @@ function wireEditor(node: HTMLElement, p: MyPrinter, model: ModelChoice, variant
     await updatePrinters(settings.printers
       .filter((x) => x.id === p.id || !(x.printer === printer.printer && x.slicer === printer.slicer))
       .map((x) => (x.id === p.id ? printer : x)));
-    document.querySelector<HTMLElement>(`#printers [data-field="editor"]:not([hidden]) [data-edit="${focus}"]`)?.focus();
+    document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(p.id)}"] [data-edit="${focus}"]`)?.focus();
+  };
+  const show = (name: string, on: boolean) => {
+    select(name).hidden = !on;
+    (node.querySelector(`[data-value="${name}"]`) as HTMLElement).hidden = on;
   };
   select("nozzle").replaceChildren(...allNozzles(model).nozzles.map((n) =>
     new Option(t("printer_nozzle", n), n, false, n === variant.nozzle)));
   select("nozzle").onchange = () => void apply(withNozzle(model, catalog!, setup, select("nozzle").value), "nozzle");
+  show("nozzle", true);
   const others = slicersFor(model, catalog!, variant.nozzle);
   select("slicer").replaceChildren(...others.map((o) => new Option(o.name, o.slicer, false, o.slicer === p.slicer)));
   select("slicer").onchange = () => void apply(withSlicer(model, setup, select("slicer").value), "slicer");
-  field("bed-field").hidden = variant.bedTypes.length < 2;
-  const first = variant.defaultBed ? bedLabel(variant.defaultBed) : t("printers_bed_from_project");
-  select("bed").replaceChildren(new Option(first, "", false, !p.bedType), ...variant.bedTypes
-    .filter((b) => b !== variant.defaultBed)
-    .map((b) => new Option(bedLabel(b), b, false, b === p.bedType)));
-  select("bed").onchange = () => void apply({ ...setup, bed: select("bed").value || undefined }, "bed");
+  show("slicer", true);
+  // A plate that cannot be chosen stays as text, in the same row.
+  if (variant.bedTypes.length > 1) {
+    const first = variant.defaultBed ? bedLabel(variant.defaultBed) : t("printers_bed_from_project");
+    select("bed").replaceChildren(new Option(first, "", false, !p.bedType), ...variant.bedTypes
+      .filter((b) => b !== variant.defaultBed)
+      .map((b) => new Option(bedLabel(b), b, false, b === p.bedType)));
+    select("bed").onchange = () => void apply({ ...setup, bed: select("bed").value || undefined }, "bed");
+    show("bed", true);
+  }
 }
 
 // --- conversion preferences -----------------------------------------------------
@@ -548,15 +598,13 @@ async function main() {
   renderPrinters();
   wirePrefs();
   renderPrefs();
-  $("add-printer").onclick = () => {
-    editingId = null;
-    renderPrinters();
-    $("add-panel").hidden = false;
-    $("add-printer").hidden = true;
-    onboarding.openPicker($("add-picker"), $("add-request"));
-    $("picker-search").focus();
-  };
-  $("add-close").onclick = closeAddPanel;
+  $("add-back").onclick = () => history.back();
+  // The browser's Back leaves the add screen too, and the header always leads home.
+  window.addEventListener("popstate", backToPrinters);
+  for (const link of document.querySelectorAll("header a")) link.addEventListener("click", closeAddView);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("add-view").hidden) history.back();
+  });
   if (settings.printers.length) showHome();
   else onboarding.start();
   $<HTMLFormElement>("convert-form").onsubmit = (e) => void convertFile(e as SubmitEvent);

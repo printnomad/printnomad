@@ -276,18 +276,8 @@
             <h2 id="printers-title" class="m-0 text-[34px] tracking-[-0.5px]" data-i18n="printers_title"></h2>
             <p class="m-0 text-[17px] text-muted" data-i18n="printers_hint"></p>
           </div>
-          <button id="add-printer" type="button" class="inline-flex min-h-11 items-center gap-2 rounded-full border-[1.5px] border-strong bg-surface px-[18px] text-[15px] font-semibold"><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="printers_add_title"></span></button>
         </div>
-        <ul id="printers" class="m-0 list-none overflow-hidden rounded-[var(--pn-r-card)] bg-surface p-0"></ul>
-        <div id="add-panel" class="flex flex-col gap-5 rounded-[var(--pn-r-card)] bg-surface p-7" hidden>
-          <div class="flex items-center justify-between gap-3">
-            <h3 class="m-0 text-lg font-bold" data-i18n="printers_add_title"></h3>
-            <button id="add-close" type="button" class="row-action" data-i18n="onboarding_cancel"></button>
-          </div>
-          <div id="add-picker"></div>
-          <div id="add-request"></div>
-        </div>
-
+        <ul id="printers" class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-5 p-0"></ul>
       </section>
 
       <!-- Convert a file manually -->
@@ -318,7 +308,17 @@
       </section>
     </main>
 
-    <footer class="border-t border-line">
+    <main id="add-view" class="mx-auto flex max-w-[var(--pn-page-max)] flex-col gap-6 px-6 pt-8 pb-20" aria-labelledby="add-title" hidden>
+      <button id="add-back" type="button" class="-ml-3 inline-flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-semibold text-fg-2 hover:bg-line-soft"><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg><span data-i18n="printers_title"></span></button>
+      <div class="flex flex-col gap-2">
+        <h1 id="add-title" class="m-0 text-[34px] tracking-[-0.5px]" data-i18n="onboarding_1_title"></h1>
+        <p class="m-0 text-[17px] text-muted" data-i18n="add_hint"></p>
+      </div>
+      <div id="add-picker"></div>
+      <div id="add-request"></div>
+    </main>
+
+    <footer id="home-footer" class="border-t border-line">
       <div class="mx-auto max-w-[var(--pn-page-max)] px-6 py-6 text-xs text-muted">
         <p id="profiles-status" role="status" class="m-0"></p>
       </div>
@@ -328,34 +328,43 @@
 
     <!-- Templates (cloned by options.ts) -->
     <template id="tpl-printer">
-      <li class="flex flex-wrap items-center gap-4 border-b border-line-soft px-6 py-[18px] last:border-b-0">
-        <span class="grid size-[52px] shrink-0 place-items-center rounded-[var(--pn-r-inner)] bg-bg">
-          <img data-field="cover" class="size-11 object-contain mix-blend-multiply" alt="" />
-          <svg data-field="placeholder" viewBox="0 0 24 24" class="size-7 text-faint" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
-        </span>
-        <span class="flex min-w-0 flex-[1_1_220px] flex-col gap-0.5">
-          <span class="flex flex-wrap items-center gap-2">
-            <span data-field="name" class="text-base font-bold"></span>
-            <span data-field="brand" class="text-[13px] text-muted"></span>
-            <span data-field="default" class="rounded-full bg-accent-soft px-2 py-[3px] text-xs font-bold text-accent-strong" data-i18n="printers_default" hidden></span>
-          </span>
-          <span data-field="setup" class="text-sm text-muted"></span>
-        </span>
-        <span class="flex flex-wrap items-center gap-2">
-          <button data-action="default" type="button" class="row-action" data-i18n="printers_make_default" hidden></button>
-          <button data-action="edit" type="button" class="row-action" aria-expanded="false"></button>
-        </span>
-        <div data-field="editor" class="flex w-full flex-col gap-4 border-t border-line-soft pt-4" hidden>
-          <div class="grid gap-3 sm:grid-cols-3">
-            <label data-field="nozzle-field" class="edit-field"><span data-i18n="picker_nozzle"></span><select data-edit="nozzle" class="edit-select"></select></label>
-            <label data-field="bed-field" class="edit-field"><span data-i18n="printers_bed"></span><select data-edit="bed" class="edit-select"></select></label>
-            <label data-field="slicer-field" class="edit-field"><span data-i18n="printers_slicer"></span><select data-edit="slicer" class="edit-select"></select></label>
+      <li class="contents">
+        <article data-field="card" class="group relative flex flex-col gap-4 rounded-[var(--pn-r-card)] bg-surface p-4 data-[editing=true]:shadow-[0_0_0_2px_var(--pn-brand)]">
+          <div class="relative flex h-[150px] items-center justify-center rounded-[14px] bg-bg">
+            <img data-field="cover" class="h-[120px] w-40 object-contain mix-blend-multiply" alt="" />
+            <svg data-field="placeholder" viewBox="0 0 24 24" class="size-12 text-faint" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+            <span data-field="default" class="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-[5px] text-xs font-bold text-white" hidden><svg viewBox="0 0 24 24" class="size-3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span data-i18n="printers_default"></span></span>
+            <button data-action="edit" type="button" class="absolute top-2.5 right-2.5 grid size-11 cursor-pointer place-items-center rounded-full border-0 bg-surface text-fg opacity-0 shadow-[0_1px_4px_rgba(22,24,26,0.14)] group-focus-within:opacity-100 group-hover:opacity-100 aria-pressed:bg-accent aria-pressed:text-white aria-pressed:opacity-100 [@media(hover:none)]:opacity-100">
+              <svg data-field="pencil" viewBox="0 0 24 24" class="size-[18px]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+              <svg data-field="done" viewBox="0 0 24 24" class="size-[18px]" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M5 12l5 5L20 7"/></svg>
+            </button>
           </div>
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <span class="text-sm text-muted" data-i18n="prefs_saved"></span>
-            <button data-action="remove" type="button" class="row-action text-err" data-i18n="printers_remove"></button>
+          <div class="flex flex-col gap-0.5 px-1">
+            <span data-field="brand" class="text-xs font-bold tracking-[1px] text-muted uppercase"></span>
+            <span data-field="name" class="text-xl font-bold"></span>
           </div>
-        </div>
+          <div class="flex flex-col px-1">
+            <div class="card-row"><label data-i18n="picker_nozzle" for=""></label><span data-value="nozzle" class="card-value"></span><select data-edit="nozzle" class="card-select" hidden></select></div>
+            <div class="card-row"><label data-i18n="printers_bed" for=""></label><span data-value="bed" class="card-value"></span><select data-edit="bed" class="card-select" hidden></select></div>
+            <div class="card-row"><label data-i18n="printers_slicer" for=""></label><span data-value="slicer" class="card-value"></span><select data-edit="slicer" class="card-select" hidden></select></div>
+          </div>
+          <div class="mt-auto flex h-14 items-center justify-between gap-2 border-t border-line-soft px-1 pt-3">
+            <span data-field="used-by" class="text-sm text-muted" data-i18n="printers_used_by" hidden></span>
+            <button data-action="default" type="button" class="-ml-4 min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 text-sm font-semibold text-accent-strong hover:bg-bg" data-i18n="printers_make_default" hidden></button>
+            <button data-action="remove" type="button" class="-ml-4 min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 text-sm font-semibold text-[#B42318] hover:bg-bg" data-i18n="printers_remove" hidden></button>
+            <span data-field="saved" class="inline-flex items-center gap-1.5 text-[13px] text-muted" hidden><svg viewBox="0 0 24 24" class="size-3.5 text-accent" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span data-i18n="prefs_saved"></span></span>
+          </div>
+        </article>
+      </li>
+    </template>
+
+    <template id="tpl-add-card">
+      <li class="contents">
+        <button id="add-printer" type="button" class="flex min-h-[420px] cursor-pointer flex-col items-center justify-center gap-3.5 rounded-[var(--pn-r-card)] border-2 border-dashed border-[var(--pn-border-dashed)] bg-transparent hover:bg-surface">
+          <span class="grid size-14 place-items-center rounded-full bg-accent-soft text-accent"><svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span class="text-base font-bold" data-i18n="printers_add_title"></span>
+          <span class="text-sm text-muted" data-i18n="printers_add_time"></span>
+        </button>
       </li>
     </template>
 

@@ -12,7 +12,7 @@
     "message": "Laminador"
   },
   "printers_remove": {
-    "message": "Quitar"
+    "message": "Quitar impresora"
   },
   "profiles_status_loading": {
     "message": "Cargando el catálogo de perfiles…"
@@ -469,9 +469,6 @@
   "onboarding_step_2": {
     "message": "Paso 2 de 2"
   },
-  "onboarding_cancel": {
-    "message": "Cancelar"
-  },
   "onboarding_back": {
     "message": "Atrás"
   },
@@ -540,9 +537,6 @@
   "onboarding_look_for": {
     "message": "Busca este botón."
   },
-  "printers_edit": {
-    "message": "Editar"
-  },
   "mw_status_downloading_percent": {
     "message": "Descargando… $1%",
     "description": "$1 = value"
@@ -584,7 +578,21 @@
   "mw_note_tuning": {
     "message": "Ajustes de impresora tomados de tu perfil"
   },
-  "printers_edit_done": {
-    "message": "Listo"
+  "add_hint": {
+    "message": "Elígela y queda agregada. Puedes cambiar su configuración justo después."
+  },
+  "printers_add_time": {
+    "message": "Toma unos segundos"
+  },
+  "printers_used_by": {
+    "message": "La usa el botón de MakerWorld"
+  },
+  "printers_edit_named": {
+    "message": "Editar $1",
+    "description": "$1 = printer"
+  },
+  "printers_edit_done_named": {
+    "message": "Terminar de editar $1",
+    "description": "$1 = printer"
   }
 }
