@@ -13,9 +13,6 @@
   "printers_slicer": {
     "message": "Slicer"
   },
-  "printers_add": {
-    "message": "Add"
-  },
   "printers_remove": {
     "message": "Remove"
   },
@@ -148,10 +145,7 @@
     "message": "Search printers"
   },
   "picker_search": {
-    "message": "Search your printer (e.g. Creator 5 Pro, P1S…)"
-  },
-  "picker_close": {
-    "message": "Close"
+    "message": "Search by model, e.g. P1S"
   },
   "picker_empty": {
     "message": "No printer matches. Try another name or brand."
@@ -165,10 +159,6 @@
   },
   "printers_bed": {
     "message": "Build plate"
-  },
-  "printers_bed_default": {
-    "message": "$1 (default)",
-    "description": "$1 = build plate name"
   },
   "printers_bed_from_project": {
     "message": "Build plate of the project"
@@ -273,7 +263,7 @@
     "message": "Cancel"
   },
   "printer_request_label": {
-    "message": "Your printer is not here? Tell us which one"
+    "message": "Which printer?"
   },
   "printer_request_send": {
     "message": "Ask for it"
@@ -481,5 +471,97 @@
   },
   "convert_intro": {
     "message": "For a .3mf you already have, like a Bambu Studio project. Not needed for MakerWorld."
+  },
+  "onboarding_1_title": {
+    "message": "Which printer do you use?"
+  },
+  "onboarding_1_hint": {
+    "message": "Pick one to start. You can add more later."
+  },
+  "onboarding_1_hint_add": {
+    "message": "Pick the printer to add."
+  },
+  "onboarding_step_1": {
+    "message": "Step 1 of 2"
+  },
+  "onboarding_step_2": {
+    "message": "Step 2 of 2"
+  },
+  "onboarding_cancel": {
+    "message": "Cancel"
+  },
+  "onboarding_back": {
+    "message": "Back"
+  },
+  "onboarding_continue": {
+    "message": "Continue"
+  },
+  "onboarding_continue_with": {
+    "message": "Continue with $1",
+    "description": "$1 = name"
+  },
+  "picker_all": {
+    "message": "All"
+  },
+  "picker_brands": {
+    "message": "Brands"
+  },
+  "request_prompt": {
+    "message": "Not on the list?"
+  },
+  "request_open": {
+    "message": "Ask us to add it"
+  },
+  "onboarding_2_title": {
+    "message": "Is this your setup?"
+  },
+  "onboarding_2_hint": {
+    "message": "We picked the most common one. Change only what's different on yours."
+  },
+  "setup_nozzle_hint": {
+    "message": "Printed on the nozzle"
+  },
+  "setup_bed_hint": {
+    "message": "The one you use most"
+  },
+  "setup_slicer_hint": {
+    "message": "Where you open the files"
+  },
+  "setup_for_slicer": {
+    "message": "for $1",
+    "description": "$1 = name"
+  },
+  "setup_profiles": {
+    "message": "Profiles download by themselves"
+  },
+  "setup_prefs_note": {
+    "message": "Conversion preferences start with safe defaults. You can fine-tune them any time."
+  },
+  "setup_finish": {
+    "message": "Looks right, finish"
+  },
+  "setup_save": {
+    "message": "Save"
+  },
+  "onboarding_3_title": {
+    "message": "You're ready."
+  },
+  "onboarding_3_text": {
+    "message": "From now on, open any model on MakerWorld and use the new download button. That's it."
+  },
+  "onboarding_see_prefs": {
+    "message": "See conversion preferences"
+  },
+  "onboarding_pin_tip": {
+    "message": "Tip: pin PrintNomad in Chrome's toolbar to come back here."
+  },
+  "onboarding_every_model": {
+    "message": "On every MakerWorld model"
+  },
+  "onboarding_look_for": {
+    "message": "Look for this button."
+  },
+  "printers_edit": {
+    "message": "Edit"
   }
 }

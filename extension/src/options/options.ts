@@ -10,15 +10,10 @@ import { reportPanel } from "../lib/report-panel.ts";
 import { sendReport } from "../lib/report-send.ts";
 import type { Catalog } from "../profiles/catalog.ts";
 import { bedLabel } from "./labels.ts";
+import { createOnboarding } from "./onboarding.ts";
 import {
-  allNozzles,
   buildModels,
-  keepBed,
-  matches,
   modelOfPreset,
-  pickSlicer,
-  presetFor,
-  slicersFor,
   supportedOnly,
   type ModelChoice,
   type Variant,
@@ -71,19 +66,6 @@ function slicerName(key: string): string {
 }
 
 // --- My printers ------------------------------------------------------------
-/** The plate menu of a printer's card: its default first, then what else the slicer offers. */
-function bedOptions(variant: Variant, chosen: string | undefined): HTMLOptionElement[] {
-  const first = variant.defaultBed
-    ? t("printers_bed_default", bedLabel(variant.defaultBed))
-    : t("printers_bed_from_project");
-  return [
-    new Option(first, "", false, !chosen),
-    ...variant.bedTypes
-      .filter((bed) => bed !== variant.defaultBed)
-      .map((bed) => new Option(bedLabel(bed), bed, false, bed === chosen)),
-  ];
-}
-
 function showCover(img: HTMLImageElement, placeholder: HTMLElement, url: string | undefined) {
   if (url) {
     img.src = url;
@@ -118,19 +100,11 @@ function renderPrinters() {
     field("name").textContent = model?.label ?? p.printer;
     field("setup").textContent = setupLine(p, variant);
     field("default").hidden = !isDefault;
-    if (variant && variant.bedTypes.length > 1) {
-      const select = field<HTMLSelectElement>("bed-select");
-      select.replaceChildren(...bedOptions(variant, p.bedType));
-      select.title = t("printers_bed");
-      select.onchange = () => void replacePrinter(p.id, { ...p, bedType: select.value || undefined });
-      field("bed-menu").hidden = false;
-    }
     showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
     const makeDefault = node.querySelector<HTMLButtonElement>('[data-action="default"]')!;
     makeDefault.hidden = isDefault;
     makeDefault.onclick = () => void setDefaultPrinter(p.id);
-    const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
-    remove.onclick = () => updatePrinters(settings.printers.filter((x) => x.id !== p.id));
+    node.querySelector<HTMLButtonElement>('[data-action="edit"]')!.onclick = () => onboarding.edit(p);
     return node;
   });
   $("printers").replaceChildren(...items);
@@ -167,118 +141,31 @@ async function updatePrinters(printers: MyPrinter[]) {
   renderPrinters();
 }
 
-function replacePrinter(id: string, printer: MyPrinter) {
-  return updatePrinters(settings.printers.map((p) => (p.id === id ? printer : p)));
-}
+// --- onboarding, adding and editing a printer -------------------------------------
+const onboarding = createOnboarding({
+  catalog: () => catalog,
+  pickable: () => pickable,
+  models: () => models,
+  async save(printer, previousId) {
+    const others = settings.printers.filter((p) => p.id !== previousId && !(p.slicer === printer.slicer && p.printer === printer.printer));
+    const at = settings.printers.findIndex((p) => p.id === previousId);
+    await updatePrinters(at >= 0 ? [...others.slice(0, at), printer, ...others.slice(at)] : [...others, printer]);
+  },
+  async remove(id) {
+    await updatePrinters(settings.printers.filter((p) => p.id !== id));
+    if (settings.printers.length) showHome();
+    else onboarding.start(true);
+  },
+  showHome,
+  sendRequest: CONFIG.reportUrl
+    ? (name) => sendReport(CONFIG.reportUrl, { report: `Printer request: ${name}`, version: CONFIG.version })
+    : undefined,
+});
 
-/** Re-pick the slicer of every printer whose slicer was chosen by the rule. */
-async function setGeneralSlicerForAll(on: boolean) {
-  settings.generalSlicerForAll = on;
-  await saveSettings({ generalSlicerForAll: on });
-  await updatePrinters(settings.printers.map((p) => {
-    if (p.slicerAuto === false) return p;
-    const model = modelOfPreset(models, p.slicer, p.printer);
-    const nozzle = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer)?.nozzle;
-    if (!model || !nozzle) return p;
-    const slicer = pickSlicer(model, catalog!, on, nozzle);
-    const preset = presetFor(model, slicer, nozzle);
-    return preset ? { ...p, slicer, printer: preset, slicerAuto: true, bedType: keepBed(model, slicer, preset, p.bedType) } : p;
-  }));
-}
-
-// --- printer picker -----------------------------------------------------------
-const picker: { model: ModelChoice | null; slicer: string; nozzle: string } = { model: null, slicer: "", nozzle: "" };
-
-function openPicker(focus = true) {
-  picker.model = null;
-  $<HTMLInputElement>("picker-search").value = "";
-  $("add-panel").hidden = false;
-  renderPicker();
-  // Opened by itself on load: do not scroll the page to it.
-  if (focus) $("picker-search").focus();
-}
-
-function closePicker() {
-  $("add-panel").hidden = true;
-}
-
-function choiceChip(label: string, checked: boolean, onClick: () => void): HTMLElement {
-  const { node } = fromTemplate("tpl-choice-chip");
-  node.textContent = label;
-  node.ariaChecked = String(checked);
-  node.onclick = onClick;
-  return node;
-}
-
-function selectModel(model: ModelChoice) {
-  picker.model = model;
-  picker.nozzle = allNozzles(model).preferred;
-  picker.slicer = pickSlicer(model, catalog!, settings.generalSlicerForAll, picker.nozzle);
-  renderPicker();
-}
-
-function renderPicker() {
-  const query = $<HTMLInputElement>("picker-search").value.trim();
-  const shown = pickable.filter((m) => matches(m, query));
-  $("picker-models").replaceChildren(...shown.map((m) => {
-    const { node, field } = fromTemplate("tpl-model");
-    const button = node.querySelector("button")!;
-    button.ariaPressed = String(picker.model?.key === m.key);
-    button.onclick = () => selectModel(m);
-    field("label").textContent = m.label;
-    field("brand").textContent = m.brand;
-    showCover(field<HTMLImageElement>("cover"), field("placeholder"), m.cover);
-    return node;
-  }));
-  $("picker-empty").hidden = shown.length > 0;
-
-  const model = picker.model;
-  $("picker-selection").hidden = !model;
-  if (!model) return;
-  $("selection-brand").textContent = model.brand;
-  $("selection-label").textContent = model.label;
-  const cover = $<HTMLImageElement>("selection-cover");
-  cover.hidden = !model.cover;
-  if (model.cover) cover.src = model.cover;
-  // The slicer is chosen by the rule; it can be changed afterwards on the printer's card.
-  $("selection-slicer").textContent = slicerName(picker.slicer);
-  $("selection-nozzles").replaceChildren(...allNozzles(model).nozzles.map((nozzle) =>
-    choiceChip(t("printer_nozzle", nozzle), nozzle === picker.nozzle, () => {
-      picker.nozzle = nozzle;
-      picker.slicer = pickSlicer(model, catalog!, settings.generalSlicerForAll, nozzle);
-      renderPicker();
-    })));
-}
-
-function addPickedPrinter() {
-  const model = picker.model;
-  const preset = model && presetFor(model, picker.slicer, picker.nozzle);
-  if (!preset) return;
-  if (!settings.printers.some((p) => p.slicer === picker.slicer && p.printer === preset)) {
-    void updatePrinters([...settings.printers,
-      { id: crypto.randomUUID(), slicer: picker.slicer, printer: preset, slicerAuto: true }]);
-  }
-  closePicker();
-}
-
-/** "My printer is not here": one click, no account, through the report service. */
-function wirePrinterRequest() {
-  const form = $<HTMLFormElement>("printer-request");
-  form.hidden = !CONFIG.reportUrl;
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const input = $<HTMLInputElement>("printer-request-name");
-    const name = input.value.trim();
-    if (!name) return;
-    const result = $("printer-request-result");
-    try {
-      await sendReport(CONFIG.reportUrl, { report: `Printer request: ${name}`, version: CONFIG.version });
-      input.value = "";
-      result.textContent = t("printer_request_sent");
-    } catch {
-      result.textContent = t("printer_request_failed");
-    }
-  };
+function showHome(anchor?: string) {
+  onboarding.hide();
+  if (anchor) document.getElementById(anchor)?.scrollIntoView();
+  else window.scrollTo(0, 0);
 }
 
 // --- conversion preferences -----------------------------------------------------
@@ -590,11 +477,9 @@ async function main() {
   renderPrinters();
   wirePrefs();
   renderPrefs();
-  if (!settings.printers.length) openPicker(false);
-
-  $<HTMLInputElement>("picker-search").oninput = renderPicker;
-  $("picker-close").onclick = closePicker;
-  $("picker-add").onclick = addPickedPrinter;
+  $("add-printer").onclick = () => onboarding.start(false);
+  if (settings.printers.length) showHome();
+  else onboarding.start(true);
   $<HTMLFormElement>("convert-form").onsubmit = (e) => void convertFile(e as SubmitEvent);
 }
 

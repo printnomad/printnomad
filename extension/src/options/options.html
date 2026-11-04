@@ -8,6 +8,116 @@
     <script type="module" src="options.js"></script>
   </head>
   <body>
+    <div id="onboarding" class="flex min-h-screen flex-col" hidden>
+      <div class="flex items-center justify-between gap-4 px-6 py-6 lg:px-16">
+        <span class="flex items-center gap-2.5"><span class="grid size-9 place-items-center rounded-[10px] bg-dark"><svg viewBox="0 0 24 24" class="size-[26px]" fill="none" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 6h2" stroke="#FFFFFF"/><path d="M9.5 9h5" stroke="#00AE42"/><path d="M8 12h8" stroke="#FA6831"/><path d="M6.5 15h4.5M13 15h4.5" stroke="#3D8BFD"/><path d="M5 18h5.5M13.5 18h5.5" stroke="#1FB5A0"/></svg></span>
+          <span class="font-display text-xl font-black tracking-[-0.2px]">Print<span class="text-accent">Nomad</span></span></span>
+        <span class="flex items-center gap-3">
+          <span id="onboarding-progress" class="flex items-center gap-2 text-sm font-semibold text-muted">
+            <span class="h-1.5 w-7 rounded-[3px] bg-accent"></span><span id="progress-2" class="h-1.5 w-7 rounded-[3px] bg-strong"></span>
+            <span id="progress-text" class="ml-1.5"></span>
+          </span>
+          <button id="onboarding-cancel" type="button" class="btn-ghost" data-i18n="onboarding_cancel" hidden></button>
+        </span>
+      </div>
+
+      <section id="step-1" class="flex flex-1 flex-col" aria-labelledby="step-1-title">
+        <div class="flex flex-1 flex-col gap-6 px-6 pt-4 pb-8 lg:px-16">
+          <div class="flex flex-col gap-2.5">
+            <h1 id="step-1-title" class="m-0 text-4xl tracking-[-1px] sm:text-5xl" data-i18n="onboarding_1_title"></h1>
+            <p id="onboarding-subtitle" class="m-0 text-lg text-muted"></p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="flex min-h-[52px] flex-[0_1_420px] items-center gap-2.5 rounded-full border-[1.5px] border-line bg-surface px-[18px] text-muted">
+              <svg viewBox="0 0 24 24" class="size-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <span class="sr-only" data-i18n="picker_search_label"></span>
+              <input id="picker-search" type="search" autocomplete="off" class="min-w-0 flex-1 bg-transparent text-base text-fg outline-none" data-i18n-placeholder="picker_search" />
+            </label>
+            <div id="picker-brands" class="flex flex-wrap gap-2" role="group" data-i18n-aria="picker_brands"></div>
+          </div>
+          <div id="picker-models" class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"></div>
+          <p id="picker-empty" class="py-6 text-center text-muted" data-i18n="picker_empty" hidden></p>
+        </div>
+        <div class="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface px-6 py-5 lg:px-16">
+          <div id="printer-request-prompt" class="flex flex-wrap items-center gap-2 text-[15px] text-muted">
+            <span data-i18n="request_prompt"></span>
+            <button id="printer-request-open" type="button" class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-accent-strong underline" data-i18n="request_open"></button>
+            <form id="printer-request" class="flex flex-wrap items-center gap-2" hidden>
+              <label class="min-w-0"><span class="sr-only" data-i18n="printer_request_label"></span><input id="printer-request-name" type="text" maxlength="100" class="field min-h-11 rounded-full bg-bg" data-i18n-placeholder="printer_request_label" /></label>
+              <button type="submit" class="row-action" data-i18n="printer_request_send"></button>
+              <span id="printer-request-result" class="text-sm" role="status"></span>
+            </form>
+          </div>
+          <button id="step-1-next" type="button" class="inline-flex min-h-[52px] cursor-pointer items-center gap-2.5 rounded-full bg-accent px-7 text-base font-bold text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50"><span id="step-1-next-label"></span><svg viewBox="0 0 24 24" class="size-[18px]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </section>
+
+      <form id="step-2-form" class="contents">
+      <section id="step-2" class="flex flex-1 flex-col" aria-labelledby="step-2-title" hidden>
+        <div class="flex flex-1 flex-wrap gap-12 px-6 pt-4 pb-8 lg:flex-nowrap lg:px-16">
+          <div class="flex min-w-0 flex-[1_1_480px] flex-col gap-7">
+            <div class="flex flex-col gap-2.5">
+              <h1 id="step-2-title" class="m-0 text-4xl tracking-[-1px] sm:text-5xl" data-i18n="onboarding_2_title"></h1>
+              <p class="m-0 text-lg text-muted" data-i18n="onboarding_2_hint"></p>
+            </div>
+            <div  class="flex flex-col gap-3.5 rounded-[18px] bg-surface px-6 py-[22px]">
+              <div class="flex flex-wrap items-baseline justify-between gap-3"><span id="setup-nozzles-label" class="font-bold" data-i18n="picker_nozzle"></span><span class="text-[13px] text-muted" data-i18n="setup_nozzle_hint"></span></div>
+              <div id="setup-nozzles" role="radiogroup" aria-labelledby="setup-nozzles-label" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div id="setup-bed-group" class="flex flex-col gap-3.5 rounded-[18px] bg-surface px-6 py-[22px]">
+              <div class="flex flex-wrap items-baseline justify-between gap-3"><span id="setup-beds-label" class="font-bold" data-i18n="printers_bed"></span><span class="text-[13px] text-muted" data-i18n="setup_bed_hint"></span></div>
+              <div id="setup-beds" role="radiogroup" aria-labelledby="setup-beds-label" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div  class="flex flex-col gap-3.5 rounded-[18px] bg-surface px-6 py-[22px]">
+              <div class="flex flex-wrap items-baseline justify-between gap-3"><span id="setup-slicers-label" class="font-bold" data-i18n="printers_slicer"></span><span class="text-[13px] text-muted" data-i18n="setup_slicer_hint"></span></div>
+              <div id="setup-slicers" role="radiogroup" aria-labelledby="setup-slicers-label" class="flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+          <div class="flex w-full flex-col gap-4 pt-2 lg:w-[360px] lg:shrink-0">
+            <div class="flex flex-col gap-[18px] rounded-[22px] bg-dark p-7 text-white">
+              <span class="grid size-28 place-items-center rounded-[18px] bg-white"><img id="setup-cover" class="size-[88px] object-contain" alt="" /></span>
+              <div class="flex flex-col gap-0.5"><span id="setup-brand" class="text-xs font-bold tracking-[1px] text-dark-muted uppercase"></span><span id="setup-name" class="text-2xl font-bold"></span></div>
+              <div id="setup-summary" class="text-[15px] leading-normal text-dark-text"></div>
+              <div class="flex items-center gap-2 text-[13px] text-mint"><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span data-i18n="setup_profiles"></span></div>
+            </div>
+            <div class="px-1 text-sm leading-normal text-muted" data-i18n="setup_prefs_note"></div>
+          </div>
+        </div>
+        <div class="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface px-6 py-5 lg:px-16">
+          <span class="flex flex-wrap items-center gap-2">
+            <button id="setup-back" type="button" class="inline-flex min-h-12 cursor-pointer items-center rounded-full px-5 text-base font-semibold hover:bg-bg"></button>
+            <button id="setup-remove" type="button" class="row-action text-err" data-i18n="printers_remove" hidden></button>
+          </span>
+          <button id="setup-finish" type="submit" class="inline-flex min-h-[52px] cursor-pointer items-center gap-2.5 rounded-full bg-accent px-7 text-base font-bold text-white hover:bg-accent-strong"><span id="setup-finish-label"></span></button>
+        </div>
+      </section>
+      </form>
+
+      <section id="step-3" class="flex flex-1 items-center justify-center px-6 pb-10 lg:px-16" aria-labelledby="step-3-title" hidden>
+        <div class="flex w-full max-w-[1080px] flex-wrap items-center gap-16 lg:flex-nowrap">
+          <div class="flex min-w-0 flex-[1_1_380px] flex-col gap-[22px]">
+            <span class="grid size-16 place-items-center rounded-full bg-accent text-white"><svg viewBox="0 0 24 24" class="size-8" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span>
+            <h1 id="step-3-title" class="m-0 text-5xl leading-none tracking-[-1.5px] sm:text-[60px]" data-i18n="onboarding_3_title"></h1>
+            <p class="m-0 max-w-[480px] text-[19px] leading-[1.55] text-fg-2" data-i18n="onboarding_3_text"></p>
+            <div class="mt-2 flex flex-wrap gap-3">
+              <a href="https://makerworld.com" target="_blank" rel="noopener" class="inline-flex min-h-[52px] items-center gap-2 rounded-full bg-accent px-[26px] text-base font-bold text-white"><span data-i18n="open_makerworld"></span><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
+              <button id="done-preferences" type="button" class="inline-flex min-h-[52px] cursor-pointer items-center rounded-full border-[1.5px] border-[var(--pn-border-dashed)] bg-transparent px-6 text-base font-semibold" data-i18n="onboarding_see_prefs"></button>
+            </div>
+            <div class="mt-3 flex items-center gap-2.5 text-sm text-muted"><svg viewBox="0 0 24 24" class="size-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg><span data-i18n="onboarding_pin_tip"></span></div>
+          </div>
+          <div class="flex w-full flex-col gap-4 rounded-3xl bg-surface p-7 lg:w-[440px] lg:shrink-0">
+            <div class="text-xs font-bold tracking-[1px] text-muted uppercase" data-i18n="onboarding_every_model"></div>
+            <div class="h-40 rounded-[14px] bg-[#E6E7EB]"></div>
+            <div class="h-3.5 w-3/5 rounded-[7px] bg-[#E6E7EB]"></div>
+            <div class="h-2.5 w-[35%] rounded-[5px] bg-line-soft"></div>
+            <div class="flex min-h-[52px] w-fit items-center gap-2.5 rounded-[var(--pn-r-inner)] bg-accent px-5 text-base font-bold text-white shadow-[var(--pn-ring)]"><svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg><span id="done-button-label"></span></div>
+            <div class="text-[13px] text-muted" data-i18n="onboarding_look_for"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="home-view">
     <header class="border-b border-line bg-surface">
       <div class="mx-auto flex max-w-[var(--pn-page-max)] flex-wrap items-center justify-between gap-4 px-6 py-4">
         <div class="flex items-center gap-2.5">
@@ -30,9 +140,9 @@
           <h1 class="m-0 text-5xl leading-[0.98] tracking-[-1.5px] sm:text-[64px]" data-i18n="hero_title"></h1>
           <p class="m-0 text-lg leading-[1.55] text-dark-text"><span data-i18n="hero_before"></span> <strong id="hero-action" class="text-white"></strong><span data-i18n="hero_after"></span></p>
           <div class="mt-1 flex flex-wrap gap-3">
-            <a href="https://makerworld.com" target="_blank" rel="noopener" class="inline-flex min-h-12 items-center gap-2 rounded-full bg-mint px-[22px] font-bold text-mint-ink"><span data-i18n="open_makerworld"></span><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
+            <a href="https://makerworld.com" target="_blank" rel="noopener" class="inline-flex min-h-12 items-center gap-2 rounded-full bg-mint px-[22px] text-base font-bold text-mint-ink"><span data-i18n="open_makerworld"></span><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
           </div>
-          <div class="text-sm text-dark-muted"><span id="hero-default"></span> · <a href="#printers-section" class="font-semibold text-mint" data-i18n="hero_change"></a></div>
+          <div class="text-sm text-dark-muted"><span id="hero-default"></span> · <a href="#printers-section" class="inline-flex min-h-11 items-center font-semibold text-mint" data-i18n="hero_change"></a></div>
         </div>
         <img src="icons/hero-slicers.svg" alt="" class="pointer-events-none absolute top-1/2 right-14 hidden w-[500px] max-w-[44%] -translate-y-[42%] min-[1120px]:block" />
       </section>
@@ -170,46 +280,6 @@
         </div>
         <ul id="printers" class="m-0 list-none overflow-hidden rounded-[var(--pn-r-card)] bg-surface p-0"></ul>
 
-        <div id="add-panel" class="card flex flex-col gap-4 p-4 sm:p-5" hidden>
-          <div class="flex items-center gap-2">
-            <label class="relative flex-1">
-              <span class="sr-only" data-i18n="picker_search_label"></span>
-              <svg viewBox="0 0 24 24" class="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-              <input id="picker-search" type="search" autocomplete="off" class="field rounded-full bg-sunken py-2.5 pl-10 border-transparent" data-i18n-placeholder="picker_search" />
-            </label>
-            <button id="picker-close" type="button" class="grid size-10 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken hover:text-fg" data-i18n-title="picker_close">
-              <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <ul id="picker-models" class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5"></ul>
-          <p id="picker-empty" class="py-6 text-center text-muted" data-i18n="picker_empty" hidden></p>
-          <form id="printer-request" class="flex flex-wrap items-center gap-2 text-sm" hidden>
-            <label class="min-w-0 flex-1"><span class="sr-only" data-i18n="printer_request_label"></span><input id="printer-request-name" type="text" maxlength="100" class="field rounded-full bg-sunken py-2 border-transparent" data-i18n-placeholder="printer_request_label" /></label>
-            <button type="submit" class="btn rounded-full bg-sunken px-4 py-2 text-xs hover:bg-line" data-i18n="printer_request_send"></button>
-            <span id="printer-request-result" class="text-xs text-muted" role="status"></span>
-          </form>
-
-          <div id="picker-selection" class="flex flex-col gap-4 rounded-2xl bg-sunken p-4 lg:flex-row lg:items-center" hidden>
-            <div class="flex min-w-0 items-center gap-3 lg:flex-1">
-              <span class="grid size-14 shrink-0 place-items-center rounded-xl bg-white p-1">
-                <img id="selection-cover" class="size-full object-contain" alt="" />
-              </span>
-              <span class="min-w-0">
-                <span id="selection-brand" class="eyebrow block"></span>
-                <span id="selection-label" class="block truncate font-display text-lg font-extrabold"></span>
-              </span>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <span class="eyebrow" data-i18n="picker_nozzle"></span>
-              <div id="selection-nozzles" class="flex flex-wrap gap-1.5" role="radiogroup"></div>
-            </div>
-            <div class="flex flex-col gap-1.5">
-              <span class="eyebrow" data-i18n="printers_slicer"></span>
-              <span id="selection-slicer" class="chip self-start bg-surface px-3.5 py-1.5 text-sm ring-1 ring-line"></span>
-            </div>
-            <button id="picker-add" type="button" class="btn-primary lg:self-end" data-i18n="printers_add"></button>
-          </div>
-        </div>
       </section>
 
       <!-- Convert a file manually -->
@@ -220,7 +290,7 @@
         </div>
         <form id="convert-form" class="flex flex-col gap-3" novalidate>
           <div class="flex flex-wrap items-stretch gap-3">
-            <label id="dropzone" class="relative flex min-w-0 flex-[999_1_380px] cursor-pointer items-center gap-3.5 rounded-[var(--pn-r-tile)] border-2 border-dashed border-dashed bg-surface px-[22px] py-[18px] data-[drag=true]:border-accent data-[drag=true]:bg-accent-tint">
+            <label id="dropzone" class="relative flex min-w-0 flex-[999_1_380px] cursor-pointer items-center gap-3.5 rounded-[var(--pn-r-tile)] border-2 border-dashed border-[var(--pn-border-dashed)] bg-surface px-[22px] py-[18px] data-[drag=true]:border-accent data-[drag=true]:bg-accent-tint">
               <svg viewBox="0 0 24 24" class="size-6 shrink-0 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>
               <span class="min-w-0 text-[15px] [overflow-wrap:anywhere]"><strong id="file-name" data-i18n="convert_drop_title"></strong> <span id="file-detail" class="text-muted" data-i18n="convert_drop_hint"></span></span>
               <input id="convert-file" type="file" accept=".3mf" class="sr-only" />
@@ -229,7 +299,7 @@
               <span class="text-xs font-semibold text-muted" data-i18n="convert_printer"></span>
               <select id="convert-printer" class="w-full min-w-0 truncate bg-transparent text-[15px] font-semibold"></select>
             </label>
-            <button id="convert-button" type="submit" class="min-h-14 cursor-pointer rounded-[var(--pn-r-tile)] bg-accent px-7 font-bold text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50" data-i18n="convert_button"></button>
+            <button id="convert-button" type="submit" class="min-h-14 cursor-pointer rounded-[var(--pn-r-tile)] bg-accent px-7 text-base font-bold text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50" data-i18n="convert_button"></button>
           </div>
           <div id="convert-result" class="flex flex-col gap-3" hidden>
             <p id="convert-status" class="chip self-start" role="status" hidden></p>
@@ -245,6 +315,8 @@
         <p id="profiles-status" role="status" class="m-0"></p>
       </div>
     </footer>
+
+    </div>
 
     <!-- Templates (cloned by options.ts) -->
     <template id="tpl-printer">
@@ -262,12 +334,8 @@
           <span data-field="setup" class="text-sm text-muted"></span>
         </span>
         <span class="flex flex-wrap items-center gap-2">
-          <label data-field="bed-menu" class="relative" hidden>
-            <span class="sr-only" data-i18n="printers_bed"></span>
-            <select data-field="bed-select" class="row-action max-w-56 cursor-pointer truncate"></select>
-          </label>
           <button data-action="default" type="button" class="row-action" data-i18n="printers_make_default" hidden></button>
-          <button data-action="remove" type="button" class="row-action" data-i18n="printers_remove"></button>
+          <button data-action="edit" type="button" class="row-action" data-i18n="printers_edit"></button>
         </span>
       </li>
     </template>
@@ -296,23 +364,6 @@
           <div data-field="report-panel" class="mt-2"></div>
         </details>
       </li>
-    </template>
-
-    <template id="tpl-model">
-      <li>
-        <button type="button" aria-pressed="false" class="flex h-full w-full flex-col items-center gap-2 rounded-2xl border-2 border-transparent bg-sunken p-3 text-center transition hover:border-line aria-pressed:border-accent aria-pressed:bg-accent-soft">
-          <span class="grid aspect-square w-full max-w-28 place-items-center rounded-xl bg-white p-1.5">
-            <img data-field="cover" class="size-full object-contain" loading="lazy" alt="" />
-            <svg data-field="placeholder" viewBox="0 0 24 24" class="size-10 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
-          </span>
-          <span data-field="label" class="text-sm leading-tight font-bold"></span>
-          <span data-field="brand" class="text-xs text-muted"></span>
-        </button>
-      </li>
-    </template>
-
-    <template id="tpl-choice-chip">
-      <button type="button" role="radio" aria-checked="false" class="chip bg-surface px-3.5 py-1.5 text-sm ring-1 ring-line aria-checked:bg-accent aria-checked:text-on-accent aria-checked:ring-accent"></button>
     </template>
 
   </body>

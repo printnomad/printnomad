@@ -21,7 +21,6 @@
   --color-line: var(--pn-line);
   --color-line-soft: var(--pn-line-soft);
   --color-strong: var(--pn-border-strong);
-  --color-dashed: var(--pn-border-dashed);
   --color-fg: var(--pn-ink);
   --color-fg-2: var(--pn-ink-2);
   --color-muted: var(--pn-muted);
@@ -56,7 +55,8 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-bg font-sans text-fg antialiased;
+    /* Text size too: Chrome gives extension pages a body font-size of 75%. */
+    @apply bg-bg font-sans text-base text-fg antialiased;
   }
   h1,
   h2 {
@@ -113,6 +113,15 @@
   & > span {
     @apply size-[26px] rounded-full bg-white shadow-[var(--pn-shadow-knob)];
   }
+}
+@utility brand-chip {
+  @apply min-h-11 cursor-pointer rounded-full border-[1.5px] border-line bg-surface px-4 text-sm font-semibold text-fg aria-pressed:border-dark aria-pressed:bg-dark aria-pressed:text-white;
+}
+@utility pill {
+  @apply min-h-11 cursor-pointer rounded-full border-[1.5px] border-strong bg-surface px-[18px] text-[15px] font-semibold text-fg aria-checked:border-dark aria-checked:bg-dark aria-checked:text-white;
+}
+@utility printer-tile {
+  @apply relative flex cursor-pointer flex-col items-center gap-2.5 rounded-[18px] border-2 border-surface bg-surface px-3 pt-5 pb-4 aria-pressed:border-accent aria-pressed:shadow-[var(--pn-ring)];
 }
 @utility radio-card {
   @apply flex cursor-pointer flex-col gap-2.5 rounded-[var(--pn-r-tile)] border-[1.5px] border-line bg-surface p-[18px] text-left aria-checked:border-accent aria-checked:bg-accent-tint;

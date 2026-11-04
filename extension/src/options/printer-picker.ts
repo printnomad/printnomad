@@ -69,10 +69,15 @@ export function buildModels(catalog: Catalog, catalogUrl: string): ModelChoice[]
   return [...models.values()].sort((a, b) => a.brand.localeCompare(b.brand) || a.label.localeCompare(b.label, undefined, { numeric: true }));
 }
 
-/** The models offered for new printers: only those tested (config.json supportedModels). */
+/** The models offered for new printers: only those tested, in the order of the list (config.json supportedModels). */
 export function supportedOnly(models: ModelChoice[], supported: string[]): ModelChoice[] {
-  const names = new Set(supported);
-  return models.filter((m) => names.has(m.model));
+  const rank = new Map(supported.map((name, i) => [name, i]));
+  return models.filter((m) => rank.has(m.model)).sort((a, b) => rank.get(a.model)! - rank.get(b.model)!);
+}
+
+/** The brands of these models, in their order. */
+export function brandsOf(models: ModelChoice[]): string[] {
+  return [...new Set(models.map((m) => m.brand))];
 }
 
 /** All words of the query appear in the brand or the model. */

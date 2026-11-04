@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import type { Catalog } from "../src/profiles/catalog.ts";
 import {
+  brandsOf,
   buildModels,
   keepBed,
   matches,
@@ -58,8 +59,11 @@ test("search by brand or model", () => {
   assert.ok(!matches(c5p, "p1s"));
 });
 
-test("only tested models are offered", () => {
+test("only tested models are offered, in the order of the list", () => {
   assert.deepEqual(supportedOnly(models, ["Bambu Lab P1S", "Not in the catalog"]).map((m) => m.label), ["P1S"]);
+  const ordered = supportedOnly(models, ["Flashforge Creator 5 Pro", "Bambu Lab P1S"]);
+  assert.deepEqual(ordered.map((m) => m.label), ["Creator 5 Pro", "P1S"]);
+  assert.deepEqual(brandsOf(ordered), ["Flashforge", "Bambu Lab"]);
 });
 
 test("the brand's own slicer first, 0.4 nozzle by default", () => {

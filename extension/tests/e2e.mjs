@@ -41,15 +41,34 @@ try {
       const [slicer, preset] = entry.split("|");
       return { id: `p${i}`, slicer, printer: preset };
     });
+  if (!process.env.PN_E2E_FILE) {
+    // First run: the three steps, only while there is no printer.
+    await page.waitForSelector("#step-1:not([hidden])");
+    if (!(await page.$eval("#home-view", (e) => e.hidden))) throw new Error("the home page shows without a printer");
+    await page.click('[data-model="Flashforge Creator 5 Pro"]');
+    await page.click("#step-1-next");
+    await page.waitForSelector("#step-2:not([hidden])");
+    await page.click("#setup-finish");
+    await page.waitForSelector("#step-3:not([hidden])");
+    const saved = await page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers);
+    if (saved.length !== 1 || saved[0].printer !== "Flashforge Creator 5 Pro 0.4 nozzle") throw new Error(`first printer: ${JSON.stringify(saved)}`);
+    await page.click("#done-preferences");
+    await page.waitForSelector("#home-view:not([hidden])");
+    console.log("OK: first run sets up a printer in three steps");
+  }
   await page.evaluate((printers) => chrome.storage.sync.set({ printers }), printers);
   await page.reload();
   await page.waitForFunction(() => document.querySelectorAll("#convert-printer option").length > 0);
 
   if (!process.env.PN_E2E_FILE) {
-    // The build plate menu of the printer's card reaches the conversion (checked below).
-    await page.select('[data-field="bed-select"]', "Supertack Plate");
+    // The build plate chosen in Edit reaches the conversion (checked below).
+    await page.click('[data-action="edit"]');
+    await page.waitForSelector('#setup-beds [data-value="Supertack Plate"]', { visible: true });
+    await page.click('#setup-beds [data-value="Supertack Plate"]');
+    await page.click("#setup-finish");
     await page.waitForFunction(async () =>
       (await chrome.storage.sync.get("printers")).printers[0].bedType === "Supertack Plate");
+    await page.waitForSelector("#home-view:not([hidden])");
   }
 
   const started = Date.now();
