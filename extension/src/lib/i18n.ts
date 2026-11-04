@@ -15,6 +15,7 @@ export function uiLanguage(): string {
 export function localize(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>("[data-i18n]").forEach((el) => (el.textContent = t(el.dataset.i18n!)));
   root.querySelectorAll<HTMLInputElement>("[data-i18n-placeholder]").forEach((el) => (el.placeholder = t(el.dataset.i18nPlaceholder!)));
+  root.querySelectorAll<HTMLElement>("[data-i18n-aria]").forEach((el) => (el.ariaLabel = t(el.dataset.i18nAria!)));
   root.querySelectorAll<HTMLElement>("[data-i18n-title]").forEach((el) => (el.title = t(el.dataset.i18nTitle!)));
   document.documentElement.lang = uiLanguage();
 }

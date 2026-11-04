@@ -7,64 +7,168 @@
     <link rel="stylesheet" href="styles.css" />
     <script type="module" src="options.js"></script>
   </head>
-  <body class="min-h-screen text-[15px]">
-    <header class="sticky top-0 z-10 border-b border-line bg-bg/85 backdrop-blur">
-      <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
+  <body>
+    <header class="border-b border-line bg-surface">
+      <div class="mx-auto flex max-w-[var(--pn-page-max)] flex-wrap items-center justify-between gap-4 px-6 py-4">
         <div class="flex items-center gap-2.5">
-          <span class="grid size-8 place-items-center rounded-lg bg-[#1c1c1e] ring-1 ring-line" aria-hidden="true">
-            <svg viewBox="0 0 24 24" class="size-5 text-accent" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h18M5 17V12a7 7 0 0 1 14 0v5M9 17v-3M15 17v-3" /></svg>
-          </span>
-          <span class="font-display text-lg font-extrabold tracking-tight">Print<span class="text-accent">Nomad</span></span>
+          <span class="grid size-9 place-items-center rounded-[10px] bg-dark"><svg viewBox="0 0 24 24" class="size-[26px]" fill="none" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 6h2" stroke="#FFFFFF"/><path d="M9.5 9h5" stroke="#00AE42"/><path d="M8 12h8" stroke="#FA6831"/><path d="M6.5 15h4.5M13 15h4.5" stroke="#3D8BFD"/><path d="M5 18h5.5M13.5 18h5.5" stroke="#1FB5A0"/></svg></span>
+          <span class="font-display text-xl font-black tracking-[-0.2px]">Print<span class="text-accent">Nomad</span></span>
         </div>
-        <a href="#printers-section" class="btn-ghost hidden sm:inline-flex" data-i18n="nav_printers"></a>
+        <nav class="flex flex-wrap gap-1" data-i18n-aria="nav_label">
+          <a href="#prefs" class="nav-link" data-i18n="nav_prefs"></a>
+          <a href="#printers-section" class="nav-link" data-i18n="nav_printers"></a>
+          <a href="#convert" class="nav-link" data-i18n="nav_convert"></a>
+        </nav>
       </div>
     </header>
 
-    <main class="mx-auto flex max-w-5xl flex-col gap-20 px-5 pt-12 pb-16">
-      <!-- Hero: what it does + convert a file -->
-      <section class="grid items-start gap-10 lg:grid-cols-[1fr_1.05fr]">
-        <div class="flex min-w-0 flex-col gap-5 lg:pt-6">
-          <h1 class="text-4xl leading-[1.05] sm:text-5xl" data-i18n="hero_title"></h1>
-          <p class="max-w-md text-lg leading-relaxed text-muted" data-i18n="hero_text"></p>
+    <main id="home" class="mx-auto flex max-w-[var(--pn-page-max)] flex-col gap-[var(--pn-section-gap)] px-6 pt-10 pb-20">
+      <!-- Hero -->
+      <section class="relative flex min-h-[420px] items-center overflow-hidden rounded-[var(--pn-r-hero)] bg-dark px-7 py-12 text-white sm:px-14 sm:py-16">
+        <div class="relative z-10 flex max-w-[460px] min-w-0 flex-col gap-[22px]">
+          <div class="inline-flex items-center gap-2 text-[13px] font-bold tracking-[1.2px] text-mint uppercase"><span class="size-2 rounded-full bg-mint"></span><span data-i18n="hero_eyebrow"></span></div>
+          <h1 class="m-0 text-5xl leading-[0.98] tracking-[-1.5px] sm:text-[64px]" data-i18n="hero_title"></h1>
+          <p class="m-0 text-lg leading-[1.55] text-dark-text"><span data-i18n="hero_before"></span> <strong id="hero-action" class="text-white"></strong><span data-i18n="hero_after"></span></p>
+          <div class="mt-1 flex flex-wrap gap-3">
+            <a href="https://makerworld.com" target="_blank" rel="noopener" class="inline-flex min-h-12 items-center gap-2 rounded-full bg-mint px-[22px] font-bold text-mint-ink"><span data-i18n="open_makerworld"></span><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
+          </div>
+          <div class="text-sm text-dark-muted"><span id="hero-default"></span> · <a href="#printers-section" class="font-semibold text-mint" data-i18n="hero_change"></a></div>
         </div>
+        <img src="icons/hero-slicers.svg" alt="" class="pointer-events-none absolute top-1/2 right-14 hidden w-[500px] max-w-[44%] -translate-y-[42%] min-[1120px]:block" />
+      </section>
 
-        <form id="convert" class="flex min-w-0 flex-col gap-3" novalidate>
-          <label id="dropzone" class="group relative flex min-h-56 cursor-pointer flex-col justify-between gap-6 rounded-3xl bg-accent p-6 text-on-accent transition data-[drag=true]:scale-[1.01] data-[drag=true]:bg-accent-strong">
-            <input id="convert-file" type="file" accept=".3mf" class="sr-only" />
-            <span class="flex items-start justify-between gap-4">
-              <span class="text-[11px] font-bold tracking-[0.08em] uppercase opacity-90" data-i18n="convert_drop_label"></span>
-              <svg viewBox="0 0 24 24" class="size-6 opacity-90" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" /></svg>
-            </span>
-            <span class="flex flex-col gap-2">
-              <span id="file-name" class="line-clamp-3 font-display text-3xl leading-tight font-extrabold tracking-tight [overflow-wrap:anywhere] sm:text-4xl" data-i18n="convert_drop_title"></span>
-              <span id="file-detail" class="text-sm opacity-90" data-i18n="convert_drop_hint"></span>
-            </span>
-          </label>
-
-          <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-            <label class="card flex min-w-0 items-center gap-3 px-4 py-3">
-              <svg viewBox="0 0 24 24" class="size-5 shrink-0 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
-              <span class="sr-only" data-i18n="convert_printer"></span>
-              <select id="convert-printer" class="w-full min-w-0 truncate bg-transparent text-sm font-semibold"></select>
-            </label>
-            <button id="convert-button" type="submit" class="btn-primary px-7 py-3 text-base" data-i18n="convert_button"></button>
+      <!-- Conversion preferences -->
+      <section id="prefs" class="flex scroll-mt-6 flex-col gap-5" aria-labelledby="prefs-title">
+        <div class="flex max-w-[720px] flex-col gap-2">
+          <h2 id="prefs-title" class="m-0 text-[34px] tracking-[-0.5px]" data-i18n="prefs_title"></h2>
+          <p class="m-0 text-[17px] leading-[1.55] text-muted" data-i18n="prefs_intro"></p>
+        </div>
+        <div class="rounded-[var(--pn-r-card)] bg-surface px-7 py-2">
+          <div class="flex flex-col gap-1 pt-5 pb-3">
+            <h3 class="m-0 text-lg font-bold" data-i18n="keep_title"></h3>
+            <p class="m-0 text-[15px] text-muted" data-i18n="keep_hint"></p>
           </div>
-
-          <div id="convert-result" class="flex flex-col gap-3" hidden>
-            <p id="convert-status" class="chip self-start" role="status" hidden></p>
-            <ul id="convert-results" class="flex flex-col gap-3" aria-live="polite"></ul>
-            <p id="convert-tip" class="rounded-2xl bg-accent-soft px-4 py-3 text-sm" data-i18n="convert_tip" hidden></p>
+          <div data-pref class="flex flex-col gap-4 border-t border-line-soft py-5">
+            <div class="flex items-center justify-between gap-5">
+              <div class="flex min-w-0 items-center gap-4">
+                <span data-icon-tile class="grid size-12 shrink-0 place-items-center rounded-[14px]"><svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/><path d="M12 11v6"/></svg></span>
+                <div class="flex min-w-0 flex-col gap-1">
+                  <div class="flex flex-wrap items-center gap-2"><span id="label-temps" class="font-semibold" data-i18n="pref_temps"></span><span class="rounded-full bg-accent-soft px-2 py-[3px] text-xs font-bold text-accent-strong" data-i18n="pref_recommended"></span></div>
+                  <span class="text-sm leading-normal text-muted" data-i18n="pref_temps_desc"></span>
+                </div>
+              </div>
+              <button type="button" role="switch" data-option="keep_designer_filament" aria-labelledby="label-temps" class="toggle"><span></span></button>
+            </div>
           </div>
-        </form>
+          <div data-pref class="flex flex-col gap-4 border-t border-line-soft py-5">
+            <div class="flex items-center justify-between gap-5">
+              <div class="flex min-w-0 items-center gap-4">
+                <span data-icon-tile class="grid size-12 shrink-0 place-items-center rounded-[14px]"><svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1.5"/><path d="M12 10.5C11 7 12 4 15 4c2 0 2 3 0 4.5l-3 2z"/><path d="M13.5 12c3.5-1 6.5 0 6.5 3 0 2-3 2-4.5 0l-2-3z"/><path d="M10.5 12.5C10 16 8 19 5.5 18c-1.8-.8-.8-3.5 1.5-4.2l3.5-1.3z"/></svg></span>
+                <div class="flex min-w-0 flex-col gap-1">
+                  <div class="flex flex-wrap items-center gap-2"><span id="label-cooling" class="font-semibold" data-i18n="pref_cooling"></span></div>
+                  <span class="text-sm leading-normal text-muted" data-i18n="pref_cooling_desc"></span>
+                </div>
+              </div>
+              <button type="button" role="switch" data-option="keep_designer_cooling" aria-labelledby="label-cooling" class="toggle"><span></span></button>
+            </div>
+            <div data-warning="cooling" role="note" class="flex flex-col gap-4 rounded-[var(--pn-r-tile)] border border-warn-border bg-warn-bg px-5 py-[18px]" hidden>
+              <div class="flex items-start gap-3">
+                <svg viewBox="0 0 24 24" class="mt-px size-5 shrink-0 text-warn-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg>
+                <div class="flex flex-col gap-1"><span class="text-[15px] font-bold text-warn-title" data-i18n="pref_cooling_warn_title"></span><span class="text-sm leading-normal text-warn" data-i18n="pref_cooling_warn"></span></div>
+              </div>
+              <div class="flex flex-col gap-2.5 rounded-[var(--pn-r-inner)] bg-surface px-4 py-3.5">
+                <div class="flex flex-wrap items-center justify-between gap-2.5"><span data-example-title class="text-[13px] font-bold"></span><span class="rounded-full bg-bg px-2.5 py-[3px] text-xs font-semibold text-fg-2" data-i18n="pref_illustrative"></span></div>
+                <div class="grid gap-2 sm:grid-cols-3">
+                  <div class="flex flex-col gap-1.5 rounded-[10px] bg-sunken px-3 py-2.5">
+                    <span class="text-xs text-muted" data-i18n="pref_cooling_row1"></span>
+                    <span class="flex flex-wrap items-baseline gap-1.5"><span class="text-[13px] text-faint line-through">80%</span><span class="text-[17px] font-bold text-warn">100%</span><span class="text-xs font-bold text-warn" data-i18n="pref_higher"></span></span>
+                  </div><div class="flex flex-col gap-1.5 rounded-[10px] bg-sunken px-3 py-2.5">
+                    <span class="text-xs text-muted" data-i18n="pref_cooling_row2"></span>
+                    <span class="flex flex-wrap items-baseline gap-1.5"><span class="text-[13px] text-faint line-through">70%</span><span class="text-[17px] font-bold text-warn">100%</span><span class="text-xs font-bold text-warn" data-i18n="pref_higher"></span></span>
+                  </div><div class="flex flex-col gap-1.5 rounded-[10px] bg-sunken px-3 py-2.5">
+                    <span class="text-xs text-muted" data-i18n="pref_cooling_row3"></span>
+                    <span class="flex flex-wrap items-baseline gap-1.5"><span class="text-[13px] text-faint line-through">3</span><span class="text-[17px] font-bold text-warn">1</span><span class="text-xs font-bold text-warn" data-i18n="pref_lower"></span></span>
+                  </div>
+                </div>
+                <span class="text-[13px] leading-normal text-fg-2"><strong data-i18n="pref_cooling_verdict"></strong> <span data-i18n="pref_cooling_advice"></span></span>
+              </div>
+            </div>
+          </div>
+          <div data-pref class="flex flex-col gap-4 border-t border-line-soft py-5">
+            <div class="flex items-center justify-between gap-5">
+              <div class="flex min-w-0 items-center gap-4">
+                <span data-icon-tile class="grid size-12 shrink-0 place-items-center rounded-[14px]"><svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>
+                <div class="flex min-w-0 flex-col gap-1">
+                  <div class="flex flex-wrap items-center gap-2"><span id="label-tuning" class="font-semibold" data-i18n="pref_tuning"></span><span class="rounded-full bg-tag-adv px-2 py-[3px] text-xs font-bold text-tag-adv-fg" data-i18n="pref_advanced"></span></div>
+                  <span class="text-sm leading-normal text-muted" data-i18n="pref_tuning_desc"></span>
+                </div>
+              </div>
+              <button type="button" role="switch" data-option="keep_designer_printer_settings" aria-labelledby="label-tuning" class="toggle"><span></span></button>
+            </div>
+            <div data-warning="tuning" role="note" class="flex flex-col gap-4 rounded-[var(--pn-r-tile)] border border-warn-border bg-warn-bg px-5 py-[18px]" hidden>
+              <div class="flex items-start gap-3">
+                <svg viewBox="0 0 24 24" class="mt-px size-5 shrink-0 text-warn-icon" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg>
+                <div class="flex flex-col gap-1"><span class="text-[15px] font-bold text-warn-title" data-i18n="pref_tuning_warn_title"></span><span class="text-sm leading-normal text-warn" data-i18n="pref_tuning_warn"></span></div>
+              </div>
+              <div class="flex flex-col gap-2.5 rounded-[var(--pn-r-inner)] bg-surface px-4 py-3.5">
+                <div class="flex flex-wrap items-center justify-between gap-2.5"><span data-example-title class="text-[13px] font-bold"></span><span class="rounded-full bg-bg px-2.5 py-[3px] text-xs font-semibold text-fg-2" data-i18n="pref_illustrative"></span></div>
+                <div class="grid gap-2 sm:grid-cols-3">
+                  <div class="flex flex-col gap-1.5 rounded-[10px] bg-sunken px-3 py-2.5">
+                    <span class="text-xs text-muted" data-i18n="pref_tuning_row1"></span>
+                    <span class="flex flex-wrap items-baseline gap-1.5"><span class="text-[13px] text-faint line-through">8000 mm/s²</span><span class="text-[17px] font-bold text-warn">5000 mm/s²</span><span class="text-xs font-bold text-warn" data-i18n="pref_lower"></span></span>
+                  </div><div class="flex flex-col gap-1.5 rounded-[10px] bg-sunken px-3 py-2.5">
+                    <span class="text-xs text-muted" data-i18n="pref_tuning_row2"></span>
+                    <span class="flex flex-wrap items-baseline gap-1.5"><span class="text-[13px] text-faint line-through">0.10 mm</span><span class="text-[17px] font-bold text-warn">0.15 mm</span><span class="text-xs font-bold text-warn" data-i18n="pref_higher"></span></span>
+                  </div><div class="flex flex-col gap-1.5 rounded-[10px] bg-sunken px-3 py-2.5">
+                    <span class="text-xs text-muted" data-i18n="pref_tuning_row3"></span>
+                    <span class="flex flex-wrap items-baseline gap-1.5"><span class="text-[13px] text-faint line-through">95%</span><span class="text-[17px] font-bold text-warn">100%</span><span class="text-xs font-bold text-warn" data-i18n="pref_higher"></span></span>
+                  </div>
+                </div>
+                <span class="text-[13px] leading-normal text-fg-2"><strong data-i18n="pref_tuning_verdict"></strong> <span data-i18n="pref_tuning_advice"></span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-5 rounded-[var(--pn-r-card)] bg-surface p-7">
+          <div class="flex max-w-[760px] flex-col gap-1.5">
+            <h3 id="assign-title" class="m-0 text-lg font-bold" data-i18n="assign_title"></h3>
+            <p class="m-0 text-[15px] leading-[1.55] text-muted" data-i18n="assign_intro"></p>
+          </div>
+          <div role="radiogroup" aria-labelledby="assign-title" class="grid gap-3 md:grid-cols-3">
+            <button type="button" role="radio" data-map-mode="compatible" class="radio-card">
+                <span class="flex flex-wrap items-center gap-2.5"><span class="radio-dot"></span><span class="font-bold" data-i18n="assign_compatible"></span><span class="rounded-full bg-accent-soft px-2 py-[3px] text-xs font-bold text-accent-strong" data-i18n="pref_recommended"></span></span>
+                <span class="text-sm leading-normal text-fg-2" data-i18n="assign_compatible_desc"></span>
+                <span class="text-[13px] leading-normal text-muted"><strong class="text-fg" data-i18n="assign_pick_when"></strong> <span data-i18n="assign_compatible_when"></span></span>
+              </button>
+            <button type="button" role="radio" data-map-mode="exact" class="radio-card">
+                <span class="flex flex-wrap items-center gap-2.5"><span class="radio-dot"></span><span class="font-bold" data-i18n="assign_exact"></span></span>
+                <span class="text-sm leading-normal text-fg-2" data-i18n="assign_exact_desc"></span>
+                <span class="text-[13px] leading-normal text-muted"><strong class="text-fg" data-i18n="assign_pick_when"></strong> <span data-i18n="assign_exact_when"></span></span>
+              </button>
+            <button type="button" role="radio" data-map-mode="slicer" class="radio-card">
+                <span class="flex flex-wrap items-center gap-2.5"><span class="radio-dot"></span><span class="font-bold" data-i18n="assign_slicer"></span></span>
+                <span class="text-sm leading-normal text-fg-2" data-i18n="assign_slicer_desc"></span>
+                <span class="text-[13px] leading-normal text-muted"><strong class="text-fg" data-i18n="assign_pick_when"></strong> <span data-i18n="assign_slicer_when"></span></span>
+              </button>
+          </div>
+          <div class="flex flex-col gap-3 rounded-[14px] bg-bg px-[18px] py-4">
+            <span id="assign-example-title" class="text-[13px] font-bold"></span>
+            <div id="assign-example" class="flex flex-wrap gap-3"></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-muted"><svg viewBox="0 0 24 24" class="size-4 text-accent" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span data-i18n="prefs_saved"></span></div>
       </section>
 
       <!-- My printers -->
-      <section id="printers-section" class="flex flex-col gap-5" aria-labelledby="printers-title">
-        <div>
-          <h2 id="printers-title" class="text-3xl" data-i18n="printers_title"></h2>
-          <p class="mt-1 text-muted" data-i18n="printers_hint"></p>
+      <section id="printers-section" class="flex scroll-mt-6 flex-col gap-5" aria-labelledby="printers-title">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div class="flex flex-col gap-2">
+            <h2 id="printers-title" class="m-0 text-[34px] tracking-[-0.5px]" data-i18n="printers_title"></h2>
+            <p class="m-0 text-[17px] text-muted" data-i18n="printers_hint"></p>
+          </div>
+          <button id="add-printer" type="button" class="inline-flex min-h-11 items-center gap-2 rounded-full border-[1.5px] border-strong bg-surface px-[18px] text-[15px] font-semibold"><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="printers_add_title"></span></button>
         </div>
-        <ul id="printers" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></ul>
+        <ul id="printers" class="m-0 list-none overflow-hidden rounded-[var(--pn-r-card)] bg-surface p-0"></ul>
 
         <div id="add-panel" class="card flex flex-col gap-4 p-4 sm:p-5" hidden>
           <div class="flex items-center gap-2">
@@ -108,56 +212,63 @@
         </div>
       </section>
 
-      <!-- Advanced options, out of the way -->
-      <section class="flex flex-col gap-4">
-        <button id="advanced-toggle" type="button" class="btn-ghost self-start text-sm" aria-controls="conversion-advanced"></button>
-        <div id="conversion-advanced" class="flex flex-col gap-3" hidden>
-          <label class="card flex items-start justify-between gap-6">
-            <span class="flex flex-col gap-1">
-              <span class="font-bold" data-i18n="general_slicer_label"></span>
-              <span class="text-sm leading-relaxed text-muted" data-i18n="general_slicer_help"></span>
-            </span>
-            <input id="general-slicer" type="checkbox" class="switch mt-0.5" />
-          </label>
-          <ul id="conversion-options" class="card flex flex-col divide-y divide-line p-0"></ul>
-          <button id="conversion-reset" type="button" class="btn-ghost self-start" data-i18n="conversion_reset" hidden></button>
+      <!-- Convert a file manually -->
+      <section id="convert" class="flex scroll-mt-6 flex-col gap-4" aria-labelledby="convert-title">
+        <div class="flex flex-col gap-1.5">
+          <h2 id="convert-title" class="m-0 font-sans text-xl font-bold" data-i18n="convert_title"></h2>
+          <p class="m-0 text-[15px] text-muted" data-i18n="convert_intro"></p>
         </div>
+        <form id="convert-form" class="flex flex-col gap-3" novalidate>
+          <div class="flex flex-wrap items-stretch gap-3">
+            <label id="dropzone" class="relative flex min-w-0 flex-[999_1_380px] cursor-pointer items-center gap-3.5 rounded-[var(--pn-r-tile)] border-2 border-dashed border-dashed bg-surface px-[22px] py-[18px] data-[drag=true]:border-accent data-[drag=true]:bg-accent-tint">
+              <svg viewBox="0 0 24 24" class="size-6 shrink-0 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>
+              <span class="min-w-0 text-[15px] [overflow-wrap:anywhere]"><strong id="file-name" data-i18n="convert_drop_title"></strong> <span id="file-detail" class="text-muted" data-i18n="convert_drop_hint"></span></span>
+              <input id="convert-file" type="file" accept=".3mf" class="sr-only" />
+            </label>
+            <label class="flex min-w-0 flex-[1_1_240px] flex-col gap-1 rounded-[var(--pn-r-tile)] border-[1.5px] border-line bg-surface px-[18px] py-2.5">
+              <span class="text-xs font-semibold text-muted" data-i18n="convert_printer"></span>
+              <select id="convert-printer" class="w-full min-w-0 truncate bg-transparent text-[15px] font-semibold"></select>
+            </label>
+            <button id="convert-button" type="submit" class="min-h-14 cursor-pointer rounded-[var(--pn-r-tile)] bg-accent px-7 font-bold text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50" data-i18n="convert_button"></button>
+          </div>
+          <div id="convert-result" class="flex flex-col gap-3" hidden>
+            <p id="convert-status" class="chip self-start" role="status" hidden></p>
+            <ul id="convert-results" class="m-0 flex list-none flex-col gap-3 p-0" aria-live="polite"></ul>
+            <p id="convert-tip" class="rounded-2xl bg-accent-soft px-4 py-3 text-sm" data-i18n="convert_tip" hidden></p>
+          </div>
+        </form>
       </section>
     </main>
 
     <footer class="border-t border-line">
-      <div class="mx-auto flex max-w-5xl flex-col gap-2 px-5 py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-        <p id="profiles-status" role="status"></p>
+      <div class="mx-auto max-w-[var(--pn-page-max)] px-6 py-6 text-xs text-muted">
+        <p id="profiles-status" role="status" class="m-0"></p>
       </div>
     </footer>
 
     <!-- Templates (cloned by options.ts) -->
     <template id="tpl-printer">
-      <li class="card flex items-start gap-3">
-        <span class="grid size-16 shrink-0 place-items-center rounded-xl bg-white p-1.5">
-          <img data-field="cover" class="size-full object-contain" alt="" />
-          <svg data-field="placeholder" viewBox="0 0 24 24" class="size-7 text-accent" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+      <li class="flex flex-wrap items-center gap-4 border-b border-line-soft px-6 py-[18px] last:border-b-0">
+        <span class="grid size-[52px] shrink-0 place-items-center rounded-[var(--pn-r-inner)] bg-bg">
+          <img data-field="cover" class="size-11 object-contain mix-blend-multiply" alt="" />
+          <svg data-field="placeholder" viewBox="0 0 24 24" class="size-7 text-faint" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
         </span>
-        <span class="flex min-w-0 flex-1 flex-col gap-1">
-          <span data-field="brand" class="eyebrow"></span>
-          <span data-field="name" class="font-bold leading-snug"></span>
-          <span class="mt-1 flex flex-wrap gap-1.5">
-            <span data-field="nozzle" class="chip bg-sunken px-2.5 py-0.5 text-muted"></span>
-            <label data-field="slicer-menu" class="relative" hidden>
-              <span class="sr-only" data-i18n="printers_slicer"></span>
-              <select data-field="slicer-select" class="chip cursor-pointer appearance-none bg-sunken py-0.5 pr-6 pl-2.5 text-muted hover:text-fg"></select>
-              <svg viewBox="0 0 24 24" class="pointer-events-none absolute top-1/2 right-1.5 size-3 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-            </label>
-            <label data-field="bed-menu" class="relative max-w-full" hidden>
-              <span class="sr-only" data-i18n="printers_bed"></span>
-              <select data-field="bed-select" class="chip max-w-full cursor-pointer appearance-none truncate bg-sunken py-0.5 pr-6 pl-2.5 text-muted hover:text-fg"></select>
-              <svg viewBox="0 0 24 24" class="pointer-events-none absolute top-1/2 right-1.5 size-3 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-            </label>
+        <span class="flex min-w-0 flex-[1_1_220px] flex-col gap-0.5">
+          <span class="flex flex-wrap items-center gap-2">
+            <span data-field="name" class="font-bold"></span>
+            <span data-field="brand" class="text-[13px] text-muted"></span>
+            <span data-field="default" class="rounded-full bg-accent-soft px-2 py-[3px] text-xs font-bold text-accent-strong" data-i18n="printers_default" hidden></span>
           </span>
+          <span data-field="setup" class="text-sm text-muted"></span>
         </span>
-        <button data-action="remove" type="button" class="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-err-soft hover:text-err">
-          <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
-        </button>
+        <span class="flex flex-wrap items-center gap-2">
+          <label data-field="bed-menu" class="relative" hidden>
+            <span class="sr-only" data-i18n="printers_bed"></span>
+            <select data-field="bed-select" class="row-action max-w-56 cursor-pointer truncate"></select>
+          </label>
+          <button data-action="default" type="button" class="row-action" data-i18n="printers_make_default" hidden></button>
+          <button data-action="remove" type="button" class="row-action" data-i18n="printers_remove"></button>
+        </span>
       </li>
     </template>
 
@@ -187,17 +298,6 @@
       </li>
     </template>
 
-    <template id="tpl-add-card">
-      <li>
-        <button type="button" class="flex h-full min-h-24 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-line px-5 py-4 text-left font-semibold hover:border-accent hover:text-accent">
-          <span class="grid size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
-            <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          </span>
-          <span data-i18n="printers_add_title"></span>
-        </button>
-      </li>
-    </template>
-
     <template id="tpl-model">
       <li>
         <button type="button" aria-pressed="false" class="flex h-full w-full flex-col items-center gap-2 rounded-2xl border-2 border-transparent bg-sunken p-3 text-center transition hover:border-line aria-pressed:border-accent aria-pressed:bg-accent-soft">
@@ -215,37 +315,5 @@
       <button type="button" role="radio" aria-checked="false" class="chip bg-surface px-3.5 py-1.5 text-sm ring-1 ring-line aria-checked:bg-accent aria-checked:text-on-accent aria-checked:ring-accent"></button>
     </template>
 
-    <template id="tpl-option-bool">
-      <li class="flex flex-col gap-3 p-5">
-        <label class="flex items-start justify-between gap-6">
-          <span class="flex flex-col gap-1">
-            <span data-field="label" class="font-bold"></span>
-            <span data-field="help" class="text-sm leading-relaxed text-muted"></span>
-          </span>
-          <input data-field="input" type="checkbox" class="switch mt-0.5" />
-        </label>
-        <p data-field="warning" class="rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn" role="alert" hidden></p>
-      </li>
-    </template>
-
-    <template id="tpl-option-choice">
-      <li class="flex flex-col gap-3 p-5">
-        <fieldset class="flex flex-col gap-3">
-          <legend class="flex flex-col gap-1">
-            <span data-field="label" class="font-bold"></span>
-            <span data-field="help" class="text-sm leading-relaxed text-muted"></span>
-          </legend>
-          <div data-field="choices" class="mt-3 grid gap-2"></div>
-        </fieldset>
-        <p data-field="warning" class="rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn" role="alert" hidden></p>
-      </li>
-    </template>
-
-    <template id="tpl-choice">
-      <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-line px-4 py-3 has-checked:border-accent has-checked:bg-accent-soft">
-        <input data-field="input" type="radio" class="mt-1 accent-accent" />
-        <span data-field="label" class="text-sm"></span>
-      </label>
-    </template>
   </body>
 </html>

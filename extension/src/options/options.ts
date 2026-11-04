@@ -1,14 +1,15 @@
 // Options page: My printers, profile status, conversion options and a manual "Convert a file".
 import { CONFIG } from "../config.ts";
-import type { Issue, OptionInfo } from "../engine/protocol.ts";
+import type { Issue } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
-import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
+import { DEFAULT_OPTIONS, defaultPrinter, loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
 import { mapEditor } from "../lib/map-editor.ts";
 import { clipboardReport } from "../lib/report-copy.ts";
 import { reportPanel } from "../lib/report-panel.ts";
 import { sendReport } from "../lib/report-send.ts";
 import type { Catalog } from "../profiles/catalog.ts";
+import { bedLabel } from "./labels.ts";
 import {
   allNozzles,
   buildModels,
@@ -40,7 +41,7 @@ function fromTemplate(id: string) {
 }
 
 const converter = new Converter();
-const { store, engine } = converter;
+const { store } = converter;
 
 let settings: Settings;
 let catalog: Catalog | null = null;
@@ -70,19 +71,6 @@ function slicerName(key: string): string {
 }
 
 // --- My printers ------------------------------------------------------------
-/** Plate names for people; the values are the slicers' (rules.BED_TYPES in the core). */
-function bedLabel(bed: string): string {
-  switch (bed) {
-    case "Cool Plate": return t("bed_cool_plate");
-    case "Engineering Plate": return t("bed_engineering_plate");
-    case "High Temp Plate": return t("bed_high_temp_plate");
-    case "Textured PEI Plate": return t("bed_textured_pei_plate");
-    case "Textured Cool Plate": return t("bed_textured_cool_plate");
-    case "Supertack Plate": return t("bed_supertack_plate");
-    default: return bed;
-  }
-}
-
 /** The plate menu of a printer's card: its default first, then what else the slicer offers. */
 function bedOptions(variant: Variant, chosen: string | undefined): HTMLOptionElement[] {
   const first = variant.defaultBed
@@ -109,29 +97,27 @@ function showCover(img: HTMLImageElement, placeholder: HTMLElement, url: string 
   }
 }
 
+/** "0.4 mm nozzle · Flash Studio · Cool Plate" */
+function setupLine(p: MyPrinter, variant: Variant | undefined): string {
+  const bed = p.bedType ?? variant?.defaultBed;
+  return [variant && t("printer_setup_nozzle", variant.nozzle), slicerName(p.slicer), bed && bedLabel(bed)].filter(Boolean).join(" · ");
+}
+
+function printerLabel(p: MyPrinter): string {
+  return modelOfPreset(models, p.slicer, p.printer)?.label ?? p.printer;
+}
+
 function renderPrinters() {
+  const fallback = defaultPrinter(settings);
   const items = settings.printers.map((p) => {
     const { node, field } = fromTemplate("tpl-printer");
     const model = modelOfPreset(models, p.slicer, p.printer);
     const variant = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer);
+    const isDefault = p.id === fallback?.id;
     field("brand").textContent = model?.brand ?? "";
     field("name").textContent = model?.label ?? p.printer;
-    field("nozzle").textContent = variant ? `${t("printer_nozzle", variant.nozzle)} · ${slicerName(p.slicer)}` : p.printer;
-    // Other slicers with the same printer and nozzle: change it from the card.
-    const others = model && variant ? slicersFor(model, catalog!, variant.nozzle) : [];
-    if (settings.advanced && model && variant && others.length > 1) {
-      const select = field<HTMLSelectElement>("slicer-select");
-      select.replaceChildren(...others.map((o) => new Option(o.name, o.slicer, false, o.slicer === p.slicer)));
-      select.title = t("printers_change_slicer");
-      select.onchange = () => {
-        const preset = presetFor(model, select.value, variant.nozzle);
-        if (preset) {
-          void replacePrinter(p.id, { ...p, slicer: select.value, printer: preset, slicerAuto: false,
-            bedType: keepBed(model, select.value, preset, p.bedType) });
-        }
-      };
-      field("slicer-menu").hidden = false;
-    }
+    field("setup").textContent = setupLine(p, variant);
+    field("default").hidden = !isDefault;
     if (variant && variant.bedTypes.length > 1) {
       const select = field<HTMLSelectElement>("bed-select");
       select.replaceChildren(...bedOptions(variant, p.bedType));
@@ -140,27 +126,39 @@ function renderPrinters() {
       field("bed-menu").hidden = false;
     }
     showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
+    const makeDefault = node.querySelector<HTMLButtonElement>('[data-action="default"]')!;
+    makeDefault.hidden = isDefault;
+    makeDefault.onclick = () => void setDefaultPrinter(p.id);
     const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
-    remove.title = remove.ariaLabel = t("printers_remove");
     remove.onclick = () => updatePrinters(settings.printers.filter((x) => x.id !== p.id));
     return node;
   });
-  const add = fromTemplate("tpl-add-card");
-  add.node.querySelector("button")!.onclick = () => openPicker();
-  $("printers").replaceChildren(...items, add.node);
+  $("printers").replaceChildren(...items);
+  $("printers").hidden = !items.length;
 
   const select = $<HTMLSelectElement>("convert-printer");
   const selected = select.value;
-  const options = settings.printers.map((p) => {
-    const label = modelOfPreset(models, p.slicer, p.printer)?.label ?? p.printer;
-    return new Option(`${label} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected);
-  });
-  // Several printers: one click converts for all of them (one file each), the default.
-  if (options.length > 1) {
-    options.unshift(new Option(t("convert_all_printers", options.length), ALL_PRINTERS, false,
-      !selected || selected === ALL_PRINTERS));
-  }
+  const ordered = fallback ? [fallback, ...settings.printers.filter((p) => p !== fallback)] : [];
+  const options = ordered.map((p) =>
+    new Option(`${printerLabel(p)} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected));
+  // Several printers: converting for all of them (one file each) stays one choice away.
+  if (options.length > 1) options.push(new Option(t("convert_all_printers", options.length), ALL_PRINTERS, false, selected === ALL_PRINTERS));
   select.replaceChildren(...(options.length ? options : [new Option(t("convert_no_printers"), "")]));
+  renderHero();
+  renderExamples();
+}
+
+function renderHero() {
+  const printer = defaultPrinter(settings);
+  const label = printer ? printerLabel(printer) : "";
+  $("hero-action").textContent = t("mw_download_for", label);
+  $("hero-default").textContent = t("hero_default", label);
+}
+
+async function setDefaultPrinter(id: string) {
+  settings.defaultPrinterId = id;
+  await saveSettings({ defaultPrinterId: id });
+  renderPrinters();
 }
 
 async function updatePrinters(printers: MyPrinter[]) {
@@ -283,88 +281,99 @@ function wirePrinterRequest() {
   };
 }
 
-// --- conversion options (advanced mode) -------------------------------------
-let optionInfo: OptionInfo[] | null = null;
-
-function optionValue(o: OptionInfo): boolean | string {
-  return settings.options[o.key] ?? o.default;
+// --- conversion preferences -----------------------------------------------------
+function optionValue(key: string): boolean | string {
+  return settings.options[key] ?? DEFAULT_OPTIONS[key];
 }
 
-async function setOption(o: OptionInfo, value: boolean | string) {
+async function setOption(key: string, value: boolean | string) {
   const options = { ...settings.options };
-  if (value === o.default) delete options[o.key];
-  else options[o.key] = value;
+  if (value === DEFAULT_OPTIONS[key]) delete options[key];
+  else options[key] = value;
   settings.options = options;
   await saveSettings({ options });
-  renderOptions();
+  renderPrefs();
 }
 
-function optionControl(o: OptionInfo): HTMLElement {
-  const value = optionValue(o);
-  const { node, field } = fromTemplate(o.kind === "bool" ? "tpl-option-bool" : "tpl-option-choice");
-  field("label").textContent = o.label;
-  field("help").textContent = o.help;
-  if (o.kind === "bool") {
-    const input = field<HTMLInputElement>("input");
-    input.checked = value === true;
-    input.onchange = () => void setOption(o, input.checked);
-  } else {
-    field("choices").replaceChildren(...(o.choices ?? []).map((choice) => {
-      const item = fromTemplate("tpl-choice");
-      const input = item.field<HTMLInputElement>("input");
-      input.name = `option-${o.key}`;
-      input.value = choice.value;
-      input.checked = value === choice.value;
-      input.onchange = () => void setOption(o, choice.value);
-      item.field("label").textContent = choice.label;
-      return item.node;
-    }));
-  }
-  const warning = field("warning");
-  if (o.warning !== undefined && value === o.warn_when) {
-    warning.textContent = o.warning;
-    warning.hidden = false;
-  }
-  return node;
+const WARNING_OF: Record<string, string> = { keep_designer_cooling: "cooling", keep_designer_printer_settings: "tuning" };
+const EXAMPLE_COLOURS = [
+  { name: () => t("assign_colour_red"), colour: "#D64541" },
+  { name: () => t("assign_colour_white"), colour: "#FFFFFF" },
+  { name: () => t("assign_colour_black"), colour: "#222222" },
+];
+
+function exampleTarget(mode: string, slot: number): string {
+  if (mode === "exact") return t("assign_example_exact", slot);
+  if (mode === "slicer") return t("assign_example_slicer", slot);
+  return t("assign_example_compatible");
 }
 
-function renderOptions() {
-  const list = $("conversion-options");
-  $("advanced-toggle").textContent = settings.advanced ? t("advanced_hide") : t("advanced_show");
-  $("advanced-toggle").ariaExpanded = String(settings.advanced);
-  $("conversion-advanced").hidden = !settings.advanced;
-  $("conversion-reset").hidden = Object.keys(settings.options).length === 0;
-  if (!settings.advanced) return;
-  if (!optionInfo) {
-    const loading = document.createElement("li");
-    loading.className = "p-5 text-muted";
-    loading.textContent = t("conversion_loading");
-    list.replaceChildren(loading);
-    return;
-  }
-  list.replaceChildren(...optionInfo.map(optionControl));
+function assignLabel(mode: string): string {
+  if (mode === "exact") return t("assign_exact");
+  if (mode === "slicer") return t("assign_slicer");
+  return t("assign_compatible");
 }
 
-async function setAdvanced(advanced: boolean) {
-  settings.advanced = advanced;
-  await saveSettings({ advanced });
-  renderPrinters();
-  await loadOptions();
+function renderPrefs() {
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-option]")) {
+    const key = button.dataset.option!;
+    const on = optionValue(key) === true;
+    button.setAttribute("aria-checked", String(on));
+    const row = button.closest("[data-pref]")!;
+    const tile = row.querySelector("[data-icon-tile]")!;
+    tile.classList.toggle("bg-accent-soft", on);
+    tile.classList.toggle("text-accent-strong", on);
+    tile.classList.toggle("bg-bg", !on);
+    tile.classList.toggle("text-faint", !on);
+    const warning = WARNING_OF[key] && row.querySelector<HTMLElement>(`[data-warning="${WARNING_OF[key]}"]`);
+    if (warning) warning.hidden = !on;
+  }
+  const mode = String(optionValue("map_mode"));
+  for (const card of document.querySelectorAll<HTMLButtonElement>("[data-map-mode]")) {
+    const on = card.dataset.mapMode === mode;
+    card.setAttribute("aria-checked", String(on));
+    card.tabIndex = on ? 0 : -1;
+  }
+  $("assign-example-title").textContent = t("assign_example_title", assignLabel(mode));
+  $("assign-example").replaceChildren(...EXAMPLE_COLOURS.map((c, i) => {
+    const pill = document.createElement("div");
+    pill.className = "flex items-center gap-2.5 rounded-full bg-surface py-2 pr-3.5 pl-2 text-sm";
+    const dot = document.createElement("span");
+    dot.className = "size-6 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.15)]";
+    dot.style.background = c.colour;
+    const name = document.createElement("span");
+    name.className = "font-semibold";
+    name.textContent = c.name();
+    const target = document.createElement("span");
+    target.className = "text-fg-2";
+    target.textContent = `→ ${exampleTarget(mode, i + 1)}`;
+    pill.append(dot, name, target);
+    return pill;
+  }));
 }
 
-async function loadOptions() {
-  renderOptions();
-  if (!settings.advanced || optionInfo) return;
-  try {
-    optionInfo = await engine.listOptions(uiLanguage());
-  } catch (e) {
-    const error = document.createElement("li");
-    error.className = "p-5 text-err";
-    error.textContent = (e as Error).message;
-    $("conversion-options").replaceChildren(error);
-    return;
+function renderExamples() {
+  const printer = defaultPrinter(settings);
+  const title = t("pref_example", printer ? printerLabel(printer) : "", "Bambu Lab A1");
+  for (const el of document.querySelectorAll("[data-example-title]")) el.textContent = title;
+}
+
+function wirePrefs() {
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-option]")) {
+    button.onclick = () => void setOption(button.dataset.option!, optionValue(button.dataset.option!) !== true);
   }
-  renderOptions();
+  const cards = [...document.querySelectorAll<HTMLButtonElement>("[data-map-mode]")];
+  for (const [i, card] of cards.entries()) {
+    card.onclick = () => void setOption("map_mode", card.dataset.mapMode!);
+    // A radio group moves with the arrow keys.
+    card.onkeydown = (e) => {
+      const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+      if (!step) return;
+      e.preventDefault();
+      const next = cards[(i + step + cards.length) % cards.length];
+      void setOption("map_mode", next.dataset.mapMode!).then(() => next.focus());
+    };
+  }
 }
 
 // --- convert a file ----------------------------------------------------------
@@ -579,23 +588,14 @@ async function main() {
   await loadCatalog();
   wireDropzone();
   renderPrinters();
-  void loadOptions();
+  wirePrefs();
+  renderPrefs();
   if (!settings.printers.length) openPicker(false);
 
   $<HTMLInputElement>("picker-search").oninput = renderPicker;
   $("picker-close").onclick = closePicker;
   $("picker-add").onclick = addPickedPrinter;
-  const general = $<HTMLInputElement>("general-slicer");
-  general.checked = settings.generalSlicerForAll;
-  general.onchange = () => void setGeneralSlicerForAll(general.checked);
-  $("advanced-toggle").onclick = () => void setAdvanced(!settings.advanced);
-  wirePrinterRequest();
-  $("conversion-reset").onclick = async () => {
-    settings.options = {};
-    await saveSettings({ options: {} });
-    renderOptions();
-  };
-  $<HTMLFormElement>("convert").onsubmit = (e) => void convertFile(e as SubmitEvent);
+  $<HTMLFormElement>("convert-form").onsubmit = (e) => void convertFile(e as SubmitEvent);
 }
 
 void main();

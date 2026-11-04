@@ -14,23 +14,52 @@ export interface MyPrinter {
 
 export interface Settings {
   printers: MyPrinter[];
-  /** Advanced mode shows the conversion options; basic mode always uses their defaults. */
-  advanced: boolean;
-  /** Values of the conversion options changed in advanced mode. */
+  /** The printer the MakerWorld button and the page name first; absent: the first one. */
+  defaultPrinterId?: string;
+  /** Conversion options changed from their defaults (DEFAULT_OPTIONS). */
   options: Record<string, boolean | string>;
   /** Use the general slicer (OrcaSlicer) for every printer instead of each brand's own. */
   generalSlicerForAll: boolean;
 }
 
-const DEFAULTS: Settings = { printers: [], advanced: false, options: {}, generalSlicerForAll: false };
+/** The core's defaults (core/src/printnomad/options.py); a test keeps them in step. */
+export const DEFAULT_OPTIONS: Record<string, boolean | string> = {
+  map_mode: "compatible",
+  keep_designer_filament: true,
+  keep_designer_cooling: false,
+  keep_designer_printer_settings: false,
+};
+
+const DEFAULTS: Settings = { printers: [], options: {}, generalSlicerForAll: false };
+
+/**
+ * Settings saved by earlier versions, updated. `advanced` is gone: options now always apply.
+ * They used to apply only in advanced mode, so with it off they are dropped, and nobody's
+ * conversions change. Returns what to write and to remove; nothing when already up to date.
+ */
+export function migrateSettings(stored: Record<string, unknown>): { set: Partial<Settings>; remove: string[] } {
+  if (!("advanced" in stored)) return { set: {}, remove: [] };
+  return { set: stored.advanced === true ? {} : { options: {} }, remove: ["advanced"] };
+}
 
 export async function loadSettings(): Promise<Settings> {
-  // Passing the defaults returns them for the keys that were never saved.
-  return (await chrome.storage.sync.get({ ...DEFAULTS })) as Settings;
+  const stored = await chrome.storage.sync.get(null);
+  const { set, remove } = migrateSettings(stored);
+  if (remove.length) {
+    await chrome.storage.sync.set(set);
+    await chrome.storage.sync.remove(remove);
+  }
+  for (const key of remove) delete stored[key];
+  return { ...DEFAULTS, ...stored, ...set } as Settings;
 }
 
 export async function saveSettings(patch: Partial<Settings>): Promise<void> {
   await chrome.storage.sync.set(patch);
+}
+
+/** The default printer: the one chosen, else the first; undefined without printers. */
+export function defaultPrinter(settings: Pick<Settings, "printers" | "defaultPrinterId">): MyPrinter | undefined {
+  return settings.printers.find((p) => p.id === settings.defaultPrinterId) ?? settings.printers[0];
 }
 
 /** chrome.runtime platform → platform key of slicers.json. */

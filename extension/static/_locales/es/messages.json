@@ -30,7 +30,7 @@
     "message": "Perfiles no disponibles: $1"
   },
   "convert_printer": {
-    "message": "Para"
+    "message": "Para la impresora"
   },
   "convert_button": {
     "message": "Convertir"
@@ -107,12 +107,6 @@
   "convert_no_file": {
     "message": "Elige un archivo .3mf."
   },
-  "conversion_reset": {
-    "message": "Restablecer valores por defecto"
-  },
-  "conversion_loading": {
-    "message": "Cargando opciones…"
-  },
   "convert_saving": {
     "message": "Guardando $1…"
   },
@@ -123,28 +117,22 @@
     "message": "Ábrelo tal cual: tu impresora ya está seleccionada. Si vuelves a elegir la impresora en el laminador, pulsa «Transfer» (Transferir) para mantener los valores del modelo («Discard» los cambia por los del perfil de tu impresora)."
   },
   "nav_printers": {
-    "message": "Mis impresoras"
+    "message": "Impresoras"
   },
   "hero_title": {
-    "message": "Cualquier modelo, listo para tu impresora."
-  },
-  "hero_text": {
-    "message": "Suelta un proyecto de MakerWorld o Bambu Studio: sale preparado para tu impresora y laminador, con lo que ajustó el diseñador."
-  },
-  "convert_drop_label": {
-    "message": "Proyecto .3mf"
+    "message": "Todo listo."
   },
   "convert_drop_title": {
-    "message": "Suelta aquí tu proyecto"
+    "message": "Suelta un .3mf aquí"
   },
   "convert_drop_hint": {
-    "message": "o haz clic para elegir un archivo"
+    "message": "o haz clic para elegir"
   },
   "convert_file_ready": {
     "message": "$1 · listo para convertir"
   },
   "printers_hint": {
-    "message": "Las impresoras para las que conviertes. Sus perfiles se descargan solos."
+    "message": "Se configuran una vez. Los perfiles se descargan solos."
   },
   "printers_add_title": {
     "message": "Añadir impresora"
@@ -206,15 +194,6 @@
   },
   "result_stats": {
     "message": "$1 del modelo · $2 de tu impresora · $3 avisos"
-  },
-  "printers_change_slicer": {
-    "message": "Laminador para el que se convierten los proyectos de esta impresora"
-  },
-  "general_slicer_label": {
-    "message": "Usar OrcaSlicer para todas las impresoras"
-  },
-  "general_slicer_help": {
-    "message": "Por defecto cada impresora usa el laminador de su marca (Flash Studio para Flashforge, Bambu Studio para Bambu Lab…) y OrcaSlicer para las demás. Actívalo si abres todo en OrcaSlicer. Igual puedes cambiar el laminador de una impresora en su tarjeta."
   },
   "mw_chip_title": {
     "message": "$1 · convertido por PrintNomad"
@@ -283,12 +262,6 @@
   "map_cancel": {
     "message": "Cancelar"
   },
-  "advanced_show": {
-    "message": "Opciones avanzadas"
-  },
-  "advanced_hide": {
-    "message": "Ocultar opciones avanzadas"
-  },
   "printer_request_label": {
     "message": "¿No está tu impresora? Dinos cuál"
   },
@@ -300,5 +273,203 @@
   },
   "printer_request_failed": {
     "message": "No se pudo enviar. Inténtalo más tarde."
+  },
+  "nav_label": {
+    "message": "Secciones"
+  },
+  "nav_prefs": {
+    "message": "Preferencias"
+  },
+  "nav_convert": {
+    "message": "Convertir archivo"
+  },
+  "hero_eyebrow": {
+    "message": "Listo en MakerWorld"
+  },
+  "hero_before": {
+    "message": "Abre cualquier modelo en MakerWorld y pulsa"
+  },
+  "hero_after": {
+    "message": ". El archivo sale preparado para tu impresora y laminador."
+  },
+  "open_makerworld": {
+    "message": "Abrir MakerWorld"
+  },
+  "hero_default": {
+    "message": "Impresora predeterminada: $1",
+    "description": "$1 = value"
+  },
+  "hero_change": {
+    "message": "cambiar"
+  },
+  "prefs_title": {
+    "message": "Preferencias de conversión"
+  },
+  "prefs_intro": {
+    "message": "Tú decides qué se queda de los ajustes del diseñador y qué viene de tu impresora. Se aplican a cada descarga."
+  },
+  "prefs_saved": {
+    "message": "Se guarda automáticamente"
+  },
+  "keep_title": {
+    "message": "Conservar del modelo original"
+  },
+  "keep_hint": {
+    "message": "Apagado significa que manda el perfil de tu impresora."
+  },
+  "pref_recommended": {
+    "message": "Recomendado"
+  },
+  "pref_advanced": {
+    "message": "Avanzado"
+  },
+  "pref_illustrative": {
+    "message": "Valores solo de ejemplo"
+  },
+  "pref_example": {
+    "message": "Ejemplo: $1 → $2",
+    "description": "$1 = your printer, $2 = source printer"
+  },
+  "pref_higher": {
+    "message": "↑ mayor"
+  },
+  "pref_lower": {
+    "message": "↓ menor"
+  },
+  "pref_temps": {
+    "message": "Temperaturas de filamento"
+  },
+  "pref_temps_desc": {
+    "message": "Temperaturas de boquilla y cama y densidad que puso el diseñador, sobre tu perfil de filamento."
+  },
+  "pref_cooling": {
+    "message": "Enfriamiento"
+  },
+  "pref_cooling_desc": {
+    "message": "Ventiladores y enfriamiento que puso el diseñador, en lugar de tu perfil."
+  },
+  "pref_cooling_warn_title": {
+    "message": "Los porcentajes de ventilador no viajan bien"
+  },
+  "pref_cooling_warn": {
+    "message": "Un porcentaje significa un caudal distinto en cada impresora. Un ventilador más fuerte puede enfriar de más (capas débiles, warping en PETG/ABS); uno más débil, de menos (voladizos y puentes caídos). Úsalo solo si el enfriamiento del modelo es esencial."
+  },
+  "pref_cooling_verdict": {
+    "message": "Déjalo apagado"
+  },
+  "pref_cooling_advice": {
+    "message": "salvo que el diseñador diga que el enfriamiento es clave, por ejemplo en puentes largos o piezas impresas ensambladas."
+  },
+  "pref_cooling_row1": {
+    "message": "Ventilador de pieza"
+  },
+  "pref_cooling_row2": {
+    "message": "Ventilador de voladizos"
+  },
+  "pref_cooling_row3": {
+    "message": "Sin ventilador en primeras N capas"
+  },
+  "pref_tuning": {
+    "message": "Ajustes de impresora"
+  },
+  "pref_tuning_desc": {
+    "message": "Aceleraciones, pata de elefante, compensación XY, caudal de primera capa, arcos y nombre del archivo G-code."
+  },
+  "pref_tuning_warn_title": {
+    "message": "Estos valores son de la máquina del diseñador"
+  },
+  "pref_tuning_warn": {
+    "message": "Las aceleraciones siguen el sistema de movimiento de la impresora de origen, y los valores de calibración (pata de elefante, compensación XY, caudal de primera capa) se midieron en esa máquina, no en la tuya."
+  },
+  "pref_tuning_verdict": {
+    "message": "Enciéndelo solo"
+  },
+  "pref_tuning_advice": {
+    "message": "si sabes lo que haces, por ejemplo si comprobaste que estos valores le sirven a tu impresora o quieres probar los ajustes del diseñador."
+  },
+  "pref_tuning_row1": {
+    "message": "Aceleración de pared exterior"
+  },
+  "pref_tuning_row2": {
+    "message": "Pata de elefante"
+  },
+  "pref_tuning_row3": {
+    "message": "Caudal de primera capa"
+  },
+  "assign_title": {
+    "message": "Asignación de filamentos"
+  },
+  "assign_intro": {
+    "message": "Los modelos multicolor traen un plan: qué color va en cada ranura de tu AMS o unidad multimaterial. Esto decide quién tiene la última palabra, el archivo o tu laminador."
+  },
+  "assign_pick_when": {
+    "message": "Elígelo cuando"
+  },
+  "assign_compatible": {
+    "message": "Compatible"
+  },
+  "assign_compatible_desc": {
+    "message": "El archivo conserva los colores del modelo, y tu laminador los asigna a tus bobinas al abrirlo. Funciona en todos los laminadores."
+  },
+  "assign_compatible_when": {
+    "message": "no estés seguro. Nunca bloquea un archivo."
+  },
+  "assign_exact": {
+    "message": "Exacta"
+  },
+  "assign_exact_desc": {
+    "message": "Cada color llega fijo a una ranura, como lo planeó el diseñador. Algunos laminadores rechazan estos archivos."
+  },
+  "assign_exact_when": {
+    "message": "tus bobinas estén en el mismo orden que el plan del diseñador."
+  },
+  "assign_slicer": {
+    "message": "Según el laminador"
+  },
+  "assign_slicer_desc": {
+    "message": "Exacta si tu laminador la acepta, Compatible si no. Se decide en cada descarga."
+  },
+  "assign_slicer_when": {
+    "message": "quieras Exacta pero cambies de laminador."
+  },
+  "assign_example_title": {
+    "message": "Ejemplo: un modelo de 3 colores con $1",
+    "description": "$1 = value"
+  },
+  "assign_example_compatible": {
+    "message": "Lo asignas en el laminador"
+  },
+  "assign_example_exact": {
+    "message": "Ranura $1",
+    "description": "$1 = value"
+  },
+  "assign_example_slicer": {
+    "message": "Ranura $1 si tu laminador lo permite",
+    "description": "$1 = value"
+  },
+  "assign_colour_red": {
+    "message": "Rojo"
+  },
+  "assign_colour_white": {
+    "message": "Blanco"
+  },
+  "assign_colour_black": {
+    "message": "Negro"
+  },
+  "printers_default": {
+    "message": "Predeterminada"
+  },
+  "printers_make_default": {
+    "message": "Hacer predeterminada"
+  },
+  "printer_setup_nozzle": {
+    "message": "Boquilla de $1 mm",
+    "description": "$1 = value"
+  },
+  "convert_title": {
+    "message": "Convertir un archivo a mano"
+  },
+  "convert_intro": {
+    "message": "Para un .3mf que ya tengas, como un proyecto de Bambu Studio. No hace falta para MakerWorld."
   }
 }

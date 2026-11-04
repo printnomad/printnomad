@@ -8,6 +8,7 @@
 @import "./tokens.css";
 
 @source "./options/options.html";
+@source "./makerworld/*.html";
 @source "./**/*.ts";
 
 @theme inline {
@@ -64,6 +65,12 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-accent;
   }
+  a {
+    @apply text-accent-strong;
+  }
+  main a[class*="rounded-full"] {
+    color: inherit;
+  }
 }
 
 /* Reusable pieces (@utility so they can build on each other with @apply). */
@@ -91,13 +98,25 @@
 @utility field {
   @apply w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted;
 }
-/* iOS-style switch on a checkbox */
-@utility switch {
-  @apply relative h-7 w-12 shrink-0 cursor-pointer appearance-none rounded-full bg-line transition checked:bg-accent;
-  &::after {
-    @apply absolute top-0.5 left-0.5 size-6 rounded-full bg-white shadow transition content-[''];
+@utility nav-link {
+  @apply inline-flex min-h-11 items-center rounded-full px-3.5 text-sm font-semibold text-fg-2 hover:bg-bg;
+}
+@utility row-action {
+  @apply min-h-11 cursor-pointer rounded-full border-0 bg-bg px-4 text-sm font-semibold text-fg hover:bg-line;
+}
+/* Switch: role="switch" on a button; 56x32, with the hit area grown to 44px. */
+@utility toggle {
+  @apply relative flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-0 bg-strong p-[3px] transition-colors aria-checked:justify-end aria-checked:bg-accent;
+  &::before {
+    @apply absolute inset-x-0 -inset-y-1.5 content-[''];
   }
-  &:checked::after {
-    @apply translate-x-5;
+  & > span {
+    @apply size-[26px] rounded-full bg-white shadow-[var(--pn-shadow-knob)];
   }
+}
+@utility radio-card {
+  @apply flex cursor-pointer flex-col gap-2.5 rounded-[var(--pn-r-tile)] border-[1.5px] border-line bg-surface p-[18px] text-left aria-checked:border-accent aria-checked:bg-accent-tint;
+}
+@utility radio-dot {
+  @apply size-[18px] shrink-0 rounded-full border-[1.5px] border-[var(--pn-radio-off)] bg-white in-aria-checked:border-[5px] in-aria-checked:border-accent;
 }
