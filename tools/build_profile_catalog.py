@@ -48,7 +48,7 @@ DISPLAY_NAMES = {"Bambulab": "Bambu Lab"}
 
 def vendor_display_name(root: Path, vendor: str) -> str:
     try:
-        name = json.loads((root / f"{vendor}.json").read_text(encoding="utf-8")).get("name") or vendor
+        name = json.loads((root / f"{vendor}.json").read_text(encoding="utf-8-sig")).get("name") or vendor
     except (OSError, ValueError):
         name = vendor
     return DISPLAY_NAMES.get(name, name)
@@ -89,7 +89,7 @@ def vendor_dirs(root: Path) -> list[Path]:
 def vendor_version(root: Path, vendor: str) -> str | None:
     meta = root / f"{vendor}.json"
     try:
-        return json.loads(meta.read_text(encoding="utf-8")).get("version")
+        return json.loads(meta.read_text(encoding="utf-8-sig")).get("version")
     except (OSError, ValueError):
         return None
 
@@ -100,7 +100,8 @@ def bundle_files(vendor_dir: Path) -> dict[str, dict]:
     for kind in KINDS:
         for f in sorted((vendor_dir / kind).rglob("*.json")):
             try:
-                data = json.loads(f.read_text(encoding="utf-8"))
+                # utf-8-sig, like the core's ProfileLibrary: some slicers save profiles with a BOM.
+                data = json.loads(f.read_text(encoding="utf-8-sig"))
             except (OSError, UnicodeDecodeError, ValueError):
                 continue
             if isinstance(data, dict) and data.get("type", kind) in INDEXED_KINDS:

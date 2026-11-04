@@ -9,7 +9,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ### Fixed
 - **Line widths in % become mm**: `*_line_width` values such as `skin_infill_line_width = 100%` are converted with the target nozzle's diameter in the project settings, object and part overrides and height ranges. Bambu Studio and QIDI Studio read them as 100 mm ("too large line width").
-- **Profiles saved with a UTF-8 BOM are read** (Snapmaker Orca 2.4.1); they used to be skipped silently.
+- **Profiles saved with a UTF-8 BOM are read** (Snapmaker Orca 2.4.1), also by the catalog builder; they used to be skipped silently.
 - **Filaments chosen in height ranges are kept**: a filament used only by a height range could be removed as unused, and the range kept the old number after renumbering (the slicer falls back to filament 1).
 - **Faster verification of the written 3MF**: copied entries are checked by the CRC-32 and size the ZIP records for them instead of decompressing the whole file and hashing the geometry twice (half of the conversion time in the browser: SpeedBoat 435 → 217 ms in Pyodide). Replaced entries are still compared byte by byte.
 - Bambu G-code from a Bambu target profile is no longer flagged; `retraction_distances_when_cut = 0` (rejected by the slicer, shipped in a Flash Studio profile) is dropped; Standard processes win layer-height ties.
