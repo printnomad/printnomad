@@ -473,9 +473,6 @@
   "onboarding_1_hint": {
     "message": "Pick one to start. You can add more later."
   },
-  "onboarding_1_hint_add": {
-    "message": "Pick the printer to add."
-  },
   "onboarding_step_1": {
     "message": "Step 1 of 2"
   },
@@ -534,9 +531,6 @@
   },
   "setup_finish": {
     "message": "Looks right, finish"
-  },
-  "setup_save": {
-    "message": "Save"
   },
   "onboarding_3_title": {
     "message": "You're ready."
@@ -599,5 +593,8 @@
   },
   "mw_note_tuning": {
     "message": "Printer tuning taken from your profile"
+  },
+  "printers_edit_done": {
+    "message": "Done"
   }
 }

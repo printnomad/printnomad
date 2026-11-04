@@ -123,9 +123,20 @@
 @utility printer-tile {
   @apply relative flex cursor-pointer flex-col items-center gap-2.5 rounded-[18px] border-2 border-surface bg-surface px-3 pt-5 pb-4 aria-pressed:border-accent aria-pressed:shadow-[var(--pn-ring)];
 }
+@utility edit-field {
+  @apply flex min-w-0 flex-col gap-1.5 text-[13px] font-semibold text-muted;
+}
+@utility edit-select {
+  @apply min-h-11 w-full cursor-pointer rounded-[var(--pn-r-control)] border-[1.5px] border-line bg-surface px-3 text-[15px] font-semibold text-fg;
+}
 @utility radio-card {
   @apply flex cursor-pointer flex-col gap-2.5 rounded-[var(--pn-r-tile)] border-[1.5px] border-line bg-surface p-[18px] text-left aria-checked:border-accent aria-checked:bg-accent-tint;
 }
 @utility radio-dot {
   @apply size-[18px] shrink-0 rounded-full border-[1.5px] border-[var(--pn-radio-off)] bg-white in-aria-checked:border-[5px] in-aria-checked:border-accent;
+}
+
+/* On the white panel of My printers, the tiles need an edge of their own. */
+#add-picker .printer-tile {
+  border-color: var(--pn-line);
 }

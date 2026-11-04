@@ -61,14 +61,32 @@ try {
   await page.waitForFunction(() => document.querySelectorAll("#convert-printer option").length > 0);
 
   if (!process.env.PN_E2E_FILE) {
-    // The build plate chosen in Edit reaches the conversion (checked below).
+    // Edit opens in the printer's own card, stays on the page and saves each change;
+    // the plate chosen there reaches the conversion (checked below).
     await page.click('[data-action="edit"]');
-    await page.waitForSelector('#setup-beds [data-value="Supertack Plate"]', { visible: true });
-    await page.click('#setup-beds [data-value="Supertack Plate"]');
-    await page.click("#setup-finish");
+    await page.waitForSelector('[data-edit="bed"]', { visible: true });
+    if (await page.$eval("#home-view", (e) => e.hidden)) throw new Error("Edit left the page");
+    await page.select('[data-edit="bed"]', "Supertack Plate");
     await page.waitForFunction(async () =>
       (await chrome.storage.sync.get("printers")).printers[0].bedType === "Supertack Plate");
-    await page.waitForSelector("#home-view:not([hidden])");
+    await page.waitForFunction(() => document.querySelector('[data-edit="bed"]')?.value === "Supertack Plate");
+    await page.select('[data-edit="nozzle"]', "0.6");
+    await page.waitForFunction(async () =>
+      (await chrome.storage.sync.get("printers")).printers[0].printer === "Flashforge Creator 5 Pro 0.6 nozzle");
+    await page.waitForFunction(() => document.querySelector('[data-edit="nozzle"]')?.value === "0.6");
+    await page.select('[data-edit="nozzle"]', "0.4");
+    await page.waitForFunction(async () =>
+      (await chrome.storage.sync.get("printers")).printers[0].printer === "Flashforge Creator 5 Pro 0.4 nozzle");
+    await page.waitForFunction(() => document.querySelector('[data-edit="nozzle"]')?.value === "0.4");
+
+    // Adding opens in the same section; a printer already there opens for editing.
+    await page.click("#add-printer");
+    await page.waitForSelector('#add-picker [data-model="Flashforge Creator 5 Pro"]', { visible: true });
+    await page.click('#add-picker [data-model="Flashforge Creator 5 Pro"]');
+    await page.waitForFunction(() => document.querySelector("#add-panel").hidden);
+    const count = await page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers.length);
+    if (count !== 1) throw new Error(`${count} printers after adding one already there`);
+    console.log("OK: edit and add inside My printers");
   }
 
   const started = Date.now();

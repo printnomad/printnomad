@@ -1,5 +1,5 @@
-// First run (which printer, is this your setup, you're ready) and, with the same screens,
-// adding or editing a printer afterwards.
+// First run (which printer, is this your setup, you're ready). The printer picker also adds
+// printers afterwards, inside the My printers section.
 import { t } from "../lib/i18n.ts";
 import type { MyPrinter } from "../lib/settings.ts";
 import type { Catalog } from "../profiles/catalog.ts";
@@ -7,13 +7,14 @@ import { bedLabel } from "./labels.ts";
 import {
   allNozzles,
   brandsOf,
-  keepBed,
   matches,
-  modelOfPreset,
   pickSlicer,
-  presetFor,
+  printerFromSetup,
   slicersFor,
+  withNozzle,
+  withSlicer,
   type ModelChoice,
+  type Setup,
 } from "./printer-picker.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -22,15 +23,12 @@ export interface OnboardingHost {
   catalog(): Catalog | null;
   /** The models offered for new printers. */
   pickable(): ModelChoice[];
-  /** Every model, to find a saved printer's. */
-  models(): ModelChoice[];
-  save(printer: MyPrinter, previousId?: string): Promise<void>;
-  remove(id: string): Promise<void>;
+  save(printer: MyPrinter): Promise<void>;
+  /** A model picked in the My printers section. */
+  picked(model: ModelChoice): void;
   showHome(anchor?: string): void;
   sendRequest?(name: string): Promise<void>;
 }
-
-type Mode = "first" | "add" | "edit";
 
 const CHECK = '<path d="M5 12l5 5L20 7"/>';
 const svg = (body: string, cls: string, width = 2.4) =>
@@ -44,13 +42,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
 }
 
 export function createOnboarding(host: OnboardingHost) {
-  let mode: Mode = "first";
-  let editing: MyPrinter | null = null;
+  /** The picker is inside My printers: a click adds the printer at once. */
+  let adding = false;
   let brand: string | null = null;
   let model: ModelChoice | null = null;
-  let nozzle = "";
-  let slicer = "";
-  let bed: string | undefined;
+  let setup: Setup = { nozzle: "", slicer: "", bed: undefined };
 
   function show(step: 1 | 2 | 3) {
     $("onboarding").hidden = false;
@@ -58,11 +54,10 @@ export function createOnboarding(host: OnboardingHost) {
     $("step-1").hidden = step !== 1;
     $("step-2").hidden = step !== 2;
     $("step-3").hidden = step !== 3;
-    $("onboarding-progress").hidden = step === 3 || mode === "edit";
+    $("onboarding-progress").hidden = step === 3;
     $("progress-2").classList.toggle("bg-accent", step === 2);
     $("progress-2").classList.toggle("bg-strong", step !== 2);
     $("progress-text").textContent = step === 2 ? t("onboarding_step_2") : t("onboarding_step_1");
-    $("onboarding-cancel").hidden = mode === "first" || step === 3;
     window.scrollTo(0, 0);
   }
 
@@ -96,6 +91,10 @@ export function createOnboarding(host: OnboardingHost) {
     button.ariaPressed = String(selected);
     button.dataset.model = m.model;
     button.onclick = () => {
+      if (adding) {
+        host.picked(m);
+        return;
+      }
       model = m;
       renderStep1();
     };
@@ -119,7 +118,7 @@ export function createOnboarding(host: OnboardingHost) {
 
   // --- step 2 --------------------------------------------------------------------
   function variant() {
-    return model?.variants.find((v) => v.slicer === slicer && v.nozzle === nozzle);
+    return model?.variants.find((v) => v.slicer === setup.slicer && v.nozzle === setup.nozzle);
   }
 
   function pills(group: string, options: { value: string; label: string }[], current: string, pick: (v: string) => void) {
@@ -147,10 +146,8 @@ export function createOnboarding(host: OnboardingHost) {
   function renderStep2() {
     if (!model) return;
     const m = model;
-    pills("setup-nozzles", allNozzles(m).nozzles.map((n) => ({ value: n, label: t("printer_nozzle", n) })), nozzle, (n) => {
-      nozzle = n;
-      if (!presetFor(m, slicer, n)) slicer = pickSlicer(m, host.catalog()!, n);
-      bed = keepBed(m, slicer, presetFor(m, slicer, n)!, bed);
+    pills("setup-nozzles", allNozzles(m).nozzles.map((n) => ({ value: n, label: t("printer_nozzle", n) })), setup.nozzle, (n) => {
+      setup = withNozzle(m, host.catalog()!, setup, n);
       renderStep2();
     });
     const current = variant();
@@ -161,13 +158,12 @@ export function createOnboarding(host: OnboardingHost) {
       ...(fallback ? [{ value: "", label: bedLabel(fallback) }] : [{ value: "", label: t("printers_bed_from_project") }]),
       ...beds.filter((b) => b !== fallback).map((b) => ({ value: b, label: bedLabel(b) })),
     ];
-    pills("setup-beds", bedChoices, bed ?? "", (b) => {
-      bed = b || undefined;
+    pills("setup-beds", bedChoices, setup.bed ?? "", (b) => {
+      setup = { ...setup, bed: b || undefined };
       renderStep2();
     });
-    pills("setup-slicers", slicersFor(m, host.catalog()!, nozzle).map((s) => ({ value: s.slicer, label: s.name })), slicer, (s) => {
-      slicer = s;
-      bed = keepBed(m, s, presetFor(m, s, nozzle)!, bed);
+    pills("setup-slicers", slicersFor(m, host.catalog()!, setup.nozzle).map((s) => ({ value: s.slicer, label: s.name })), setup.slicer, (s) => {
+      setup = withSlicer(m, setup, s);
       renderStep2();
     });
     const picture = $<HTMLImageElement>("setup-cover");
@@ -176,43 +172,28 @@ export function createOnboarding(host: OnboardingHost) {
     picture.alt = `${m.brand} ${m.label}`;
     $("setup-brand").textContent = m.brand;
     $("setup-name").textContent = m.label;
-    const chosenBed = bed ?? fallback;
+    const chosenBed = setup.bed ?? fallback;
     $("setup-summary").textContent = [
-      t("printer_setup_nozzle", nozzle),
+      t("printer_setup_nozzle", setup.nozzle),
       ...(beds.length > 1 && chosenBed ? [bedLabel(chosenBed)] : []),
-      t("setup_for_slicer", current?.slicerName ?? slicer),
+      t("setup_for_slicer", current?.slicerName ?? setup.slicer),
     ].join(" · ");
-    $("setup-finish-label").textContent = mode === "edit" ? t("setup_save") : t("setup_finish");
-    $("setup-remove").hidden = mode !== "edit";
-    $("setup-back").textContent = mode === "edit" ? t("onboarding_cancel") : t("onboarding_back");
   }
 
   function toStep2() {
     if (!model) return;
-    nozzle = allNozzles(model).preferred;
-    slicer = pickSlicer(model, host.catalog()!, nozzle);
-    bed = undefined;
+    const nozzle = allNozzles(model).preferred;
+    setup = { nozzle, slicer: pickSlicer(model, host.catalog()!, nozzle), bed: undefined };
     renderStep2();
     show(2);
   }
 
   async function finish() {
-    const preset = model && presetFor(model, slicer, nozzle);
-    if (!model || !preset) return;
-    const byRule = slicer === pickSlicer(model, host.catalog()!, nozzle);
-    await host.save({
-      id: editing?.id ?? crypto.randomUUID(),
-      slicer,
-      printer: preset,
-      slicerAuto: byRule,
-      ...(bed ? { bedType: bed } : {}),
-    }, editing?.id);
-    if (mode === "first") {
-      $("done-button-label").textContent = t("mw_download_for", model.label);
-      show(3);
-    } else {
-      host.showHome();
-    }
+    const printer = model && printerFromSetup(crypto.randomUUID(), model, host.catalog()!, setup);
+    if (!model || !printer) return;
+    await host.save(printer);
+    $("done-button-label").textContent = t("mw_download_for", model.label);
+    show(3);
   }
 
   // --- wiring --------------------------------------------------------------------
@@ -222,15 +203,7 @@ export function createOnboarding(host: OnboardingHost) {
     e.preventDefault();
     void finish();
   };
-  $("setup-back").onclick = () => {
-    if (mode === "edit") host.showHome();
-    else show(1);
-  };
-  $("setup-remove").onclick = async () => {
-    if (!editing) return;
-    await host.remove(editing.id);
-  };
-  $("onboarding-cancel").onclick = () => host.showHome();
+  $("setup-back").onclick = () => show(1);
   $("done-preferences").onclick = () => host.showHome("prefs");
   const request = $("printer-request");
   $("printer-request-open").onclick = () => {
@@ -254,30 +227,33 @@ export function createOnboarding(host: OnboardingHost) {
     }
   };
 
+  /** Put the picker in `list` and the "not on the list" line in `request`. */
+  function placePicker(list: HTMLElement, request: HTMLElement) {
+    list.append($("picker-body"));
+    request.prepend($("printer-request-prompt"));
+  }
+
+  function resetPicker() {
+    model = null;
+    brand = null;
+    $<HTMLInputElement>("picker-search").value = "";
+  }
+
   return {
-    /** Which printer: the first run, or "Add a printer". */
-    start(first: boolean) {
-      mode = first ? "first" : "add";
-      editing = null;
-      model = null;
-      brand = null;
-      $<HTMLInputElement>("picker-search").value = "";
-      $("onboarding-subtitle").textContent = first ? t("onboarding_1_hint") : t("onboarding_1_hint_add");
+    /** First run: the three steps, full page. */
+    start() {
+      adding = false;
+      resetPicker();
+      placePicker($("step-1-picker"), $("step-1-bar"));
       renderStep1();
       show(1);
     },
-    edit(printer: MyPrinter) {
-      const found = modelOfPreset(host.models(), printer.slicer, printer.printer);
-      if (!found) return;
-      const current = found.variants.find((v) => v.slicer === printer.slicer && v.preset === printer.printer);
-      mode = "edit";
-      editing = printer;
-      model = found;
-      nozzle = current?.nozzle ?? allNozzles(found).preferred;
-      slicer = printer.slicer;
-      bed = printer.bedType;
-      renderStep2();
-      show(2);
+    /** The picker inside My printers. */
+    openPicker(list: HTMLElement, request: HTMLElement) {
+      adding = true;
+      resetPicker();
+      placePicker(list, request);
+      renderStep1();
     },
     hide() {
       $("onboarding").hidden = true;

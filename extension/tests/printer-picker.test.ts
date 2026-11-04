@@ -11,8 +11,11 @@ import {
   nozzlesFor,
   pickSlicer,
   presetFor,
+  printerFromSetup,
   slicersFor,
   supportedOnly,
+  withNozzle,
+  withSlicer,
 } from "../src/options/printer-picker.ts";
 
 const printer = (name: string, model: string, nozzle: string) => ({ name, model, nozzle, extruders: 1 });
@@ -111,4 +114,25 @@ test("plates of each preset come from the catalog, and a chosen plate is kept on
   assert.equal(keepBed(model, "bambustudio", "C5P", "Textured Cool Plate"), undefined);
   assert.equal(keepBed(model, "bambustudio", "Old", "Cool Plate"), undefined);
   assert.equal(keepBed(model, "bambustudio", "C5P", undefined), undefined);
+});
+
+test("changing the nozzle keeps the slicer only if it has that nozzle", () => {
+  const c5p = models[1];
+  const setup = { nozzle: "0.4", slicer: "orcaslicer", bed: undefined };
+  assert.deepEqual(withNozzle(c5p, catalog, setup, "0.6"), { nozzle: "0.6", slicer: "flashstudio", bed: undefined });
+  assert.equal(withNozzle(c5p, catalog, { ...setup, slicer: "flashstudio" }, "0.6").slicer, "flashstudio");
+});
+
+test("changing the slicer drops a plate it does not offer", () => {
+  const c5p = models[1];
+  assert.deepEqual(withSlicer(c5p, { nozzle: "0.4", slicer: "flashstudio", bed: "Cool Plate" }, "orcaslicer"),
+    { nozzle: "0.4", slicer: "orcaslicer", bed: undefined });
+});
+
+test("a setup becomes a printer with the same id", () => {
+  const c5p = models[1];
+  assert.deepEqual(printerFromSetup("id", c5p, catalog, { nozzle: "0.4", slicer: "flashstudio", bed: undefined }),
+    { id: "id", slicer: "flashstudio", printer: "Flashforge Creator 5 Pro 0.4 nozzle", slicerAuto: true });
+  assert.equal(printerFromSetup("id", c5p, catalog, { nozzle: "0.4", slicer: "orcaslicer", bed: undefined })?.slicerAuto, false);
+  assert.equal(printerFromSetup("id", c5p, catalog, { nozzle: "9", slicer: "flashstudio", bed: undefined }), undefined);
 });
