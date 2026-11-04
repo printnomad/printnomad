@@ -2,89 +2,64 @@
  * The build only emits classes that appear in the @source files: always write full
  * class names in code (never "bg-" + colour).
  *
- * Look: hotNozzleLab's (iOS-like grouped background, white rounded cards, heavy
- * Avenir headings, pill buttons) with OrcaSlicer's teal as the accent.
+ * Look: the PrintNomad design handoff (tokens.css). Light only for now.
  */
 @import "tailwindcss";
+@import "./tokens.css";
 
 @source "./options/options.html";
 @source "./**/*.ts";
 
 @theme inline {
-  --font-sans: "Avenir Next", Avenir, "Nunito Sans", -apple-system, system-ui, sans-serif;
-  --font-display: "Avenir Next", Avenir, "Nunito Sans", -apple-system, system-ui, sans-serif;
+  --font-sans: var(--pn-font-ui);
+  --font-display: var(--pn-font-display);
 
   --color-bg: var(--pn-bg);
   --color-surface: var(--pn-surface);
-  --color-sunken: var(--pn-sunken);
+  --color-sunken: var(--pn-surface-sunken);
   --color-line: var(--pn-line);
-  --color-fg: var(--pn-fg);
+  --color-line-soft: var(--pn-line-soft);
+  --color-strong: var(--pn-border-strong);
+  --color-dashed: var(--pn-border-dashed);
+  --color-fg: var(--pn-ink);
+  --color-fg-2: var(--pn-ink-2);
   --color-muted: var(--pn-muted);
-  --color-accent: var(--pn-accent);
-  --color-accent-strong: var(--pn-accent-strong);
-  --color-on-accent: var(--pn-on-accent);
-  --color-accent-soft: var(--pn-accent-soft);
-  --color-ok: var(--pn-ok);
-  --color-ok-soft: var(--pn-ok-soft);
-  --color-warn: var(--pn-warn);
-  --color-warn-soft: var(--pn-warn-soft);
-  --color-err: var(--pn-err);
-  --color-err-soft: var(--pn-err-soft);
-}
-
-:root,
-:host {
-  --pn-bg: #f2f2f7;
-  --pn-surface: #ffffff;
-  --pn-sunken: #f2f2f7;
-  --pn-line: #e5e5ea;
-  --pn-fg: #1c1c1e;
-  --pn-muted: #6e6e73;
-  /* OrcaSlicer teal, darkened for AA contrast with white text */
-  --pn-accent: #00796b;
-  --pn-accent-strong: #00695c;
-  --pn-on-accent: #ffffff;
-  --pn-accent-soft: #e0f2f1;
-  --pn-ok: #1f7a4d;
-  --pn-ok-soft: #e3f4ea;
-  --pn-warn: #8a5a00;
-  --pn-warn-soft: #fff4d6;
-  --pn-err: #c62828;
-  --pn-err-soft: #fdecea;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root,
-  :host {
-    --pn-bg: #000000;
-    --pn-surface: #1c1c1e;
-    --pn-sunken: #2c2c2e;
-    --pn-line: #38383a;
-    --pn-fg: #ffffff;
-    --pn-muted: #98989d;
-    --pn-accent: #2ec4b6;
-    --pn-accent-strong: #5ad6ca;
-    --pn-on-accent: #04201d;
-    --pn-accent-soft: #0d2b28;
-    --pn-ok: #3ccf86;
-    --pn-ok-soft: #0f2a1c;
-    --pn-warn: #f5c451;
-    --pn-warn-soft: #2e2408;
-    --pn-err: #ff6b6b;
-    --pn-err-soft: #331414;
-  }
+  --color-faint: var(--pn-faint);
+  --color-accent: var(--pn-brand);
+  --color-accent-strong: var(--pn-brand-dark);
+  --color-on-accent: #ffffff;
+  --color-accent-soft: var(--pn-brand-soft);
+  --color-accent-tint: var(--pn-brand-tint);
+  --color-mint: var(--pn-mint);
+  --color-mint-ink: var(--pn-mint-ink);
+  --color-dark: var(--pn-dark);
+  --color-dark-muted: var(--pn-dark-muted);
+  --color-dark-text: var(--pn-dark-text);
+  --color-warn-bg: var(--pn-warn-bg);
+  --color-warn-border: var(--pn-warn-border);
+  --color-warn-title: var(--pn-warn-title);
+  --color-warn: var(--pn-warn-text);
+  --color-warn-icon: var(--pn-warn-icon);
+  --color-warn-soft: var(--pn-warn-bg);
+  --color-tag-adv: var(--pn-tag-adv-bg);
+  --color-tag-adv-fg: var(--pn-tag-adv-fg);
+  --color-ok: var(--pn-brand-dark);
+  --color-ok-soft: var(--pn-brand-soft);
+  --color-err: #b3261e;
+  --color-err-soft: #fdecea;
 }
 
 @layer base {
   html {
-    color-scheme: light dark;
+    color-scheme: light;
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-bg font-sans text-fg antialiased;
   }
   h1,
   h2 {
-    @apply font-display font-extrabold tracking-tight;
+    @apply font-display font-black;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-accent;
@@ -96,10 +71,10 @@
   @apply text-[11px] font-bold tracking-[0.08em] text-muted uppercase;
 }
 @utility card {
-  @apply rounded-2xl bg-surface p-5;
+  @apply rounded-[var(--pn-r-card)] bg-surface p-5;
 }
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
 }
 @utility btn-primary {
   @apply btn bg-accent text-on-accent hover:bg-accent-strong;
@@ -108,7 +83,7 @@
   @apply btn bg-surface text-fg hover:bg-sunken;
 }
 @utility btn-ghost {
-  @apply btn px-3 py-1.5 text-muted hover:bg-sunken hover:text-fg;
+  @apply btn px-3 text-muted hover:bg-sunken hover:text-fg;
 }
 @utility chip {
   @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;

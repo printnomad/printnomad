@@ -82,6 +82,8 @@ manifest.content_scripts = [
 manifest.web_accessible_resources = [{ resources: ["bridge.html", "styles.css"], matches: sites }];
 writeFileSync(join(dist, "manifest.json"), JSON.stringify(manifest, null, 2));
 cpSync(join(here, "static", "_locales"), join(dist, "_locales"), { recursive: true });
+cpSync(join(here, "static", "fonts"), join(dist, "fonts"), { recursive: true });
+cpSync(join(here, "static", "icons"), join(dist, "icons"), { recursive: true });
 cpSync(join(here, "src", "options", "options.html"), join(dist, "options.html"));
 cpSync(join(here, "src", "makerworld", "bridge.html"), join(dist, "bridge.html"));
 
