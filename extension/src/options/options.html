@@ -110,6 +110,7 @@
             <div class="h-40 rounded-[14px] bg-[#E6E7EB]"></div>
             <div class="h-3.5 w-3/5 rounded-[7px] bg-[#E6E7EB]"></div>
             <div class="h-2.5 w-[35%] rounded-[5px] bg-line-soft"></div>
+            <div class="flex flex-wrap items-center gap-2 text-sm font-semibold"><span class="rounded-full bg-bg px-3 py-1.5 text-muted" data-i18n="picker_all"></span><span id="done-chip" class="rounded-full border-[1.5px] border-accent bg-accent-tint px-3 py-1.5 text-accent-strong"></span><span class="rounded-full bg-bg px-3 py-1.5 text-muted">A1</span></div>
             <div class="flex min-h-[52px] w-fit items-center gap-2.5 rounded-[var(--pn-r-inner)] bg-accent px-5 text-base font-bold text-white shadow-[var(--pn-ring)]"><svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg><span id="done-button-label"></span></div>
             <div class="text-[13px] text-muted" data-i18n="onboarding_look_for"></div>
           </div>
@@ -138,11 +139,10 @@
         <div class="relative z-10 flex max-w-[460px] min-w-0 flex-col gap-[22px]">
           <div class="inline-flex items-center gap-2 text-[13px] font-bold tracking-[1.2px] text-mint uppercase"><span class="size-2 rounded-full bg-mint"></span><span data-i18n="hero_eyebrow"></span></div>
           <h1 class="m-0 text-5xl leading-[0.98] tracking-[-1.5px] sm:text-[64px]" data-i18n="hero_title"></h1>
-          <p class="m-0 text-lg leading-[1.55] text-dark-text"><span data-i18n="hero_before"></span> <strong id="hero-action" class="text-white"></strong><span data-i18n="hero_after"></span></p>
+          <p class="m-0 text-lg leading-[1.55] text-dark-text" data-i18n="hero_text"></p>
           <div class="mt-1 flex flex-wrap gap-3">
             <a href="https://makerworld.com" target="_blank" rel="noopener" class="inline-flex min-h-12 items-center gap-2 rounded-full bg-mint px-[22px] text-base font-bold text-mint-ink"><span data-i18n="open_makerworld"></span><svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>
           </div>
-          <div class="text-sm text-dark-muted"><span id="hero-default"></span> · <a href="#printers-section" class="inline-flex min-h-11 items-center font-semibold text-mint" data-i18n="hero_change"></a></div>
         </div>
         <img src="icons/hero-slicers.svg" alt="" class="pointer-events-none absolute top-1/2 right-14 hidden w-[500px] max-w-[44%] -translate-y-[42%] min-[1120px]:block" />
       </section>
@@ -333,11 +333,6 @@
           <div class="relative flex h-[150px] items-center justify-center rounded-[14px] bg-bg">
             <img data-field="cover" class="h-[120px] w-40 object-contain mix-blend-multiply" alt="" />
             <svg data-field="placeholder" viewBox="0 0 24 24" class="size-12 text-faint" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
-            <span data-field="default" class="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-[5px] text-xs font-bold text-white" hidden><svg viewBox="0 0 24 24" class="size-3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span data-i18n="printers_default"></span></span>
-            <button data-action="edit" type="button" class="absolute top-2.5 right-2.5 grid size-11 cursor-pointer place-items-center rounded-full border-0 bg-surface text-fg opacity-0 shadow-[0_1px_4px_rgba(22,24,26,0.14)] group-focus-within:opacity-100 group-hover:opacity-100 aria-pressed:bg-accent aria-pressed:text-white aria-pressed:opacity-100 [@media(hover:none)]:opacity-100">
-              <svg data-field="pencil" viewBox="0 0 24 24" class="size-[18px]" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
-              <svg data-field="done" viewBox="0 0 24 24" class="size-[18px]" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M5 12l5 5L20 7"/></svg>
-            </button>
           </div>
           <div class="flex flex-col gap-0.5 px-1">
             <span data-field="brand" class="text-xs font-bold tracking-[1px] text-muted uppercase"></span>
@@ -349,10 +344,12 @@
             <div class="card-row"><label data-i18n="printers_slicer" for=""></label><span data-value="slicer" class="card-value"></span><select data-edit="slicer" class="card-select" hidden></select></div>
           </div>
           <div class="mt-auto flex h-14 items-center justify-between gap-2 border-t border-line-soft px-1 pt-3">
-            <span data-field="used-by" class="text-sm text-muted" data-i18n="printers_used_by" hidden></span>
-            <button data-action="default" type="button" class="-ml-4 min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 text-sm font-semibold text-accent-strong hover:bg-bg" data-i18n="printers_make_default" hidden></button>
+            <button data-action="edit" type="button" class="row-action -ml-1"></button>
             <button data-action="remove" type="button" class="-ml-4 min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-4 text-sm font-semibold text-[#B42318] hover:bg-bg" data-i18n="printers_remove" hidden></button>
-            <span data-field="saved" class="inline-flex items-center gap-1.5 text-[13px] text-muted" hidden><svg viewBox="0 0 24 24" class="size-3.5 text-accent" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg><span data-i18n="prefs_saved"></span></span>
+            <span data-field="edit-actions" class="flex items-center gap-1.5" hidden>
+              <button data-action="cancel" type="button" class="min-h-11 cursor-pointer rounded-full border-0 bg-transparent px-3 text-sm font-semibold hover:bg-bg" data-i18n="printers_cancel"></button>
+              <button data-action="save" type="button" class="min-h-11 cursor-pointer rounded-full border-0 bg-accent px-4 text-sm font-semibold text-white hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-50" data-i18n="printers_save"></button>
+            </span>
           </div>
         </article>
       </li>

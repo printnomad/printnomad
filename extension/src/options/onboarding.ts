@@ -193,6 +193,7 @@ export function createOnboarding(host: OnboardingHost) {
     if (!model || !printer) return;
     await host.save(printer);
     $("done-button-label").textContent = t("mw_download_for", model.label);
+    $("done-chip").textContent = model.label;
     show(3);
   }
 

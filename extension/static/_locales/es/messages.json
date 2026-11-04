@@ -12,7 +12,7 @@
     "message": "Laminador"
   },
   "printers_remove": {
-    "message": "Quitar impresora"
+    "message": "Quitar"
   },
   "profiles_status_loading": {
     "message": "Cargando el catálogo de perfiles…"
@@ -189,7 +189,7 @@
     "message": "Descargar para $1"
   },
   "mw_status_downloading": {
-    "message": "Obteniendo el archivo de MakerWorld…"
+    "message": "Obteniendo el 3MF…"
   },
   "mw_status_converting": {
     "message": "Convirtiendo para $1…",
@@ -271,21 +271,8 @@
   "hero_eyebrow": {
     "message": "Listo en MakerWorld"
   },
-  "hero_before": {
-    "message": "Abre cualquier modelo en MakerWorld y pulsa"
-  },
-  "hero_after": {
-    "message": ". El archivo sale preparado para tu impresora y laminador."
-  },
   "open_makerworld": {
     "message": "Abrir MakerWorld"
-  },
-  "hero_default": {
-    "message": "Impresora predeterminada: $1",
-    "description": "$1 = value"
-  },
-  "hero_change": {
-    "message": "cambiar"
   },
   "prefs_title": {
     "message": "Preferencias de conversión"
@@ -441,12 +428,6 @@
   "assign_colour_black": {
     "message": "Negro"
   },
-  "printers_default": {
-    "message": "Predeterminada"
-  },
-  "printers_make_default": {
-    "message": "Hacer predeterminada"
-  },
   "printer_setup_nozzle": {
     "message": "Boquilla de $1 mm",
     "description": "$1 = value"
@@ -523,7 +504,7 @@
     "message": "Ya está."
   },
   "onboarding_3_text": {
-    "message": "A partir de ahora, abre cualquier modelo en MakerWorld y usa el nuevo botón de descarga. Eso es todo."
+    "message": "A partir de ahora, abre cualquier modelo en MakerWorld, elige tu impresora en Print Files y descarga. Eso es todo."
   },
   "onboarding_see_prefs": {
     "message": "Ver preferencias de conversión"
@@ -535,48 +516,7 @@
     "message": "En cada modelo de MakerWorld"
   },
   "onboarding_look_for": {
-    "message": "Busca este botón."
-  },
-  "mw_status_downloading_percent": {
-    "message": "Descargando… $1%",
-    "description": "$1 = value"
-  },
-  "mw_saved_show": {
-    "message": "Guardado · Mostrar en Finder"
-  },
-  "mw_menu_title": {
-    "message": "Descargar para"
-  },
-  "mw_menu_manage": {
-    "message": "Administrar impresoras y preferencias"
-  },
-  "mw_choose_printer": {
-    "message": "Elegir otra impresora"
-  },
-  "mw_meta_preferences": {
-    "message": "Preferencias"
-  },
-  "mw_meta_keeps": {
-    "message": "conserva del diseñador: $1",
-    "description": "$1 = value"
-  },
-  "mw_meta_keeps_none": {
-    "message": "usa el perfil de tu impresora"
-  },
-  "mw_keep_filament": {
-    "message": "temperaturas"
-  },
-  "mw_keep_cooling": {
-    "message": "enfriamiento"
-  },
-  "mw_keep_tuning": {
-    "message": "ajustes de impresora"
-  },
-  "mw_note_cooling": {
-    "message": "Enfriamiento tomado de tu perfil"
-  },
-  "mw_note_tuning": {
-    "message": "Ajustes de impresora tomados de tu perfil"
+    "message": "Tus impresoras aparecen junto a las de MakerWorld."
   },
   "add_hint": {
     "message": "Elígela y queda agregada. Puedes cambiar su configuración justo después."
@@ -584,18 +524,30 @@
   "printers_add_time": {
     "message": "Toma unos segundos"
   },
-  "printers_used_by": {
-    "message": "La usa el botón de MakerWorld"
-  },
   "printers_edit_named": {
     "message": "Editar $1",
     "description": "$1 = printer"
   },
-  "printers_edit_done_named": {
-    "message": "Terminar de editar $1",
-    "description": "$1 = printer"
-  },
   "printers_bed_fixed": {
     "message": "La define tu laminador"
+  },
+  "hero_text": {
+    "message": "Abre cualquier modelo en MakerWorld, elige tu impresora junto a las de Bambu en Print Files y descarga. El archivo sale preparado para tu impresora y laminador."
+  },
+  "printers_save": {
+    "message": "Guardar"
+  },
+  "printers_cancel": {
+    "message": "Cancelar"
+  },
+  "printers_edit": {
+    "message": "Editar"
+  },
+  "mw_status_saved": {
+    "message": "Guardado ✓"
+  },
+  "mw_chip_title": {
+    "message": "$1 · convertido por PrintNomad",
+    "description": "$1 = printer"
   }
 }

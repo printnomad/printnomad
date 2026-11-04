@@ -61,25 +61,27 @@ try {
   await page.waitForFunction(() => document.querySelectorAll("#convert-printer option").length > 0);
 
   if (!process.env.PN_E2E_FILE) {
-    // Edit opens in the printer's own card, stays on the page and saves each change;
-    // the plate chosen there reaches the conversion (checked below).
+    // Edit opens in the printer's own card; nothing is stored until Save. The plate chosen
+    // there reaches the conversion (checked below).
+    const stored = () => page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers[0]);
     await page.click('[data-action="edit"]');
     await page.waitForSelector('[data-edit="bed"]', { visible: true });
-    if (await page.$eval("#home-view", (e) => e.hidden)) throw new Error("Edit left the page");
+    if (!(await page.$eval('[data-action="save"]', (b) => b.disabled))) throw new Error("Save is on with nothing changed");
+    await page.select('[data-edit="nozzle"]', "0.6");
+    await page.waitForFunction(() => document.querySelector('[data-edit="nozzle"]')?.value === "0.6");
+    if ((await stored()).printer.includes("0.6")) throw new Error("the change was stored before Save");
+    await page.click('[data-action="cancel"]');
+    await page.waitForFunction(() => !document.querySelector('[data-edit="nozzle"]:not([hidden])'));
+    if ((await stored()).printer.includes("0.6")) throw new Error("Cancel stored the change");
+    await page.click('[data-action="edit"]');
+    await page.waitForSelector('[data-edit="bed"]', { visible: true });
     await page.select('[data-edit="bed"]', "Supertack Plate");
+    await page.waitForFunction(() => document.querySelector('[data-edit="bed"]')?.value === "Supertack Plate");
+    if ((await stored()).bedType) throw new Error("the plate was stored before Save");
+    await page.click('[data-action="save"]');
     await page.waitForFunction(async () =>
       (await chrome.storage.sync.get("printers")).printers[0].bedType === "Supertack Plate");
-    await page.waitForFunction(() => document.querySelector('[data-edit="bed"]')?.value === "Supertack Plate");
-    await page.select('[data-edit="nozzle"]', "0.6");
-    await page.waitForFunction(async () =>
-      (await chrome.storage.sync.get("printers")).printers[0].printer === "Flashforge Creator 5 Pro 0.6 nozzle");
-    await page.waitForFunction(() => document.querySelector('[data-edit="nozzle"]')?.value === "0.6");
-    await page.select('[data-edit="nozzle"]', "0.4");
-    await page.waitForFunction(async () =>
-      (await chrome.storage.sync.get("printers")).printers[0].printer === "Flashforge Creator 5 Pro 0.4 nozzle");
-    await page.waitForFunction(() => document.querySelector('[data-edit="nozzle"]')?.value === "0.4");
-
-    await page.click('[data-action="edit"]'); // Done
+    await page.waitForFunction(() => !document.querySelector('[data-edit="bed"]:not([hidden])'));
 
     // Adding has its own screen under the same header; picking a model is all it takes.
     await page.click("#add-printer");
@@ -92,10 +94,10 @@ try {
     await page.waitForSelector('#add-view:not([hidden]) [data-model="Flashforge Creator 5 Pro"]', { visible: true });
     await page.click('#add-view [data-model="Flashforge Creator 5 Pro"]');
     await page.waitForSelector("#home:not([hidden])");
-    await page.waitForFunction(() => document.querySelector('[data-action="edit"]')?.ariaPressed === "true");
+    await page.waitForSelector('[data-action="cancel"]', { visible: true });
     const count = await page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers.length);
     if (count !== 1) throw new Error(`${count} printers after adding one already there`);
-    await page.click('[data-action="edit"]'); // Done
+    await page.click('[data-action="cancel"]');
     console.log("OK: edit in the card, add on its own screen");
   }
 

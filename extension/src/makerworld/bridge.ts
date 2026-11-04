@@ -5,14 +5,12 @@
 // MakerWorld origins listed in config.json, and only to the page that embeds it.
 import { CONFIG } from "../config.ts";
 import type { Issue } from "../engine/protocol.ts";
-import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
-import { t } from "../lib/i18n.ts";
+import { Converter, saveOutput } from "../lib/conversion.ts";
 import { clipboardReport } from "../lib/report-copy.ts";
 import { sendReport } from "../lib/report-send.ts";
-import { DEFAULT_OPTIONS, defaultPrinter, loadSettings, platformKey } from "../lib/settings.ts";
-import { bedLabel } from "../options/labels.ts";
+import { loadSettings, platformKey } from "../lib/settings.ts";
 import { buildModels, modelOfPreset } from "../options/printer-picker.ts";
-import { BRIDGE, CONTENT, type BridgeMessage, type BridgeRequest, type ConvertOutcome, type PagePrinter, type PageState } from "./protocol.ts";
+import { BRIDGE, CONTENT, type BridgeMessage, type BridgeRequest, type ConvertOutcome, type PagePrinter } from "./protocol.ts";
 
 const parentOrigin = location.ancestorOrigins?.[0] ?? "";
 const converter = new Converter();
@@ -21,35 +19,13 @@ function reply(message: BridgeMessage, transfer: Transferable[] = []) {
   window.parent.postMessage(message, parentOrigin, transfer);
 }
 
-async function printers(): Promise<PageState> {
+async function printers(): Promise<PagePrinter[]> {
   const [settings, { catalog, url }] = await Promise.all([loadSettings(), converter.store.catalog()]);
   const models = buildModels(catalog, url);
-  const option = (key: string) => settings.options[key] ?? DEFAULT_OPTIONS[key];
-  return {
-    printers: settings.printers.map((p): PagePrinter => {
-      const model = modelOfPreset(models, p.slicer, p.printer);
-      const variant = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer);
-      const slicerName = catalog.slicers[p.slicer]?.name ?? p.slicer;
-      const bed = p.bedType ?? variant?.defaultBed;
-      return { id: p.id, label: model?.label ?? p.printer, brand: model?.brand ?? "", slicer: p.slicer, slicerName,
-        setup: [slicerName, bed && bedLabel(bed)].filter(Boolean).join(" · ") };
-    }),
-    defaultId: defaultPrinter(settings)?.id ?? null,
-    keeps: [
-      ...(option("keep_designer_filament") === true ? ["filament" as const] : []),
-      ...(option("keep_designer_cooling") === true ? ["cooling" as const] : []),
-      ...(option("keep_designer_printer_settings") === true ? ["tuning" as const] : []),
-    ],
-  };
-}
-
-/** The designer's changes replaced by the printer's profile, for the note under the button. */
-function overrideNotes(report: Record<string, unknown> | null): string[] {
-  const dropped = (Array.isArray(report?.dropped) ? report.dropped as { key?: string }[] : []).map((d) => d.key ?? "");
-  return [
-    ...(dropped.some((k) => /fan|cooling|exhaust/.test(k)) ? [t("mw_note_cooling")] : []),
-    ...(dropped.some((k) => /acceleration|elefant|compensation|flow_ratio|arc_fitting/.test(k)) ? [t("mw_note_tuning")] : []),
-  ];
+  return settings.printers.map((p) => {
+    const model = modelOfPreset(models, p.slicer, p.printer);
+    return { id: p.id, label: model?.label ?? p.printer, brand: model?.brand ?? "", slicer: p.slicer };
+  });
 }
 
 /**
@@ -93,8 +69,7 @@ async function convert(printerId: string, name?: string, data?: ArrayBuffer, map
   const download = await saveOutput(res.output);
   if (!download.saved) return { status: "cancelled" };
   const warnings = Array.isArray(res.report?.warnings) ? (res.report.warnings as unknown[]).length : 0;
-  return { status: "saved", fileName: download.fileName, warnings, convertMs: Math.round(res.ms), downloadId: download.id,
-    notes: overrideNotes(res.report) };
+  return { status: "saved", fileName: download.fileName, warnings, convertMs: Math.round(res.ms) };
 }
 
 window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
@@ -104,7 +79,6 @@ window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
   try {
     const result = request.type === "printers" ? await printers()
       : request.type === "prepare" ? await prepare()
-      : request.type === "show-download" ? await showInFolder(request.downloadId)
       : request.type === "send-report"
         ? await sendReport(CONFIG.reportUrl, { report: request.report, comment: request.comment, contact: request.contact, code: request.code, version: CONFIG.version })
       : await convert(request.printerId, request.name, request.data, request.map);

@@ -151,10 +151,11 @@ slicers show "old vs new" values after a conversion.
 
 ## Right on MakerWorld
 
-A button appears above MakerWorld's own: *Download for Creator 5 Pro*, with a menu for your
-other printers. The project is downloaded through MakerWorld as usual, converted in the
-browser and saved — only the converted file. The button shows the progress, and a line under
-it says which slicer it is for and what is kept from the designer.
+Your printers appear in MakerWorld's *Print Files* as if MakerWorld supported them: a
+Creator 5 Pro chip next to A1, P1S… (printers MakerWorld already lists are left alone).
+Pick it and the green button becomes *Download for Creator 5 Pro*: the project is
+downloaded through MakerWorld as usual, converted in the browser and saved — only the
+converted file.
 
 ## Nothing silent
 

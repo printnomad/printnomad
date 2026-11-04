@@ -2,7 +2,7 @@
 import { CONFIG } from "../config.ts";
 import type { Issue } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
-import { DEFAULT_OPTIONS, defaultPrinter, loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
+import { DEFAULT_OPTIONS, loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
 import { mapEditor } from "../lib/map-editor.ts";
 import { clipboardReport } from "../lib/report-copy.ts";
@@ -16,6 +16,7 @@ import {
   buildModels,
   modelOfPreset,
   pickSlicer,
+  presetFor,
   printerFromSetup,
   slicersFor,
   supportedOnly,
@@ -86,24 +87,18 @@ function showCover(img: HTMLImageElement, placeholder: HTMLElement, url: string 
   }
 }
 
-/** "0.4 mm nozzle · Flash Studio · Cool Plate" */
-function setupLine(p: MyPrinter, variant: Variant | undefined): string {
-  const bed = p.bedType ?? variant?.defaultBed;
-  return [variant && t("printer_setup_nozzle", variant.nozzle), slicerName(p.slicer), bed && bedLabel(bed)].filter(Boolean).join(" · ");
-}
-
 function printerLabel(p: MyPrinter): string {
   return modelOfPreset(models, p.slicer, p.printer)?.label ?? p.printer;
 }
 
 function renderPrinters() {
-  const fallback = defaultPrinter(settings);
   const items = settings.printers.map((p) => {
     const { node, field } = fromTemplate("tpl-printer");
     const model = modelOfPreset(models, p.slicer, p.printer);
-    const variant = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer);
-    const isDefault = p.id === fallback?.id;
-    const editing = editingId === p.id;
+    const editing = editingId === p.id && draft !== null;
+    const shownSlicer = editing ? draft!.slicer : p.slicer;
+    const shownPreset = editing && model ? presetFor(model, draft!.slicer, draft!.nozzle) : p.printer;
+    const variant = model?.variants.find((v) => v.slicer === shownSlicer && v.preset === shownPreset);
     const label = model?.label ?? p.printer;
     const card = field("card");
     card.dataset.editing = String(editing);
@@ -111,15 +106,14 @@ function renderPrinters() {
     card.dataset.printer = p.id;
     field("brand").textContent = model?.brand ?? "";
     field("name").textContent = label;
-    field("default").hidden = !isDefault;
     showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
 
-    const bed = p.bedType ?? variant?.defaultBed;
+    const bed = (editing ? draft!.bed : p.bedType) ?? variant?.defaultBed;
     const values: Record<string, string> = {
       nozzle: variant ? t("printer_nozzle", variant.nozzle) : "—",
       // Fixed plate without a name in the profile: the slicer's own (rules.FIXED_PLATE_DEFAULT).
       bed: bed ? bedLabel(bed) : variant && variant.bedTypes.length < 2 ? t("printers_bed_fixed") : t("printers_bed_from_project"),
-      slicer: slicerName(p.slicer),
+      slicer: slicerName(shownSlicer),
     };
     for (const [name, value] of Object.entries(values)) {
       const shown = node.querySelector(`[data-value="${name}"]`) as HTMLElement;
@@ -131,23 +125,20 @@ function renderPrinters() {
     if (editing && model && variant) wireEditor(node, p, model, variant);
 
     const edit = node.querySelector<HTMLButtonElement>('[data-action="edit"]')!;
-    edit.ariaPressed = String(editing);
-    edit.ariaLabel = editing ? t("printers_edit_done_named", label) : t("printers_edit_named", label);
-    field("pencil").toggleAttribute("hidden", editing);
-    field("done").toggleAttribute("hidden", !editing);
+    edit.textContent = t("printers_edit");
+    edit.ariaLabel = t("printers_edit_named", label);
+    edit.hidden = editing;
     edit.onclick = () => {
-      editingId = editing ? null : p.id;
+      if (!model || !variant) return;
+      editingId = p.id;
+      draft = { nozzle: variant.nozzle, slicer: p.slicer, bed: p.bedType };
       renderPrinters();
-      document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(p.id)}"] [data-action="edit"]`)?.focus();
+      document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(p.id)}"] select`)?.focus();
     };
-    field("used-by").hidden = editing || !isDefault;
-    const makeDefault = node.querySelector<HTMLButtonElement>('[data-action="default"]')!;
-    makeDefault.hidden = editing || isDefault;
-    makeDefault.onclick = () => void setDefaultPrinter(p.id);
     const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
     remove.hidden = !editing;
     remove.onclick = () => void removePrinter(p.id);
-    field("saved").hidden = !editing;
+    field("edit-actions").hidden = !editing;
     return node;
   });
   const add = fromTemplate("tpl-add-card");
@@ -155,34 +146,21 @@ function renderPrinters() {
   $("printers").replaceChildren(...items, add.node);
 
   const select = $<HTMLSelectElement>("convert-printer");
-  const selected = select.value;
-  const ordered = fallback ? [fallback, ...settings.printers.filter((p) => p !== fallback)] : [];
-  const options = ordered.map((p) =>
+  const selected = select.value || settings.convertPrinterId;
+  const options = settings.printers.map((p) =>
     new Option(`${printerLabel(p)} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected));
   // Several printers: converting for all of them (one file each) stays one choice away.
   if (options.length > 1) options.push(new Option(t("convert_all_printers", options.length), ALL_PRINTERS, false, selected === ALL_PRINTERS));
   select.replaceChildren(...(options.length ? options : [new Option(t("convert_no_printers"), "")]));
-  renderHero();
+  select.onchange = () => void saveSettings({ convertPrinterId: select.value });
   renderExamples();
-}
-
-function renderHero() {
-  const printer = defaultPrinter(settings);
-  const label = printer ? printerLabel(printer) : "";
-  $("hero-action").textContent = t("mw_download_for", label);
-  $("hero-default").textContent = t("hero_default", label);
 }
 
 async function removePrinter(id: string) {
   editingId = null;
+  draft = null;
   await updatePrinters(settings.printers.filter((p) => p.id !== id));
   if (!settings.printers.length) onboarding.start();
-}
-
-async function setDefaultPrinter(id: string) {
-  settings.defaultPrinterId = id;
-  await saveSettings({ defaultPrinterId: id });
-  renderPrinters();
 }
 
 async function updatePrinters(printers: MyPrinter[]) {
@@ -193,6 +171,8 @@ async function updatePrinters(printers: MyPrinter[]) {
 
 // --- first run, adding and editing a printer -----------------------------------------
 let editingId: string | null = null;
+/** The card being edited: what its selects say, until Save. */
+let draft: Setup | null = null;
 
 const onboarding = createOnboarding({
   catalog: () => catalog,
@@ -218,6 +198,7 @@ function showHome(anchor?: string) {
 /** Adding a printer has its own screen, under the same header. */
 function openAddView() {
   editingId = null;
+  draft = null;
   $("home").hidden = true;
   $("home-footer").hidden = true;
   $("add-view").hidden = false;
@@ -246,7 +227,9 @@ async function addPrinter(model: ModelChoice) {
   const printer = printerFromSetup(crypto.randomUUID(), model, catalog!, { nozzle, slicer, bed: undefined });
   if (!printer) return;
   const existing = settings.printers.find((p) => p.printer === printer.printer && p.slicer === printer.slicer);
-  editingId = existing?.id ?? printer.id;
+  const added = existing ?? printer;
+  editingId = added.id;
+  draft = { nozzle, slicer: added.slicer, bed: added.bedType };
   backToPrinters();
   if (existing) renderPrinters();
   else await updatePrinters([...settings.printers, printer]);
@@ -255,16 +238,13 @@ async function addPrinter(model: ModelChoice) {
   card?.querySelector("select")?.focus();
 }
 
-/** Edit: in the card itself, each value becomes a select; every change is saved at once. */
+/** Edit: in the card itself, each value becomes a select; nothing is stored until Save. */
 function wireEditor(node: HTMLElement, p: MyPrinter, model: ModelChoice, variant: Variant) {
   const select = (name: string) => node.querySelector(`[data-edit="${name}"]`) as HTMLSelectElement;
-  const setup: Setup = { nozzle: variant.nozzle, slicer: p.slicer, bed: p.bedType };
-  const apply = async (next: Setup, focus: string) => {
-    const printer = printerFromSetup(p.id, model, catalog!, next);
-    if (!printer) return;
-    await updatePrinters(settings.printers
-      .filter((x) => x.id === p.id || !(x.printer === printer.printer && x.slicer === printer.slicer))
-      .map((x) => (x.id === p.id ? printer : x)));
+  const setup = draft!;
+  const change = (next: Setup, focus: string) => {
+    draft = next;
+    renderPrinters();
     document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(p.id)}"] [data-edit="${focus}"]`)?.focus();
   };
   const show = (name: string, on: boolean) => {
@@ -272,22 +252,38 @@ function wireEditor(node: HTMLElement, p: MyPrinter, model: ModelChoice, variant
     (node.querySelector(`[data-value="${name}"]`) as HTMLElement).hidden = on;
   };
   select("nozzle").replaceChildren(...allNozzles(model).nozzles.map((n) =>
-    new Option(t("printer_nozzle", n), n, false, n === variant.nozzle)));
-  select("nozzle").onchange = () => void apply(withNozzle(model, catalog!, setup, select("nozzle").value), "nozzle");
+    new Option(t("printer_nozzle", n), n, false, n === setup.nozzle)));
+  select("nozzle").onchange = () => change(withNozzle(model, catalog!, setup, select("nozzle").value), "nozzle");
   show("nozzle", true);
-  const others = slicersFor(model, catalog!, variant.nozzle);
-  select("slicer").replaceChildren(...others.map((o) => new Option(o.name, o.slicer, false, o.slicer === p.slicer)));
-  select("slicer").onchange = () => void apply(withSlicer(model, setup, select("slicer").value), "slicer");
+  const others = slicersFor(model, catalog!, setup.nozzle);
+  select("slicer").replaceChildren(...others.map((o) => new Option(o.name, o.slicer, false, o.slicer === setup.slicer)));
+  select("slicer").onchange = () => change(withSlicer(model, setup, select("slicer").value), "slicer");
   show("slicer", true);
   // A plate that cannot be chosen stays as text, in the same row.
   if (variant.bedTypes.length > 1) {
     const first = variant.defaultBed ? bedLabel(variant.defaultBed) : t("printers_bed_from_project");
-    select("bed").replaceChildren(new Option(first, "", false, !p.bedType), ...variant.bedTypes
+    select("bed").replaceChildren(new Option(first, "", false, !setup.bed), ...variant.bedTypes
       .filter((b) => b !== variant.defaultBed)
-      .map((b) => new Option(bedLabel(b), b, false, b === p.bedType)));
-    select("bed").onchange = () => void apply({ ...setup, bed: select("bed").value || undefined }, "bed");
+      .map((b) => new Option(bedLabel(b), b, false, b === setup.bed)));
+    select("bed").onchange = () => change({ ...setup, bed: select("bed").value || undefined }, "bed");
     show("bed", true);
   }
+  const printer = printerFromSetup(p.id, model, catalog!, setup);
+  const save = node.querySelector<HTMLButtonElement>('[data-action="save"]')!;
+  save.disabled = !printer || (printer.printer === p.printer && printer.slicer === p.slicer && printer.bedType === p.bedType);
+  save.onclick = async () => {
+    if (!printer) return;
+    editingId = null;
+    draft = null;
+    await updatePrinters(settings.printers
+      .filter((x) => x.id === p.id || !(x.printer === printer.printer && x.slicer === printer.slicer))
+      .map((x) => (x.id === p.id ? printer : x)));
+  };
+  node.querySelector<HTMLButtonElement>('[data-action="cancel"]')!.onclick = () => {
+    editingId = null;
+    draft = null;
+    renderPrinters();
+  };
 }
 
 // --- conversion preferences -----------------------------------------------------
@@ -362,7 +358,7 @@ function renderPrefs() {
 }
 
 function renderExamples() {
-  const printer = defaultPrinter(settings);
+  const printer = settings.printers[0];
   const title = t("pref_example", printer ? printerLabel(printer) : "", "Bambu Lab A1");
   for (const el of document.querySelectorAll("[data-example-title]")) el.textContent = title;
 }

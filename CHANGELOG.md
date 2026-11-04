@@ -22,7 +22,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Filament diameter 2.85 mm instead of 1.75 mm** for Flashforge PLA profiles: profile inheritance now resolves parents within the same vendor, then the common filament library, as OrcaSlicer does. Projects converted with earlier versions must be converted again before printing.
 
 ### Changed
-- **New design**: home page with the conversion preferences always visible, a default printer, first-run onboarding, printers as cards edited in place, a separate screen to add one in two clicks, and a split button on MakerWorld that shows its own progress, in a shadow root. Light theme only for now. The chips added to MakerWorld, advanced mode and the switch for one slicer on every printer are gone; settings saved by earlier versions are migrated.
+- **New design**: home page with the conversion preferences always visible, first-run onboarding, printers as cards edited in place with a Save button, and a separate screen to add one in two clicks. Light theme only for now. Advanced mode and the switch for one slicer on every printer are gone; settings saved by earlier versions are migrated.
 
 ### Added
 - **A short list of tested printers** (`supportedModels` in `extension/config.json`) and a simpler page; printers saved earlier keep working. Your printer not on the list? Ask for it in one click.

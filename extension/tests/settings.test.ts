@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
-import { DEFAULT_OPTIONS, defaultPrinter, migrateSettings } from "../src/lib/settings.ts";
+import { DEFAULT_OPTIONS, migrateSettings } from "../src/lib/settings.ts";
 
 test("options chosen outside advanced mode never applied, so they go with it", () => {
   assert.deepEqual(migrateSettings({ advanced: false, options: { map_mode: "exact" } }), { set: { options: {} }, remove: ["advanced"] });
@@ -18,16 +18,12 @@ test("the switch for one slicer on every printer goes; each printer keeps the sl
   assert.deepEqual(migrateSettings({ generalSlicerForAll: true, printers }), { set: {}, remove: ["generalSlicerForAll"] });
 });
 
-test("settings already up to date are left alone", () => {
-  assert.deepEqual(migrateSettings({ options: { map_mode: "exact" } }), { set: {}, remove: [] });
+test("the default printer goes: on MakerWorld the printer is chosen on the page", () => {
+  assert.deepEqual(migrateSettings({ defaultPrinterId: "a" }), { set: {}, remove: ["defaultPrinterId"] });
 });
 
-test("the default printer is the chosen one, else the first", () => {
-  const printers = [{ id: "a", slicer: "s", printer: "A" }, { id: "b", slicer: "s", printer: "B" }];
-  assert.equal(defaultPrinter({ printers })?.id, "a");
-  assert.equal(defaultPrinter({ printers, defaultPrinterId: "b" })?.id, "b");
-  assert.equal(defaultPrinter({ printers, defaultPrinterId: "gone" })?.id, "a");
-  assert.equal(defaultPrinter({ printers: [] }), undefined);
+test("settings already up to date are left alone", () => {
+  assert.deepEqual(migrateSettings({ options: { map_mode: "exact" } }), { set: {}, remove: [] });
 });
 
 test("the defaults are the core's", () => {

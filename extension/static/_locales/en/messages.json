@@ -14,7 +14,7 @@
     "message": "Slicer"
   },
   "printers_remove": {
-    "message": "Remove printer"
+    "message": "Remove"
   },
   "profiles_status_loading": {
     "message": "Loading profile catalog…"
@@ -199,7 +199,7 @@
     "message": "Download for $1"
   },
   "mw_status_downloading": {
-    "message": "Getting the file from MakerWorld…"
+    "message": "Getting the 3MF…"
   },
   "mw_status_converting": {
     "message": "Converting for $1…",
@@ -281,21 +281,8 @@
   "hero_eyebrow": {
     "message": "Ready on MakerWorld"
   },
-  "hero_before": {
-    "message": "Open any model on MakerWorld and press"
-  },
-  "hero_after": {
-    "message": ". The file comes out ready for your printer and slicer."
-  },
   "open_makerworld": {
     "message": "Open MakerWorld"
-  },
-  "hero_default": {
-    "message": "Default printer: $1",
-    "description": "$1 = value"
-  },
-  "hero_change": {
-    "message": "change"
   },
   "prefs_title": {
     "message": "Conversion preferences"
@@ -451,12 +438,6 @@
   "assign_colour_black": {
     "message": "Black"
   },
-  "printers_default": {
-    "message": "Default"
-  },
-  "printers_make_default": {
-    "message": "Make default"
-  },
   "printer_setup_nozzle": {
     "message": "$1 mm nozzle",
     "description": "$1 = value"
@@ -533,7 +514,7 @@
     "message": "You're ready."
   },
   "onboarding_3_text": {
-    "message": "From now on, open any model on MakerWorld and use the new download button. That's it."
+    "message": "From now on, open any model on MakerWorld, pick your printer in Print Files and download. That's it."
   },
   "onboarding_see_prefs": {
     "message": "See conversion preferences"
@@ -545,48 +526,7 @@
     "message": "On every MakerWorld model"
   },
   "onboarding_look_for": {
-    "message": "Look for this button."
-  },
-  "mw_status_downloading_percent": {
-    "message": "Downloading… $1%",
-    "description": "$1 = value"
-  },
-  "mw_saved_show": {
-    "message": "Saved · Show in Finder"
-  },
-  "mw_menu_title": {
-    "message": "Download for"
-  },
-  "mw_menu_manage": {
-    "message": "Manage printers and preferences"
-  },
-  "mw_choose_printer": {
-    "message": "Choose another printer"
-  },
-  "mw_meta_preferences": {
-    "message": "Preferences"
-  },
-  "mw_meta_keeps": {
-    "message": "keeps the designer's $1",
-    "description": "$1 = value"
-  },
-  "mw_meta_keeps_none": {
-    "message": "uses your printer's profile"
-  },
-  "mw_keep_filament": {
-    "message": "temperatures"
-  },
-  "mw_keep_cooling": {
-    "message": "cooling"
-  },
-  "mw_keep_tuning": {
-    "message": "printer tuning"
-  },
-  "mw_note_cooling": {
-    "message": "Cooling taken from your profile"
-  },
-  "mw_note_tuning": {
-    "message": "Printer tuning taken from your profile"
+    "message": "Your printers appear with MakerWorld's."
   },
   "add_hint": {
     "message": "Pick it and it's added. You can change its setup right after."
@@ -594,18 +534,30 @@
   "printers_add_time": {
     "message": "Takes a few seconds"
   },
-  "printers_used_by": {
-    "message": "Used by the MakerWorld button"
-  },
   "printers_edit_named": {
     "message": "Edit $1",
     "description": "$1 = printer"
   },
-  "printers_edit_done_named": {
-    "message": "Done editing $1",
-    "description": "$1 = printer"
-  },
   "printers_bed_fixed": {
     "message": "Set by your slicer"
+  },
+  "hero_text": {
+    "message": "Open any model on MakerWorld, pick your printer next to Bambu's in Print Files, and download. The file comes out ready for your printer and slicer."
+  },
+  "printers_save": {
+    "message": "Save"
+  },
+  "printers_cancel": {
+    "message": "Cancel"
+  },
+  "printers_edit": {
+    "message": "Edit"
+  },
+  "mw_status_saved": {
+    "message": "Saved ✓"
+  },
+  "mw_chip_title": {
+    "message": "$1 · converted by PrintNomad",
+    "description": "$1 = printer"
   }
 }

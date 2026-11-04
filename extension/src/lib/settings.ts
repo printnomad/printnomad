@@ -14,8 +14,8 @@ export interface MyPrinter {
 
 export interface Settings {
   printers: MyPrinter[];
-  /** The printer the MakerWorld button and the page name first; absent: the first one. */
-  defaultPrinterId?: string;
+  /** The last choice in "Convert a file" (a printer's id or all of them); absent: the first printer. */
+  convertPrinterId?: string;
   /** Conversion options changed from their defaults (DEFAULT_OPTIONS). */
   options: Record<string, boolean | string>;
 }
@@ -36,9 +36,10 @@ const DEFAULTS: Settings = { printers: [], options: {} };
  *   with it off they are dropped, and nobody's conversions change.
  * - `generalSlicerForAll` is gone: the slicer is chosen per printer, and each printer already
  *   stores the one that switch gave it.
+ * - `defaultPrinterId` is gone: on MakerWorld the printer is chosen on the page.
  */
 export function migrateSettings(stored: Record<string, unknown>): { set: Partial<Settings>; remove: string[] } {
-  const remove = ["advanced", "generalSlicerForAll"].filter((key) => key in stored);
+  const remove = ["advanced", "generalSlicerForAll", "defaultPrinterId"].filter((key) => key in stored);
   return { set: "advanced" in stored && stored.advanced !== true ? { options: {} } : {}, remove };
 }
 
@@ -55,11 +56,6 @@ export async function loadSettings(): Promise<Settings> {
 
 export async function saveSettings(patch: Partial<Settings>): Promise<void> {
   await chrome.storage.sync.set(patch);
-}
-
-/** The default printer: the one chosen, else the first; undefined without printers. */
-export function defaultPrinter(settings: Pick<Settings, "printers" | "defaultPrinterId">): MyPrinter | undefined {
-  return settings.printers.find((p) => p.id === settings.defaultPrinterId) ?? settings.printers[0];
 }
 
 /** chrome.runtime platform → platform key of slicers.json. */
