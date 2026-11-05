@@ -69,16 +69,26 @@ def read_model_info(root: ET.Element | None) -> ModelInfo:
     return info
 
 
-def painted_objects(model_xml: bytes, geometry: dict[str, bytes]) -> set[str]:
-    """Ids de objeto (3dmodel.model) cuya malla tiene pintura de color."""
-    painted_files = {name for name, data in geometry.items() if _has_paint(data)}
-    out: set[str] = set()
+def painted_filaments(model_xml: bytes, geometry: dict[str, bytes]) -> dict[str, set[int]]:
+    """Filaments painted on each object of 3dmodel.model: {object id: {filament, …}}.
+
+    Reads the colour painting of every triangle (Bambu `paint_color`, PrusaSlicer
+    `slic3rpe:mmu_segmentation`). Painted state 0 means the part's own filament, which
+    the caller already knows; only states ≥ 1 are returned. Objects without painting
+    are absent.
+    """
+    by_file = {name: _paint_states(data) for name, data in geometry.items() if _has_paint(data)}
+    out: dict[str, set[int]] = {}
+    # Meshes inside 3dmodel.model itself: per <object> block.
     if _has_paint(model_xml):
-        out.add("*")  # malla pintada dentro del propio 3dmodel.model: no se sabe qué objeto
-    if not painted_files:
+        for m in _OBJECT_BLOCK_RE.finditer(model_xml):
+            states = _paint_states(m.group(2))
+            if states:
+                out.setdefault(m.group(1).decode(), set()).update(states)
+    if not by_file:
         return out
-    # Solo etiquetas <object>/<component>: el archivo puede traer mallas enormes y
-    # un parseo XML completo tarda segundos.
+    # Only <object>/<component> tags: the file can hold huge meshes and a full XML parse
+    # takes seconds.
     current = ""
     for m in _TAG_RE.finditer(model_xml):
         tag, attrs = m.group(1), m.group(2)
@@ -87,16 +97,165 @@ def painted_objects(model_xml: bytes, geometry: dict[str, bytes]) -> set[str]:
             current = oid.group(1).decode() if oid else ""
         else:
             path = re.search(rb'path="([^"]*)"', attrs)
-            if path and path.group(1).decode().lstrip("/") in painted_files:
-                out.add(current)
+            states = by_file.get(path.group(1).decode().lstrip("/")) if path else None
+            if states:
+                out.setdefault(current, set()).update(states)
     return out
 
 
 _TAG_RE = re.compile(rb"<(object|component)\b([^>]*)>")
+_OBJECT_BLOCK_RE = re.compile(rb'<object\b[^>]*\bid="([^"]*)"[^>]*>(.*?)</object>', re.S)
 
 
 def _has_paint(data: bytes) -> bool:
     return b"paint_color" in data or b"mmu_segmentation" in data
+
+
+_PAINT_KEYS = (b'paint_color="', b'slic3rpe:mmu_segmentation="')
+
+
+def paint_code_set(data: bytes) -> set[bytes]:
+    """The distinct paint codes of a mesh file.
+
+    Meshes reach hundreds of MB: plain bytes.find is ~4× faster than a regex here, and
+    triangles share few distinct codes.
+    """
+    codes: set[bytes] = set()
+    for key in _PAINT_KEYS:
+        start = data.find(key)
+        while start != -1:
+            start += len(key)
+            end = data.index(b'"', start)
+            codes.add(data[start:end])
+            start = data.find(key, end)
+    return codes
+
+
+def paint_count(data: bytes) -> int:
+    return sum(data.count(key) for key in _PAINT_KEYS)
+
+
+def _paint_states(data: bytes) -> set[int]:
+    """Painted filaments (states ≥ 1) of every triangle in a mesh file, each code decoded once."""
+    codes = paint_code_set(data)
+    states: set[int] = set()
+    for code in codes:
+        states |= decode_paint(code.decode("ascii", "replace"))
+    states.discard(0)
+    return states
+
+
+def decode_paint(code: str) -> set[int]:
+    """States of the leaves of one triangle's paint code (TriangleSelector serialization).
+
+    The hex string is read from its last character; each character is a 4-bit code.
+    A code with split sides (low 2 bits ≠ 0) is followed by its children, depth first;
+    a leaf holds its state in the high 2 bits, or "11" plus one more code (state − 3),
+    or "11", 0b1111 and one more code (state − 18). Same format as OrcaSlicer and
+    PrusaSlicer (libslic3r/TriangleSelector.cpp, FacetsAnnotation::set_triangle_from_string).
+    """
+    try:
+        codes = [int(c, 16) for c in reversed(code)]
+    except ValueError:
+        return set()  # malformed: ignored, like the slicer does
+    states: set[int] = set()
+    i, pending = 0, 1  # nodes still to read
+    while pending and i < len(codes):
+        c = codes[i]
+        i += 1
+        pending -= 1
+        split_sides = c & 0b11
+        if split_sides:
+            pending += split_sides + 1
+            continue
+        if c & 0b1100 == 0b1100:
+            if i >= len(codes):
+                break
+            extra = codes[i]
+            i += 1
+            if extra == 0b1111:
+                if i >= len(codes):
+                    break
+                states.add(codes[i] + 18)
+                i += 1
+            else:
+                states.add(extra + 3)
+        else:
+            states.add(c >> 2)
+    return states
+
+
+def _leaf_codes(state: int) -> list[int]:
+    if state < 3:
+        return [state << 2]
+    if state <= 17:
+        return [0b1100, state - 3]
+    return [0b1100, 0b1111, state - 18]
+
+
+def remap_paint(code: str, mapping: dict[int, int]) -> str:
+    """The same paint code with its filaments renumbered (`mapping`: old → new state).
+
+    Split nodes are kept as they are, so the triangle's subdivision does not change; only
+    each leaf's state is rewritten (its encoding may grow or shrink: 2 → 3 is "8" → "0C").
+    A malformed code is returned unchanged.
+    """
+    try:
+        codes = [int(c, 16) for c in reversed(code)]
+    except ValueError:
+        return code
+    out: list[int] = []
+    i, pending = 0, 1
+    while pending and i < len(codes):
+        c = codes[i]
+        i += 1
+        pending -= 1
+        split_sides = c & 0b11
+        if split_sides:
+            out.append(c)
+            pending += split_sides + 1
+            continue
+        if c & 0b1100 == 0b1100:
+            if i >= len(codes):
+                return code
+            extra = codes[i]
+            i += 1
+            if extra == 0b1111:
+                if i >= len(codes):
+                    return code
+                state = codes[i] + 18
+                i += 1
+            else:
+                state = extra + 3
+        else:
+            state = c >> 2
+        out.extend(_leaf_codes(mapping.get(state, state)))
+    if pending:
+        return code  # truncated: leave it alone
+    out.extend(codes[i:])
+    return "".join(f"{n:X}" for n in reversed(out))
+
+
+def remap_paint_bytes(data: bytes, mapping: dict[int, int]) -> bytes:
+    """A mesh file with every paint code renumbered; everything else byte for byte."""
+    if not _has_paint(data):
+        return data
+    cache: dict[bytes, bytes] = {}
+    for key in _PAINT_KEYS:
+        parts, pos = [], 0
+        start = data.find(key)
+        while start != -1:
+            start += len(key)
+            end = data.index(b'"', start)
+            code = data[start:end]
+            if code not in cache:
+                cache[code] = remap_paint(code.decode("ascii", "replace"), mapping).encode()
+            parts += [data[pos:start], cache[code]]
+            pos = end
+            start = data.find(key, end)
+        parts.append(data[pos:])
+        data = b"".join(parts)
+    return data
 
 
 def layer_change_filaments(xml: bytes | None) -> dict[str, set[int]]:

@@ -11,7 +11,8 @@ OrcaSlicer plugin (`core/`), inside the browser with [Pyodide](https://pyodide.o
 | `src/engine/` | Web Worker running Pyodide + the core (`worker.ts`) and its promise API (`client.ts`) |
 | `src/profiles/` | Profile catalog published by CI, with the bundled fallback (`catalog.ts`) |
 | `src/options/` | Options page: My printers, profile status, conversion options (advanced mode), convert a file |
-| `src/lib/` | i18n (`chrome.i18n`) and settings (`chrome.storage.sync`, IndexedDB) |
+| `src/makerworld/` | MakerWorld integration: content script (chips, button, menu), page-world capture of the 3MF download, bridge page running the engine |
+| `src/lib/` | i18n (`chrome.i18n`), settings (`chrome.storage.sync`) and the shared conversion (`conversion.ts`) |
 | `static/` | `manifest.json` template and `_locales/<lang>/messages.json` |
 | `config.json` | Catalog URL (also the host permission) and the profiles bundled as fallback |
 
@@ -22,7 +23,7 @@ npm ci
 npm run build          # → dist/ ; load it from chrome://extensions (Developer mode → Load unpacked)
 npm run typecheck
 npm test               # unit tests (node --test)
-npm run test:e2e       # real browser (Chrome, Chromium or Brave; set CHROME_PATH otherwise)
+npm run test:e2e       # real browser (Chrome, Chromium or Brave; set CHROME_PATH otherwise): options page and MakerWorld integration (local stand-in page)
 ```
 
 Extensions cannot read the installed slicer's folders (Chromium blocks them); see

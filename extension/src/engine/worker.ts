@@ -4,6 +4,7 @@
 // pages start this module worker instead. Boot takes ~1 s and happens once per worker.
 import type { PyodideAPI } from "pyodide";
 import type {
+  AssignmentPlan,
   ConvertRequest,
   ConvertResult,
   ListPrintersRequest,
@@ -70,6 +71,7 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
       ok: boolean;
       output: string | null;
       needs_map: boolean;
+      plan?: AssignmentPlan;
       already_target: boolean;
       report: Record<string, unknown> | null;
       text: string;
@@ -92,6 +94,7 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
     return {
       ok: res.ok,
       needsMap: res.needs_map,
+      plan: res.plan,
       alreadyTarget: res.already_target,
       report: res.report,
       text: res.text,
@@ -132,6 +135,9 @@ async function handle(request: Request): Promise<unknown> {
       return listPrinters(request.args);
     case "listOptions":
       return listOptions(request.args.lang);
+    case "warm":
+      // Start Pyodide and import the core ahead of the first conversion.
+      return (await engine()).pyimport("betterbridge.web") && null;
     case "sourceInfo":
       return sourceInfo(request.args.name, request.args.data);
   }

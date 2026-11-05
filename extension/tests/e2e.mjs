@@ -8,67 +8,29 @@
 //
 // The browser comes from CHROME_PATH or a usual install location; without one the test
 // is skipped (exit 0) so CI machines without Chrome still pass.
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import puppeteer from "puppeteer-core";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { allowDownloads, buildExtension, buildFixtures, findBrowser, launch, workDir } from "./support.mjs";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const ext = join(here, "..");
-const repo = join(ext, "..");
-const BROWSERS = [
-  process.env.CHROME_PATH,
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-  "/Applications/Chromium.app/Contents/MacOS/Chromium",
-  "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-  "/usr/bin/google-chrome",
-  "/usr/bin/chromium",
-].filter(Boolean);
-
-const browserPath = BROWSERS.find((p) => existsSync(p));
+const browserPath = findBrowser();
 if (!browserPath) {
   console.log("SKIP: no Chromium-based browser found (set CHROME_PATH)");
   process.exit(0);
 }
 
-const work = mkdtempSync(join(tmpdir(), "bb-e2e-"));
+const work = workDir();
 let file = process.env.BB_E2E_FILE;
-let printer = process.env.BB_E2E_PRINTER ?? "Flashforge Creator 5 Pro 0.4 nozzle";
-if (!file) {
-  // Fake profile tree and project from the Python test fixtures (conftest.py).
-  const python = process.env.PYTHON ?? (existsSync(join(repo, ".venv/bin/python")) ? join(repo, ".venv/bin/python") : "python3");
-  execFileSync(python, ["-c", `
-import sys; sys.path[:0] = [${JSON.stringify(repo)}, ${JSON.stringify(join(repo, "core/src"))}]
-from pathlib import Path
-from conftest import build_profiles_tree, make_bambu_3mf
-work = Path(${JSON.stringify(work)})
-build_profiles_tree(work)
-make_bambu_3mf(work / "boat.3mf", [("PLA", "Bambu PLA Basic @BBL A1", "#FF0000")], [["2"]])
-`]);
-  execFileSync(python, [join(repo, "tools/build_profile_catalog.py"), "--slicer", "flashstudio",
-    "--profiles", join(work, "profiles"), "--ref", "test", "--out", join(work, "catalog")]);
-  file = join(work, "boat.3mf");
-}
-if (!process.env.BB_E2E_SKIP_BUILD) {
-  execFileSync("npm", ["run", "build"], { cwd: ext, stdio: "inherit", env: { ...process.env, BB_PROFILES_DIR: join(work, "catalog") } });
-}
+const printer = process.env.BB_E2E_PRINTER ?? "Flashforge Creator 5 Pro 0.4 nozzle";
+let catalog;
+let painted;
+if (!file) ({ project: file, painted, catalog } = buildFixtures(work));
+if (!process.env.BB_E2E_SKIP_BUILD) buildExtension({ BB_PROFILES_DIR: catalog ?? process.env.BB_PROFILES_DIR ?? "" });
 
 const downloads = join(work, "downloads");
-const browser = await puppeteer.launch({
-  executablePath: browserPath,
-  headless: true,
-  pipe: true,
-  enableExtensions: [join(ext, "dist")],
-  args: ["--no-first-run", "--no-default-browser-check", `--user-data-dir=${join(work, "profile")}`],
-});
+const { browser, id } = await launch(browserPath, work);
 const errors = [];
 try {
-  const worker = await browser.waitForTarget((t) => t.type() === "service_worker" && t.url().endsWith("/background.js"));
-  const id = new URL(worker.url()).host;
-  const session = await browser.target().createCDPSession();
-  await session.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: downloads, eventsEnabled: true });
+  await allowDownloads(browser, downloads);
 
   const page = await browser.newPage();
   page.on("pageerror", (e) => errors.push(String(e)));
@@ -129,6 +91,19 @@ try {
     if (readFileSync(d.filename).readUInt32LE(0) !== 0x04034b50) throw new Error(`${d.filename} is not a ZIP file`);
   }
   console.log(`OK: downloaded ${complete.length} file(s)`);
+
+  if (painted) {
+    // More colours on a plate than extruders: the assignment screen, then the conversion.
+    await (await page.$("#convert-file")).uploadFile(painted);
+    await page.click("#convert-button");
+    await page.waitForSelector('#convert-results [data-field="map"] .btn-primary', { timeout: 120_000 });
+    const groups = await page.$$eval('#convert-results [data-field="map"] [role="radio"][aria-checked="true"]', (c) => c.length);
+    if (groups !== 5) throw new Error(`assignment rows: ${groups}`);
+    await page.click('#convert-results [data-field="map"] .btn-primary');
+    await page.waitForFunction(() => /Saved/.test(document.querySelector('#convert-results [data-field="status"]').textContent),
+      { timeout: 120_000 });
+    console.log("OK: assignment screen and conversion with the chosen extruders");
+  }
 } finally {
   await browser.close();
 }

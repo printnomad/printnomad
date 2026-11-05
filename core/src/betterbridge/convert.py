@@ -8,12 +8,14 @@ from __future__ import annotations
 import copy
 import json
 import math
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 
-from . import model_edit, rules
+from . import model_edit, renumber, repair, rules
 from .i18n import t
 from .profiles import ProfileError, ProfileLibrary
 from .read_3mf import (
+    CUSTOM_GCODE_PER_LAYER,
     MODEL_FILE,
     MODEL_SETTINGS,
     PROJECT_SETTINGS,
@@ -25,8 +27,6 @@ from .read_3mf import (
 from .remap_filaments import assign
 from .report import FieldChange, FilamentMapping, ObjectOverride, Report
 from .target import Target
-
-CUSTOM_GCODE_PER_LAYER = "Metadata/custom_gcode_per_layer.xml"
 
 # Ajustes de PrusaSlicer que se trasladan (clave Prusa -> clave Orca).
 PRUSA_PROCESS_KEYS = {
@@ -84,6 +84,25 @@ def _prusa_settings(project: Project3MF) -> dict:
     return out
 
 
+def plate_usage(project: Project3MF, count: int) -> dict[str, set[int]]:
+    """Filaments each plate uses: objects' and parts' own, painted ones and per-layer changes."""
+    info = model_edit.read_model_info(project.model_settings())
+    painted: dict[str, set[int]] = {}
+    if project.has(MODEL_FILE):
+        geometry = {name: project.read(name) for name in project.geometry_names()}
+        # The filaments really painted on each object (not every filament of the project).
+        painted = model_edit.painted_filaments(project.read(MODEL_FILE), geometry)
+    per_layer = model_edit.layer_change_filaments(
+        project.read(CUSTOM_GCODE_PER_LAYER) if project.has(CUSTOM_GCODE_PER_LAYER) else None)
+    usage: dict[str, set[int]] = {}
+    for pid, objects in (info.plates or {"1": list(info.object_names)}).items():
+        used: set[int] = set(per_layer.get(pid, set()))
+        for o in objects:
+            used |= info.object_filaments.get(o, {1}) | painted.get(o, set())
+        usage[pid] = {f for f in used if 1 <= f <= count} or {1}
+    return usage
+
+
 def convert(
     project: Project3MF,
     target: Target,
@@ -94,6 +113,80 @@ def convert(
     keep_designer_printer_settings: bool = False,
     map_mode: str = rules.MAP_COMPATIBLE,
     source_lib: ProfileLibrary | None = None,
+) -> ConversionResult:
+    """Convierte `project` para `target` (opciones: ver `_convert`).
+
+    First the project's filaments are renumbered when it lists filaments it does not
+    use, or when the user's assignment sends several to one extruder (renumber.py): the
+    result lists the filaments it really prints. Without an assignment, a project whose
+    plates need more filaments than extruders is left as is, so the assignment screen
+    shows the designer's own numbering.
+    """
+    options = {"keep_designer_filament": keep_designer_filament, "keep_designer_cooling": keep_designer_cooling,
+               "keep_designer_printer_settings": keep_designer_printer_settings, "map_mode": map_mode,
+               "source_lib": source_lib}
+    settings = project.project_settings
+    if settings and detect_source(project) not in (SOURCE_PRUSA, SOURCE_UNKNOWN) and target.is_same_printer(settings):
+        return _review(project, target)
+    # Only projects that will really be converted (the checks of _convert come first).
+    if not settings or detect_source(project) in (SOURCE_PRUSA, SOURCE_UNKNOWN) or target.is_same_printer(settings):
+        return _convert(project, target, nozzle, user_map, **options)
+    types = [str(x).upper() for x in settings.get("filament_type") or ["PLA"]]
+    try:
+        usage = plate_usage(project, len(types))
+    except ET.ParseError:
+        return _convert(project, target, nozzle, user_map, **options)
+    used = set().union(*usage.values())
+    fits = target.shared_nozzle or all(len(u) <= target.extruders for u in usage.values())
+    chosen = None if target.shared_nozzle else user_map
+    valid_map = chosen is None or (
+        all(f in chosen for f in used)
+        and all(len({types[f - 1] for f in used if chosen[f] == e}) == 1 for e in set(chosen.values())))
+    plan = renumber.plan(len(types), used, chosen) if (chosen is not None or fits) and valid_map else None
+    if not plan:
+        return _convert(project, target, nozzle, user_map, known_usage=usage, **options)
+    reduced, changed = renumber.apply(project, plan)
+    result = _convert(reduced, target, nozzle, plan.user_map, known_usage={
+        p: {plan.new_of[f] for f in u} for p, u in usage.items()}, **options)
+    if result.report.ok:  # nothing is written when the conversion fails
+        result.files = {**changed, **result.files}
+    result.report.filament_changes = _describe(plan)
+    return result
+
+
+def _review(project: Project3MF, target: Target) -> ConversionResult:
+    """A project already set up for `target`: nothing to convert, but values that would
+    stop it slicing are fixed (repair.py). Without fixes, the report says so (an error,
+    as before: there is nothing to write)."""
+    report, files = repair.review(project, target)
+    report.already_target = True
+    if not files:
+        report.errors.append(t("convert.error.already_target", target=target.display_name))
+    return ConversionResult(report=report, files=files)
+
+
+def _describe(plan: renumber.Renumbering) -> list[str]:
+    out = []
+    if plan.removed:
+        out.append(t("report.filaments_removed", filaments=", ".join(f"#{f}" for f in plan.removed)))
+    for new, group in plan.merged.items():
+        if len(group) > 1:
+            out.append(t("report.filaments_merged", filaments=", ".join(f"#{f}" for f in group), new=new,
+                         extruder=(plan.user_map or {}).get(new, new)))
+    return out
+
+
+def _convert(
+    project: Project3MF,
+    target: Target,
+    nozzle: str | None = None,
+    user_map: dict[int, int] | None = None,
+    keep_designer_filament: bool = True,
+    keep_designer_cooling: bool = False,
+    keep_designer_printer_settings: bool = False,
+    map_mode: str = rules.MAP_COMPATIBLE,
+    source_lib: ProfileLibrary | None = None,
+    known_usage: dict[str, set[int]] | None = None,
 ) -> ConversionResult:
     """Convierte `project` para la impresora `target`.
 
@@ -220,21 +313,7 @@ def convert(
 
     ms_root = project.model_settings()
     info = model_edit.read_model_info(ms_root)
-    painted = set()
-    if project.has(MODEL_FILE):
-        geometry = {name: project.read(name) for name in project.geometry_names()}
-        painted = model_edit.painted_objects(project.read(MODEL_FILE), geometry)
-    per_layer = model_edit.layer_change_filaments(
-        project.read(CUSTOM_GCODE_PER_LAYER) if project.has(CUSTOM_GCODE_PER_LAYER) else None)
-    usage: dict[str, set[int] | None] = {}
-    for pid, objects in (info.plates or {"1": list(info.object_names)}).items():
-        if "*" in painted or any(o in painted for o in objects):
-            usage[pid] = None
-            continue
-        used: set[int] = set(per_layer.get(pid, set()))
-        for o in objects:
-            used |= info.object_filaments.get(o, {1})
-        usage[pid] = {f for f in used if 1 <= f <= n} or {1}
+    usage: dict[str, set[int] | None] = dict(known_usage) if known_usage is not None else plate_usage(project, n)
 
     result.usage = usage
     assignment = assign(ftypes, usage, target.extruders, user_map, shared_nozzle=target.shared_nozzle)
@@ -319,8 +398,11 @@ def convert(
     over_limit = manual_limit is not None and highest > manual_limit
     slicer_map_mode = _slicer_map_mode(map_mode, user_map, over_limit, target.extruders, report)
     put("filament_map_mode", slicer_map_mode, t("reason.filament_map_mode"))
-    put("filament_printable", [target.filament_printable_all] * n,
-        t("reason.filament_printable", count=target.extruders))
+    masks = [target.filament_printable_of(p) for p in fprofiles]
+    put("filament_printable", masks, t("reason.filament_printable", count=target.extruders))
+    plate_maps = {p: (slicer_map_mode, m) for p, m in assignment.per_plate.items()}
+    conflicts = repair.printable_conflicts(masks, plate_maps, usage)
+    report.warnings.extend(repair.conflict_warnings(conflicts, masks, ftypes))
     ext_colours = list(machine_cfg.get("extruder_colour") or [])
     ext_colours += ["#FFFFFF"] * (target.extruders - len(ext_colours))
     for i in reversed(range(n)):

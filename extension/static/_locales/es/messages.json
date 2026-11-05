@@ -196,5 +196,68 @@
   },
   "general_slicer_help": {
     "message": "Por defecto cada impresora usa el laminador de su marca (Flash Studio para Flashforge, Bambu Studio para Bambu Lab…) y OrcaSlicer para las demás. Actívalo si abres todo en OrcaSlicer. Igual puedes cambiar el laminador de una impresora en su tarjeta."
+  },
+  "mw_chip_title": {
+    "message": "$1 · convertido por BetterBridge"
+  },
+  "mw_download_for": {
+    "message": "Descargar para $1"
+  },
+  "mw_status_downloading": {
+    "message": "Obteniendo el 3MF…"
+  },
+  "mw_status_converting": {
+    "message": "Convirtiendo para $1…"
+  },
+  "mw_status_saved": {
+    "message": "Guardado ✓"
+  },
+  "mw_status_cancelled": {
+    "message": "No se guardó"
+  },
+  "mw_status_already": {
+    "message": "Ya está listo para esta impresora"
+  },
+  "mw_status_error": {
+    "message": "No se pudo convertir"
+  },
+  "mw_error_timeout": {
+    "message": "MakerWorld no respondió: ¿iniciaste sesión?"
+  },
+  "mw_error_download": {
+    "message": "Falló la descarga ($1)"
+  },
+  "mw_error_menu": {
+    "message": "No se encontró el menú de descarga de MakerWorld"
+  },
+  "convert_choose_extruders": {
+    "message": "Elige qué cabezal imprime cada color"
+  },
+  "convert_not_converted": {
+    "message": "No se convirtió"
+  },
+  "map_title": {
+    "message": "Asigna $1 colores a los $2 cabezales de $3"
+  },
+  "map_hint": {
+    "message": "Una placa usa más colores que cabezales tiene la impresora, así que algunos colores se imprimirán igual. Sugerencia: colores parecidos del mismo material comparten cabezal; cámbialo si quieres."
+  },
+  "map_extruder": {
+    "message": "Cabezal $1"
+  },
+  "map_plates": {
+    "message": "Placas $1"
+  },
+  "map_unused": {
+    "message": "$1 colores del proyecto no se usan y siguen a uno parecido."
+  },
+  "map_mixed": {
+    "message": "El cabezal $1 tiene materiales distintos: un material por cabezal."
+  },
+  "map_convert": {
+    "message": "Convertir"
+  },
+  "map_cancel": {
+    "message": "Cancelar"
   }
 }

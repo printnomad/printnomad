@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -36,6 +37,15 @@ def _model_xml(items: list[tuple[str, float, float]]) -> str:
             f"<resources>{objs}</resources><build>{build}</build></model>\n")
 
 
+def paint_code(state: int) -> str:
+    """Paint code of a whole triangle painted with filament `state` (TriangleSelector format)."""
+    if state < 3:
+        return f"{state << 2:X}"
+    if state <= 17:
+        return f"{state - 3:X}C"
+    return f"{state - 18:X}FC"
+
+
 def make_bambu_3mf(
     path: Path,
     filaments: list[tuple[str, str, str]],
@@ -44,9 +54,12 @@ def make_bambu_3mf(
     part_overrides: dict[str, dict[str, str]] | None = None,
     bed: int = 256,
     settings: dict | None = None,
-    paint: bool = False,
+    paint: tuple[int, ...] = (),
+    plate_map_mode: str = "Auto For Flush",
+    plate_maps: list[int] | None = None,
 ) -> Path:
-    """filaments: [(tipo, id de perfil, color)]; plates: ids de objeto por placa."""
+    """filaments: [(tipo, id de perfil, color)]; plates: ids de objeto por placa.
+    plate_map_mode / plate_maps: asignación de cada placa (por defecto automática, todo en E1)."""
     object_extruders = object_extruders or {}
     part_overrides = part_overrides or {}
     n = len(filaments)
@@ -90,8 +103,8 @@ def make_bambu_3mf(
     for i, plate in enumerate(plates, 1):
         ms.append("  <plate>")
         ms.append(f'    <metadata key="plater_id" value="{i}"/>')
-        ms.append('    <metadata key="filament_map_mode" value="Auto For Flush"/>')
-        ms.append(f'    <metadata key="filament_maps" value="{" ".join(["1"] * n)}"/>')
+        ms.append(f'    <metadata key="filament_map_mode" value="{plate_map_mode}"/>')
+        ms.append(f'    <metadata key="filament_maps" value="{" ".join(str(e) for e in plate_maps or [1] * n)}"/>')
         for oid in plate:
             ms.append("    <model_instance>")
             ms.append(f'      <metadata key="object_id" value="{oid}"/>')
@@ -107,9 +120,11 @@ def make_bambu_3mf(
         for oid in plate:
             items.append((oid, col * bed * 1.2 + bed / 2, -row * bed * 1.2 + bed / 2))
 
+    # Colour painting: one triangle per filament in `paint`, encoded like Bambu Studio.
     cube = CUBE
-    if paint:
-        cube = cube.replace('v3="1"/>', 'v3="1" paint_color="4"/>', 1)
+    for state in paint:  # the next unpainted triangle
+        cube = re.sub(r'<triangle (v1="\d+" v2="\d+" v3="\d+")/>',
+                      rf'<triangle \1 paint_color="{paint_code(state)}"/>', cube, count=1)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("[Content_Types].xml", "<Types/>")
         zf.writestr("3D/3dmodel.model", _model_xml(items))
@@ -203,6 +218,12 @@ def build_profiles_tree(tmp_path: Path) -> Path:
             "compatible_printers": [machine, "Flashforge Creator 5 Pro 0.6 nozzle"], "filament_settings_id": [name],
             "filament_max_volumetric_speed": ["18"],
         })
+    # Restricción del propio fabricante: este filamento solo en E1–E2 (como Elastic @FF C5P).
+    _write(ff / "filament/tpu.json", {
+        "type": "filament", "name": "Flashforge TPU @FF C5P", "instantiation": "true",
+        "compatible_printers": [machine], "filament_type": ["TPU"], "filament_printable": ["3"],
+        "filament_max_volumetric_speed": ["4"], "nozzle_temperature": ["230"],
+    })
     return root
 
 

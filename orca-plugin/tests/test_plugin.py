@@ -130,9 +130,9 @@ def test_notification_panel_preview_and_convert(plugin, tmp_path, monkeypatch):
     send(cap, panel, {"type": "ready"})
     preview = panel.posts[-1]
     assert preview["type"] == "preview" and not preview["blocking"]
-    assert [f["target"] for f in preview["filaments"]] == ["Flashforge PLA Basic @FF C5P"] * 2
-    assert preview["filaments"][1]["plates"] == ["1"]
-    assert preview["filaments"][0]["plates"] == []           # filamento 1 sin uso
+    # Filament 1 is never used: dropped, filament 2 becomes the only one.
+    assert [f["target"] for f in preview["filaments"]] == ["Flashforge PLA Basic @FF C5P"]
+    assert preview["filaments"][0]["plates"] == ["1"]
     assert preview["output_name"] == "proj_CREATOR5_PRO.3mf"
 
     send(cap, panel, {"type": "convert", "nozzle": "0.4"})
@@ -202,7 +202,7 @@ def test_notification_panel_preview_and_convert(plugin, tmp_path, monkeypatch):
 
 def test_panel_map_from_table(plugin, tmp_path):
     module, orca, state = plugin
-    src = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=True)
+    src = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=(1, 2, 3, 4, 5))
     cap = open_project(module, orca, state, src)
     state["notifications"][0][3]()
     panel = state["panels"][0]

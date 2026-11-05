@@ -207,5 +207,68 @@
   },
   "general_slicer_help": {
     "message": "By default each printer uses its brand's slicer (Flash Studio for Flashforge, Bambu Studio for Bambu Lab…) and OrcaSlicer for the rest. Turn it on if you open everything in OrcaSlicer. You can still change the slicer of a single printer on its card."
+  },
+  "mw_chip_title": {
+    "message": "$1 · converted by BetterBridge"
+  },
+  "mw_download_for": {
+    "message": "Download for $1"
+  },
+  "mw_status_downloading": {
+    "message": "Getting the 3MF…"
+  },
+  "mw_status_converting": {
+    "message": "Converting for $1…"
+  },
+  "mw_status_saved": {
+    "message": "Saved ✓"
+  },
+  "mw_status_cancelled": {
+    "message": "Not saved"
+  },
+  "mw_status_already": {
+    "message": "Already set up for this printer"
+  },
+  "mw_status_error": {
+    "message": "Could not convert"
+  },
+  "mw_error_timeout": {
+    "message": "MakerWorld did not answer: are you signed in?"
+  },
+  "mw_error_download": {
+    "message": "Download failed ($1)"
+  },
+  "mw_error_menu": {
+    "message": "MakerWorld's download menu was not found"
+  },
+  "convert_choose_extruders": {
+    "message": "Choose which extruder prints each colour"
+  },
+  "convert_not_converted": {
+    "message": "Not converted"
+  },
+  "map_title": {
+    "message": "Assign $1 colours to the $2 extruders of $3"
+  },
+  "map_hint": {
+    "message": "A plate uses more colours than the printer has extruders, so some colours will print the same. Suggested: similar colours of the same material share an extruder; change it if you like."
+  },
+  "map_extruder": {
+    "message": "Extruder $1"
+  },
+  "map_plates": {
+    "message": "Plates $1"
+  },
+  "map_unused": {
+    "message": "$1 colours of the project are not used and follow a similar one."
+  },
+  "map_mixed": {
+    "message": "Extruder $1 has different materials: one material per extruder."
+  },
+  "map_convert": {
+    "message": "Convert"
+  },
+  "map_cancel": {
+    "message": "Cancel"
   }
 }

@@ -70,6 +70,39 @@ is the reference, and you decide when the model's values should win.
 Advanced mode can keep the model's cooling or printer settings anyway; each option
 explains its risk.
 
+## Painted colours are read, not guessed
+
+Many MakerWorld projects define more colours than a printer has extruders but paint only
+a few of them on each plate. BetterBridge decodes the colour painting of every triangle
+(the same format OrcaSlicer and Bambu Studio use) to know which filaments each plate
+really needs, and assigns extruders plate by plate. A manual assignment is only needed
+when one plate truly uses more filaments than the printer has extruders.
+
+## The filaments it really prints
+
+The converted project lists only the filaments it uses: colours the project defines but
+never uses are removed, and when you send several colours to one extruder (a plate with
+more colours than extruders) they become one filament. A 12-colour project for a
+4-extruder printer opens with 4 filaments, not 12 — and the slicer does not keep 12
+filament slots after you close it. Every place that names a filament is renumbered:
+filament settings, the purge table, objects and parts, plates, per-layer colour changes
+and the colour painting of each triangle (the meshes themselves are untouched; each
+rewritten paint code is checked to keep its shape and its new colours).
+
+## A project that will not slice gets fixed
+
+A project already set up for your printer is not skipped blindly: it is reviewed, and
+values that would stop it slicing are fixed (the file is saved as `…_fixed.3mf`). The
+known case is the extruders each filament may use (`filament_printable`). Filament
+presets saved by users often carry the default of Bambu's two-nozzle code (extruders 1
+and 2 only); after picking such a preset in Flash Studio, a manual assignment to
+extruders 3–4 fails with *"The right nozzle can not print PLA"*. The review opens those
+filaments to every extruder. A restriction set by the printer maker's own preset (for
+example a flexible filament limited to some extruders) is kept, by the conversion too,
+and the report warns when the assignment sends that filament elsewhere. The preset
+that caused the problem stays as it is in the slicer: fix it there (or the review will
+be needed again after picking it).
+
 ## Opens in any slicer
 
 Filament-to-extruder assignment uses the slicer's *automatic* mode by default, so the
@@ -100,8 +133,16 @@ its app — Flashforge's repository was at 1.7.15 while Flash Studio shipped 1.7
 BetterBridge uses the profiles of the released app. Copies of old profiles are what make
 slicers show "old vs new" values after a conversion.
 
+## Right on MakerWorld
+
+Your printers appear in MakerWorld's *Print Files* as if MakerWorld supported them: a
+Creator 5 Pro chip next to A1, P1S… (printers MakerWorld already lists are left alone).
+Pick it and the green button becomes *Download for Creator 5 Pro*: the project is
+downloaded through MakerWorld as usual, converted in the browser and saved — only the
+converted file.
+
 ## Nothing silent
 
 Every replaced, kept, removed or warned value is in the report (text and JSON), including
-per-object overrides one by one. Geometry, colour painting and the original file are never
-modified.
+per-object overrides one by one. The original file is never modified, and the meshes stay
+byte-identical; colour painting is only renumbered when filaments are (see below).

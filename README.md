@@ -2,7 +2,7 @@
 
 Open a 3D-printing project from any model repository in **your** printer's slicer, keeping the designer's settings.
 
-BetterBridge converts 3MF projects made in Bambu Studio (and PrusaSlicer, basic support) for another printer and another Orca-based slicer: it swaps the printer, process and filament profiles for the target ones, keeps the designer's tweaks on top, maps filaments to the target's extruders, and reports every change it makes. The original file is never modified and the geometry stays byte-identical.
+BetterBridge converts 3MF projects made in Bambu Studio (and PrusaSlicer, basic support) for another printer and another Orca-based slicer: it swaps the printer, process and filament profiles for the target ones, keeps the designer's tweaks on top, maps filaments to the target's extruders, and reports every change it makes. The original file is never modified and the meshes stay byte-identical (when filaments are renumbered, only the paint codes inside them change).
 
 > **Status:** early development. Any printer preset of an installed slicer can be the target; validated by slicing with the Flashforge Creator 5 Pro in OrcaSlicer 2.5 and Flash Studio 1.7. A browser extension for MakerWorld is in progress.
 

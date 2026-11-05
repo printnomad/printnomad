@@ -1,0 +1,100 @@
+<!doctype html>
+<!-- Stand-in for a MakerWorld model page, with the structure the integration relies on
+     (see .notes/F3-MAKERWORLD.md): a printer chip carousel, span.primaryButton with its
+     .icon-box arrow, a MUI-style menu with "Download 3MF", and the two-step download
+     (JSON from /f3mf, then <a download> of the CDN URL). Written for the tests. -->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Model · fake MakerWorld</title>
+    <style>
+      .selected { font-weight: bold; }
+      .swiper-wrapper { display: flex; gap: 8px; }
+      .icon-box { display: inline-block; width: 20px; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="section">
+      <h4>Print Files (1)</h4>
+      <div class="swiper"><div class="swiper-wrapper">
+        <div class="swiper-slide"><div class="first x"><div class="chip">All</div></div></div>
+        <div class="swiper-slide swiper-slide-active"><div class="x"><div class="chip selected">A1 mini</div></div></div>
+        <div class="swiper-slide"><div class="x"><div class="chip">P1S</div></div></div>
+      </div></div>
+      <div class="profiles"><div aria-haspopup="true"><div class="active"><span class="config_title">0.2 mm</span></div></div></div>
+      <div class="actions">
+        <div class="btn" style="display: inline-flex; width: 320px"><span class="primaryButton"><div><span>Open in Bambu Studio</span></div></span><div class="icon-box">▾</div></div>
+      </div>
+    </div>
+    <!-- MakerWorld also renders a mobile copy of the section, hidden on desktop. -->
+    <div class="section mobile-box" style="display: none">
+      <h4>Print Files (1)</h4>
+      <div class="swiper"><div class="swiper-wrapper">
+        <div class="swiper-slide"><div class="first x"><div class="chip">All</div></div></div>
+        <div class="swiper-slide swiper-slide-active"><div class="x"><div class="chip selected">A1 mini</div></div></div>
+        <div class="swiper-slide"><div class="x"><div class="chip">P1S</div></div></div>
+      </div></div>
+      <div class="profiles"><div aria-haspopup="true"><div class="active"><span class="config_title">0.2 mm</span></div></div></div>
+      <div class="actions">
+        <div class="btn" style="display: inline-flex; width: 320px"><span class="primaryButton"><div><span>Open in Bambu Studio</span></div></span><div class="icon-box">▾</div></div>
+      </div>
+    </div>
+    <!-- MakerWorld keeps hidden copies of menus in the page: must never be used. -->
+    <div class="MuiPopover-root" style="opacity: 0; visibility: hidden"><ul role="menu"><li>Download 3MF</li></ul></div>
+    <script>
+      // In-memory action, like MakerWorld's React state; persisted in localStorage.
+      let action = localStorage.getItem("model_operate_last_key") || "open_in_studio";
+      const label = document.querySelector(".section:not(.mobile-box) .primaryButton span");
+      // Like MakerWorld: XHR with responseType "arraybuffer" for the /f3mf JSON.
+      const download = async () => {
+        const json = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("GET", "/api/v1/design-service/instance/1/f3mf?type=download");
+          xhr.responseType = "arraybuffer";
+          xhr.onload = () => resolve(JSON.parse(new TextDecoder().decode(xhr.response)));
+          xhr.onerror = reject;
+          xhr.send();
+        });
+        const a = document.createElement("a");
+        a.href = json.url;
+        a.download = json.name;
+        document.body.append(a);
+        a.click();
+        window.nativeDownloadAttempted = true;
+      };
+      // A chip click is a route change in MakerWorld (Next.js); count them.
+      window.chipClicks = 0;
+      document.querySelectorAll(".swiper-slide .chip").forEach((chip) => chip.addEventListener("click", () => {
+        window.chipClicks++;
+        const text = chip.textContent;
+        document.querySelectorAll(".swiper-slide .chip").forEach((c) => c.classList.toggle("selected", c.textContent === text));
+      }));
+      document.querySelector(".section:not(.mobile-box) .primaryButton").addEventListener("click", () => {
+        if (action === "download_3mf") download();
+        else window.openedInStudio = true;
+      });
+      // Like MakerWorld: a floating MUI popper anchored right below the button, as wide as it.
+      document.querySelector(".section:not(.mobile-box) .icon-box").addEventListener("click", () => {
+        const open = document.querySelector(".MuiPopper-root");
+        if (open) return open.remove();
+        const control = document.querySelector(".section:not(.mobile-box) .btn").getBoundingClientRect();
+        const root = document.createElement("div");
+        root.className = "MuiPopper-root";
+        root.setAttribute("role", "tooltip");
+        Object.assign(root.style, { position: "absolute", left: `${control.left + scrollX}px`,
+          top: `${control.bottom + scrollY}px`, width: `${control.width}px` });
+        // Several wrapper levels, the handler on the row (not on the text), like MakerWorld.
+        root.innerHTML = '<div class="paper"><div class="list"><div class="item"><div><div>Download 3MF</div></div></div>'
+          + '<div class="item"><div><div>Download STL/CAD Files <i>i</i></div></div></div></div></div>';
+        root.querySelector(".item").addEventListener("click", () => {
+          action = "download_3mf";
+          localStorage.setItem("model_operate_last_key", action);
+          label.textContent = "Download 3MF";
+          root.remove();
+          download();
+        });
+        document.body.append(root);
+      });
+    </script>
+  </body>
+</html>
