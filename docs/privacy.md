@@ -57,7 +57,7 @@ Its printer profiles are included in the extension, so it needs no other connect
 
 If this policy changes, we will update it here and change the date above.
 
-Questions or deletion requests: CONTACT_EMAIL. Source code:
+Questions or deletion requests: mefitdev@gmail.com. Source code:
 <https://github.com/printnomad/printnomad>
 
 ---
@@ -122,5 +122,5 @@ Los perfiles de impresoras vienen incluidos en la extensión, así que no necesi
 
 Si esta política cambia, la actualizaremos aquí y cambiaremos la fecha de arriba.
 
-Preguntas o solicitudes de borrado: CONTACT_EMAIL. Código fuente:
+Preguntas o solicitudes de borrado: mefitdev@gmail.com. Código fuente:
 <https://github.com/printnomad/printnomad>
