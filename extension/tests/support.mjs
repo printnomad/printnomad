@@ -66,6 +66,7 @@ export async function launch(browserPath, work) {
     executablePath: browserPath,
     headless: true,
     pipe: true,
+    dumpio: Boolean(process.env.CI),  // why the browser did not start, in the CI log
     enableExtensions: [join(ext, "dist")],
     args: ["--no-first-run", "--no-default-browser-check", `--user-data-dir=${join(work, "profile")}`],
   });

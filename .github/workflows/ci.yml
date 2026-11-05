@@ -50,6 +50,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # Ubuntu's AppArmor blocks the user namespaces Chrome's sandbox needs.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       # Chrome for Testing: branded Chrome no longer loads unpacked extensions from the command line.
       - name: Install Chrome for Testing
         run: echo "CHROME_PATH=$(npx --yes @puppeteer/browsers install chrome@stable --format '{{path}}')" >> "$GITHUB_ENV"
