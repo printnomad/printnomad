@@ -4,9 +4,8 @@ name: Profile catalog
 # latest release of every slicer listed in core/src/printnomad/data/slicers.json,
 # and publishes it to GitHub Pages.
 
+# Manual for now: the beta ships its profiles in the package (tools/build_release_catalog.sh).
 on:
-  schedule:
-    - cron: "17 4 * * 1"
   workflow_dispatch:
 
 permissions:

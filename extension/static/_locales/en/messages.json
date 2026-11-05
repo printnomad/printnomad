@@ -4,7 +4,7 @@
     "description": "Extension name"
   },
   "ext_description": {
-    "message": "Open 3D models from MakerWorld and other sites already set up for your printer and slicer.",
+    "message": "Converts 3MF projects from MakerWorld and other sites for your printer and slicer.",
     "description": "Store description"
   },
   "printers_title": {
@@ -83,7 +83,7 @@
     "message": "Could not send it. You can copy the report instead."
   },
   "report_send_hint": {
-    "message": "Sends only this text, never your 3MF file."
+    "message": "Sent to the PrintNomad developers: only this text, never your 3MF file."
   },
   "report_what_is_sent": {
     "message": "What is sent"
@@ -133,7 +133,7 @@
     "description": "$1 = file size"
   },
   "printers_hint": {
-    "message": "Set them up once. Profiles download by themselves."
+    "message": "Set them up once. Their profiles are included."
   },
   "printers_add_title": {
     "message": "Add a printer"
@@ -469,7 +469,7 @@
     "description": "$1 = name"
   },
   "setup_profiles": {
-    "message": "Profiles download by themselves"
+    "message": "Profiles are included"
   },
   "setup_prefs_note": {
     "message": "Conversion preferences start with safe defaults. You can fine-tune them any time."
@@ -533,5 +533,11 @@
   },
   "mw_status_saved_check_colours": {
     "message": "Saved ✓ · check colours"
+  },
+  "footer_source": {
+    "message": "Source code"
+  },
+  "footer_privacy": {
+    "message": "Privacy"
   }
 }

@@ -6,6 +6,7 @@
 //       names or "*" for every vendor of a slicer) from a catalog built by
 //       tools/build_profile_catalog.py. Bundles are stored gzipped (JSON shrinks ~17×);
 //       the extension decompresses them when it uses them.
+//   PN_RELEASE=1: no source maps (see package.mjs, which makes the store package).
 import { build } from "esbuild";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -30,12 +31,14 @@ const shared = {
   bundle: true,
   target: "chrome120",
   minify: true,
-  sourcemap: true,
+  sourcemap: !process.env.PN_RELEASE,
   define: {
     __PN_CONFIG__: JSON.stringify({
       catalogUrl: config.catalogUrl,
       // PN_REPORT_URL: a local stand-in for the worker (tests/e2e-makerworld.mjs).
       reportUrl: process.env.PN_REPORT_URL ?? config.reportUrl ?? "",
+      sourceUrl: config.sourceUrl ?? "",
+      privacyUrl: config.privacyUrl ?? "",
       supportedModels: config.supportedModels ?? [],
       makerworldOrigins,
       version: pkg.version ?? "0.0.0",
@@ -67,6 +70,7 @@ await build({
 // Manifest: version from package.json, host permission from the catalog URL.
 const manifest = JSON.parse(readFileSync(join(here, "static", "manifest.json"), "utf8"));
 manifest.version = pkg.version ?? "0.0.0";
+if (config.versionName) manifest.version_name = config.versionName;
 manifest.host_permissions = config.catalogUrl ? [`${new URL(config.catalogUrl).origin}/*`] : [];
 // Match patterns take no port: "http://127.0.0.1:47823" → "http://127.0.0.1/*".
 const sites = makerworldOrigins.map((origin) => {
@@ -78,9 +82,11 @@ manifest.content_scripts = [
   { matches: sites, js: ["makerworld-main.js"], world: "MAIN", run_at: "document_start" },
   { matches: sites, js: ["makerworld-content.js"], run_at: "document_idle" },
 ];
-// bridge.html: the engine iframe; styles.css: the assignment screen's shadow root.
+// bridge.html: the engine iframe; styles.css: the shadow root of the panels over the page.
 manifest.web_accessible_resources = [{ resources: ["bridge.html", "styles.css"], matches: sites }];
 writeFileSync(join(dist, "manifest.json"), JSON.stringify(manifest, null, 2));
+cpSync(join(here, "..", "LICENSE"), join(dist, "LICENSE"));
+cpSync(join(here, "..", "THIRD_PARTY_NOTICES.md"), join(dist, "THIRD_PARTY_NOTICES.md"));
 cpSync(join(here, "static", "_locales"), join(dist, "_locales"), { recursive: true });
 cpSync(join(here, "static", "fonts"), join(dist, "fonts"), { recursive: true });
 cpSync(join(here, "static", "icons"), join(dist, "icons"), { recursive: true });

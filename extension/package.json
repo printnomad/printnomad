@@ -8,6 +8,7 @@
   "scripts": {
     "build:css": "tailwindcss -i src/styles.css -o dist/styles.css --minify",
     "build": "node build.mjs && npm run build:css",
+    "package": "node package.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.ts ../tools/report-worker/test/*.test.js",
     "test:e2e": "node tests/e2e.mjs && node tests/e2e-makerworld.mjs"

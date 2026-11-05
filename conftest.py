@@ -217,7 +217,8 @@ def build_profiles_tree(tmp_path: Path) -> Path:
         "type": "filament", "name": "Generic PETG @System", "instantiation": "false",
         "filament_type": ["PETG"], "filament_max_volumetric_speed": ["12"], "nozzle_temperature": ["240"],
     })
-    for name, parent in (("Flashforge PLA Basic @FF C5P", "Generic PLA @System"),
+    for name, parent in (("Flashforge Breakaway Support For PLA @FF C5P", "Generic PLA @System"),
+                         ("Flashforge PLA Basic @FF C5P", "Generic PLA @System"),
                          ("Flashforge PLA Matte @FF C5P", "Generic PLA @System"),
                          ("Generic PLA @FF C5P", "Generic PLA @System"),
                          ("Flashforge PETG Basic @FF C5P", "Generic PETG @System")):

@@ -3,7 +3,7 @@
     "message": "PrintNomad"
   },
   "ext_description": {
-    "message": "Abre modelos 3D de MakerWorld y otros sitios ya preparados para tu impresora y tu laminador."
+    "message": "Convierte proyectos 3MF de MakerWorld y otros sitios para tu impresora y tu laminador."
   },
   "printers_title": {
     "message": "Mis impresoras"
@@ -78,7 +78,7 @@
     "message": "No se pudo enviar. Puedes copiar el reporte."
   },
   "report_send_hint": {
-    "message": "Envía solo este texto, nunca tu archivo 3MF."
+    "message": "Se envía a quienes desarrollan PrintNomad: solo este texto, nunca tu archivo 3MF."
   },
   "report_what_is_sent": {
     "message": "Qué se envía"
@@ -126,7 +126,7 @@
     "message": "$1 · listo para convertir"
   },
   "printers_hint": {
-    "message": "Se configuran una vez. Los perfiles se descargan solos."
+    "message": "Se configuran una vez. Sus perfiles vienen incluidos."
   },
   "printers_add_title": {
     "message": "Añadir impresora"
@@ -459,7 +459,7 @@
     "description": "$1 = name"
   },
   "setup_profiles": {
-    "message": "Los perfiles se descargan solos"
+    "message": "Los perfiles vienen incluidos"
   },
   "setup_prefs_note": {
     "message": "Las preferencias de conversión empiezan con valores seguros. Puedes ajustarlas cuando quieras."
@@ -522,5 +522,11 @@
   },
   "mw_status_saved_check_colours": {
     "message": "Guardado ✓ · revisa colores"
+  },
+  "footer_source": {
+    "message": "Código fuente"
+  },
+  "footer_privacy": {
+    "message": "Privacidad"
   }
 }

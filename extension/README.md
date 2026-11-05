@@ -29,6 +29,15 @@ npm run test:e2e       # real browser (Chrome, Chromium or Brave; set CHROME_PAT
 Extensions cannot read the installed slicer's folders (Chromium blocks them); see
 "Helper app" in [docs/architecture.md](../docs/architecture.md).
 
+To make the Chrome Web Store package (`out/printnomad-<version>.zip`, no source maps, checked):
+
+```sh
+(cd .. && tools/build_release_catalog.sh /tmp/pn-catalog)    # pinned slicer tags
+PN_PROFILES_DIR=/tmp/pn-catalog/site npm run package
+```
+
+The beta ships its profiles in the package (`catalogUrl` is empty), so it makes no request to any catalog.
+
 To bundle fallback profiles, build a catalog first and point the build at it (from a
 repository checkout, or with `--from-app` from an installed app when its repository
 lags behind):

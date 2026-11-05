@@ -1,5 +1,8 @@
 {
-  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. Empty until the catalog is published (catalogUrlWhenPublished): only the profiles shipped with the extension are used and no request fails. reportUrl: the report worker (tools/report-worker); empty: only Copy report. fallbackProfiles: vendors shipped per slicer. supportedModels: printer_model names offered in the printer picker: only printers tested by converting and slicing real projects (.notes/PROGRESO.md); printers saved earlier keep working. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page).",
+  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. Empty until the catalog is published (catalogUrlWhenPublished): only the profiles shipped with the extension are used and no request fails. reportUrl: the report worker (tools/report-worker); empty: only Copy report. fallbackProfiles: vendors shipped per slicer. supportedModels: printer_model names offered in the printer picker: only printers tested by converting and slicing real projects (.notes/PROGRESO.md); printers saved earlier keep working. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page). versionName: what Chrome shows next to the version. sourceUrl, privacyUrl: links in the footer of the options page.",
+  "versionName": "0.1.0 beta",
+  "sourceUrl": "https://github.com/printnomad/printnomad",
+  "privacyUrl": "https://github.com/printnomad/printnomad/blob/main/docs/privacy.md",
   "catalogUrl": "",
   "reportUrl": "https://printnomad-reports.printnomad.workers.dev",
   "fallbackProfiles": {

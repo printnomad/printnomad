@@ -572,6 +572,8 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
 // --- wiring -----------------------------------------------------------------
 async function main() {
   localize();
+  $<HTMLAnchorElement>("privacy-link").href = CONFIG.privacyUrl;
+  $<HTMLAnchorElement>("source-link").href = CONFIG.sourceUrl;
   settings = await loadSettings();
   await loadCatalog();
   wireDropzone();

@@ -266,6 +266,9 @@ class Target:
                 if ctype not in wanted:
                     continue
                 cand = _tokens(name)
+                # A support material has the type of what it supports: only for a project using one.
+                if "support" in cand and "support" not in source_tokens:
+                    continue
                 score = 4 * len(source_tokens & cand)
                 if ctype == ftype.upper():
                     score += 3
