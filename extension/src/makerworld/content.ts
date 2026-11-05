@@ -7,13 +7,18 @@
 //
 // MakerWorld's class names are generated (mw-css-…): elements are found by structure
 // (span.primaryButton, .swiper-wrapper, MUI menus) and by "3MF" in menu texts.
-import type { AssignmentPlan } from "../engine/protocol.ts";
+import { CONFIG } from "../config.ts";
+import type { AssignmentPlan, Issue } from "../engine/protocol.ts";
 import { mapEditor } from "../lib/map-editor.ts";
+import { clipboardReport } from "../lib/report-copy.ts";
+import { reportPanel } from "../lib/report-panel.ts";
 import { BRIDGE, CONTENT, type BridgeMessage, type ConvertOutcome, type FromMain, type PagePrinter } from "./protocol.ts";
 
 const CAPTURE_TIMEOUT_MS = 30_000;
 const MENU_TIMEOUT_MS = 4_000;
 const RESULT_VISIBLE_MS = 5_000;
+/** Next to the core's codes (issues.py): MakerWorld's download could not be captured or fetched. */
+const MAKERWORLD_ERROR = "PN903";
 
 const t = (key: string, ...subs: (string | number)[]) => chrome.i18n.getMessage(key, subs.map(String)) || key;
 const normalize = (text: string | null | undefined) => (text ?? "").trim().replace(/\s+/g, " ").toLowerCase();
@@ -83,7 +88,7 @@ function sections(): Section[] {
 
 const slides = (wrapper: HTMLElement) =>
   [...wrapper.children].filter((c): c is HTMLElement => c.classList.contains("swiper-slide"));
-const nativeSlides = (wrapper: HTMLElement) => slides(wrapper).filter((s) => !s.dataset.bbPrinter);
+const nativeSlides = (wrapper: HTMLElement) => slides(wrapper).filter((s) => !s.dataset.pnPrinter);
 const chipOf = (slide: HTMLElement) => slide.querySelector<HTMLElement>(":scope > div > div");
 
 /** My printers that MakerWorld has no chip for (it already lists its own printers). */
@@ -100,11 +105,11 @@ function injectChips(section: Section) {
   let changed = false;
   let after: Element = natives[0];
   for (const printer of missingPrinters(section.wrapper)) {
-    let slide = section.wrapper.querySelector<HTMLElement>(`:scope > [data-bb-printer="${CSS.escape(printer.id)}"]`);
+    let slide = section.wrapper.querySelector<HTMLElement>(`:scope > [data-pn-printer="${CSS.escape(printer.id)}"]`);
     if (!slide) {
       slide = template.cloneNode(true) as HTMLElement;
       slide.className = "swiper-slide";
-      slide.dataset.bbPrinter = printer.id;
+      slide.dataset.pnPrinter = printer.id;
       slide.firstElementChild?.classList.remove("first");
       const chip = chipOf(slide);
       if (chip) {
@@ -132,7 +137,7 @@ function paintSelection(section: Section) {
   for (const slide of slides(section.wrapper)) {
     const chip = chipOf(slide);
     if (!chip) continue;
-    const ours = slide.dataset.bbPrinter;
+    const ours = slide.dataset.pnPrinter;
     if (ours) chip.classList.toggle("selected", ours === active?.id);
     else if (active) chip.classList.remove("selected"); // React keeps "All" selected underneath
   }
@@ -168,30 +173,30 @@ function paintButton(section: Section, text?: string, loading = false) {
   if (!label) return;
   // Work in progress: a spinner instead of the text (kept for screen readers and as tooltip).
   if (loading) {
-    if (!originalButtonText.has(label) && !label.dataset.bbText) originalButtonText.set(label, label.textContent ?? "");
+    if (!originalButtonText.has(label) && !label.dataset.pnText) originalButtonText.set(label, label.textContent ?? "");
     if (label.textContent) label.textContent = "";
-    label.dataset.bbText = "1";
-    label.dataset.bbLoading = "1";
+    label.dataset.pnText = "1";
+    label.dataset.pnLoading = "1";
     label.setAttribute("aria-label", text ?? "");
     label.title = text ?? "";
     return;
   }
-  if (label.dataset.bbLoading) {
-    delete label.dataset.bbLoading;
+  if (label.dataset.pnLoading) {
+    delete label.dataset.pnLoading;
     label.removeAttribute("aria-label");
     label.removeAttribute("title");
   }
-  if (!originalButtonText.has(label) && !label.dataset.bbText) originalButtonText.set(label, label.textContent ?? "");
+  if (!originalButtonText.has(label) && !label.dataset.pnText) originalButtonText.set(label, label.textContent ?? "");
   const wanted = text ?? (active ? t("mw_download_for", active.label) : null);
   if (wanted === null) {
-    if (label.dataset.bbText) {
+    if (label.dataset.pnText) {
       label.textContent = originalButtonText.get(label) ?? label.textContent;
-      delete label.dataset.bbText;
+      delete label.dataset.pnText;
     }
     return;
   }
   if (label.textContent !== wanted) label.textContent = wanted;
-  label.dataset.bbText = "1";
+  label.dataset.pnText = "1";
 }
 
 let statusText: string | null = null;
@@ -248,7 +253,7 @@ function find3mf(scope: ParentNode): { leaf: HTMLElement; row: HTMLElement } | n
     const text = el.textContent?.trim() ?? "";
     return text.length < 40 && /\b3mf\b/i.test(text)
       && ![...el.children].some((c) => /3mf/i.test(c.textContent ?? ""))
-      && !el.closest("[data-bb-item], span.primaryButton") && isVisible(el);
+      && !el.closest("[data-pn-item], span.primaryButton") && isVisible(el);
   });
   if (!leaf) return null;
   let row = leaf;
@@ -263,9 +268,9 @@ function decorateMenu() {
   if (!active) return;
   const menu = openMenu(visibleSection());
   const native = menu && find3mf(menu)?.row;
-  if (!native?.parentElement || native.parentElement.querySelector(":scope > [data-bb-item]")) return;
+  if (!native?.parentElement || native.parentElement.querySelector(":scope > [data-pn-item]")) return;
   const item = native.cloneNode(true) as HTMLElement;
-  item.dataset.bbItem = "1";
+  item.dataset.pnItem = "1";
   item.removeAttribute("id");
   // Replace the deepest text, keep icons and layout.
   const textHolder = [...item.querySelectorAll<HTMLElement>("*")].reverse()
@@ -279,21 +284,21 @@ function decorateMenu() {
   native.before(item);
 }
 
-// While BetterBridge uses MakerWorld's menu, keep it out of sight: clipped, so it still
+// While PrintNomad uses MakerWorld's menu, keep it out of sight: clipped, so it still
 // has its size and opacity (our visibility checks) and still takes clicks.
 const hideMenus = (() => {
   const style = document.createElement("style");
-  style.textContent = `html[data-bb-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
-    [data-bb-loading]::after {
+  style.textContent = `html[data-pn-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
+    [data-pn-loading]::after {
       content: ""; display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.2em;
       border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%;
-      animation: bb-spin 0.7s linear infinite;
+      animation: pn-spin 0.7s linear infinite;
     }
-    @keyframes bb-spin { to { transform: rotate(360deg); } }`;
+    @keyframes pn-spin { to { transform: rotate(360deg); } }`;
   document.documentElement.append(style);
   return (on: boolean) => {
-    if (on) document.documentElement.dataset.bbHiding = "1";
-    else delete document.documentElement.dataset.bbHiding;
+    if (on) document.documentElement.dataset.pnHiding = "1";
+    else delete document.documentElement.dataset.pnHiding;
   };
 })();
 
@@ -332,7 +337,7 @@ function captureF3mf() {
   const file = new Promise<{ url?: string; data?: ArrayBuffer; name: string | null }>((resolve, reject) => {
     const timer = setTimeout(() => finish(new Error(t("mw_error_timeout"))), CAPTURE_TIMEOUT_MS);
     function onMessage(e: MessageEvent<FromMain>) {
-      if (e.source !== window || e.data?.source !== "betterbridge:main") return;
+      if (e.source !== window || e.data?.source !== "printnomad:main") return;
       if (e.data.type === "armed") markArmed();
       else if (e.data.type === "f3mf" || e.data.type === "f3mf-file") finish(null, e.data);
       else finish(new Error(t("mw_error_download", e.data.status)));
@@ -413,12 +418,22 @@ async function download() {
     const name = captured.name ?? "model.3mf";
     setStatus(t("mw_status_converting", printer.label));
     const outcome = await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, name, data }, [data]);
-    console.info(`[BetterBridge] 3MF from MakerWorld ${downloadMs} ms · total ${Math.round(performance.now() - started)} ms`
+    console.info(`[PrintNomad] 3MF from MakerWorld ${downloadMs} ms · total ${Math.round(performance.now() - started)} ms`
       + (outcome.status === "saved" ? ` · conversion ${outcome.convertMs} ms` : ""));
     await showOutcome(printer, outcome);
   } catch (e) {
-    console.warn("[BetterBridge]", e);
-    setStatus(e instanceof Error ? e.message : t("mw_status_error"), RESULT_VISIBLE_MS);
+    console.warn("[PrintNomad]", e);
+    // Most likely MakerWorld changed its page or the download failed: worth reporting.
+    const message = e instanceof Error ? e.message : String(e);
+    const issue = { code: MAKERWORLD_ERROR, stage: "makerworld", message, suggestion: t("issue_makerworld_suggestion") };
+    setStatus(t("mw_status_error_code", issue.code), RESULT_VISIBLE_MS);
+    showError(issue, clipboardReport({
+      version: CONFIG.version,
+      printer: printer.label,
+      slicer: printer.slicer,
+      file: location.pathname,
+      browser: navigator.userAgent,
+    }, `✗ [${issue.code}] ${message}`));
   } finally {
     busy = false;
   }
@@ -441,41 +456,93 @@ async function showOutcome(printer: PagePrinter, outcome: ConvertOutcome) {
     await showOutcome(printer, await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, map }));
     return;
   }
-  setStatus(outcomeText(outcome.status), RESULT_VISIBLE_MS);
-  if (outcome.status === "error") console.warn("[BetterBridge]", outcome.message);
+  // The status replaces the button's label: an error shows its code, and the details in a panel.
+  const code = outcome.status === "error" ? outcome.issue?.code : undefined;
+  setStatus(code ? t("mw_status_error_code", code) : outcomeText(outcome.status), RESULT_VISIBLE_MS);
+  if (outcome.status === "error") {
+    console.warn("[PrintNomad]", outcome.message);
+    showError(outcome.issue, outcome.report ?? outcome.message);
+  }
 }
 
 /**
  * The assignment screen in a modal over MakerWorld, isolated in a shadow root with the
  * extension's own styles. Resolves with the chosen map, or null when cancelled.
  */
+function openModal(onClose: () => void) {
+  const host = document.createElement("div");
+  host.dataset.pnModal = "1";
+  const shadow = host.attachShadow({ mode: "open" });
+  const style = document.createElement("link");
+  style.rel = "stylesheet";
+  style.href = chrome.runtime.getURL("styles.css");
+  const overlay = document.createElement("div");
+  overlay.className = "fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/50 p-4 font-sans text-fg";
+  const panel = document.createElement("div");
+  panel.className = "max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-bg p-2 shadow-2xl";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  const close = () => {
+    document.removeEventListener("keydown", onKey, true);
+    host.remove();
+    onClose();
+  };
+  const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+  document.addEventListener("keydown", onKey, true);
+  overlay.append(panel);
+  overlay.addEventListener("click", (e) => e.target === overlay && close());
+  shadow.append(style, overlay);
+  document.documentElement.append(host);
+  return { panel, close };
+}
+
 function askAssignment(printer: PagePrinter, plan: AssignmentPlan): Promise<string | null> {
   return new Promise((resolve) => {
-    const host = document.createElement("div");
-    host.dataset.bbModal = "1";
-    const shadow = host.attachShadow({ mode: "open" });
-    const style = document.createElement("link");
-    style.rel = "stylesheet";
-    style.href = chrome.runtime.getURL("styles.css");
-    const overlay = document.createElement("div");
-    overlay.className = "fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/50 p-4 font-sans text-fg";
-    const panel = document.createElement("div");
-    panel.className = "max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-bg p-2 shadow-2xl";
-    panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-modal", "true");
-    const close = (map: string | null) => {
-      document.removeEventListener("keydown", onKey, true);
-      host.remove();
-      resolve(map);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close(null);
-    document.addEventListener("keydown", onKey, true);
-    panel.append(mapEditor({ plan, printerLabel: printer.label, onConvert: close, onCancel: () => close(null) }));
-    overlay.append(panel);
-    overlay.addEventListener("click", (e) => e.target === overlay && close(null));
-    shadow.append(style, overlay);
-    document.documentElement.append(host);
+    let chosen: string | null = null;
+    const { panel, close } = openModal(() => resolve(chosen));
+    panel.append(mapEditor({
+      plan,
+      printerLabel: printer.label,
+      onConvert: (map) => {
+        chosen = map;
+        close();
+      },
+      onCancel: close,
+    }));
   });
+}
+
+/** Why it failed and what to do, with the report to copy or send. */
+function showError(issue: Pick<Issue, "code" | "message" | "suggestion"> | undefined, report: string) {
+  const { panel, close } = openModal(() => {});
+  const card = document.createElement("div");
+  card.className = "card flex flex-col gap-3 p-5";
+  const title = document.createElement("h3");
+  title.className = "font-display text-xl font-extrabold";
+  title.textContent = t("mw_error_title");
+  card.append(title);
+  if (issue) {
+    const box = document.createElement("div");
+    box.className = "flex flex-col gap-1 rounded-xl bg-err-soft p-3 text-sm";
+    const message = document.createElement("span");
+    message.className = "font-semibold text-err";
+    message.textContent = `${issue.code} · ${issue.message}`;
+    const suggestion = document.createElement("span");
+    suggestion.textContent = issue.suggestion;
+    box.append(message, suggestion);
+    card.append(box);
+  }
+  const send = CONFIG.reportUrl
+    ? (extra: { comment: string; contact: string }) => bridge.call<void>({ type: "send-report", report, ...extra, code: issue?.code })
+    : undefined;
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "btn-ghost self-end";
+  closeButton.dataset.field = "close";
+  closeButton.textContent = t("report_close");
+  closeButton.onclick = close;
+  card.append(reportPanel({ text: report, send, collapsed: true }), closeButton);
+  panel.append(card);
 }
 
 // --- wiring -------------------------------------------------------------------------
@@ -490,9 +557,9 @@ function reconcile() {
 // Our button replaces MakerWorld's action; native chips switch our mode off.
 document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
-  if (!target || triggering || target.closest("[data-bb-item]")) return;
+  if (!target || triggering || target.closest("[data-pn-item]")) return;
   const slide = target.closest<HTMLElement>(".swiper-slide");
-  if (slide && !slide.dataset.bbPrinter && sections().some((s) => s.wrapper.contains(slide))) {
+  if (slide && !slide.dataset.pnPrinter && sections().some((s) => s.wrapper.contains(slide))) {
     deactivate();
     return;
   }
@@ -522,7 +589,7 @@ async function loadPrinters() {
   if (active && !printers.some((p) => p.id === active!.id)) active = null;
   reconcile();
   // A chip of ours is on the page: get the engine and profiles ready for the click.
-  if (!prepared && document.querySelector("[data-bb-printer]")) {
+  if (!prepared && document.querySelector("[data-pn-printer]")) {
     prepared = true;
     void bridge.call({ type: "prepare" }).catch(() => (prepared = false));
   }

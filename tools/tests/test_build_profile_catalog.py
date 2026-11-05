@@ -4,8 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
-from betterbridge.profiles import ProfileLibrary
-from betterbridge.target import Target
+from printnomad.profiles import ProfileLibrary
+from printnomad.target import Target
 
 TOOL = Path(__file__).resolve().parents[1] / "build_profile_catalog.py"
 spec = importlib.util.spec_from_file_location("build_profile_catalog", TOOL)
@@ -30,6 +30,18 @@ def test_catalog_lists_usable_printers_and_bundles(profiles_root, tmp_path):
     assert all(rel.split("/")[0] in ("machine", "process", "filament") for rel in bundle["files"])
     catalog = json.loads((out / "catalog.json").read_text())
     assert catalog["schema"] == 1 and "flashstudio" in catalog["slicers"]
+
+
+def test_profiles_and_vendor_file_with_utf8_bom_are_read(tmp_path):
+    def write_with_bom(path, data):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"\xef\xbb\xbf" + json.dumps(data).encode("utf-8"))
+
+    write_with_bom(tmp_path / "Snapmaker.json", {"name": "Snap", "version": "1.2"})
+    write_with_bom(tmp_path / "Snapmaker/machine/u1.json", {"type": "machine", "name": "U1"})
+    assert list(catalog_tool.bundle_files(tmp_path / "Snapmaker")) == ["machine/u1.json"]
+    assert catalog_tool.vendor_display_name(tmp_path, "Snapmaker") == "Snap"
+    assert catalog_tool.vendor_version(tmp_path, "Snapmaker") == "1.2"
 
 
 def test_bundles_give_the_same_library_as_folders(profiles_root, tmp_path):

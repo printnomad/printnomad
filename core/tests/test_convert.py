@@ -3,13 +3,13 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from betterbridge import read_3mf, rules
-from betterbridge.convert import convert
-from betterbridge.model_edit import meta
-from betterbridge.profiles import ProfileLibrary
-from betterbridge.slicers import Slicer
-from betterbridge.target import Target
 from conftest import make_bambu_3mf
+from printnomad import read_3mf, rules
+from printnomad.convert import convert
+from printnomad.model_edit import meta
+from printnomad.profiles import ProfileLibrary
+from printnomad.slicers import Slicer
+from printnomad.target import Target
 
 # Particularidad de OrcaSlicer 2.5 (registro de laminadores): manual solo en E1–E2.
 ORCA = Slicer(key="orcaslicer", name="OrcaSlicer", quirks={"manual_map_max_extruder": 2})
@@ -59,6 +59,69 @@ def test_bambu_specifics_removed_and_reported(lib, tmp_path):
     assert not any("M1007" in w or "G392" in w for w in result.report.warnings)
 
 
+@pytest.fixture
+def multi_bed_lib(lib):
+    """Profiles of a printer that lets the user choose the plate, like the Creator 5 Pro."""
+    lib.raw[("machine", MACHINE)]["support_multi_bed_types"] = "1"
+    return lib
+
+
+def test_plates_on_offer(lib, multi_bed_lib):
+    assert Target(multi_bed_lib, MACHINE, ORCA).bed_types == list(rules.BED_TYPES)
+    bambu = Slicer(key="bambustudio", name="Bambu Studio", quirks={"bed_types_missing": ["Textured Cool Plate"]})
+    assert "Textured Cool Plate" not in Target(multi_bed_lib, MACHINE, bambu).bed_types
+    multi_bed_lib.raw[("machine_model", "Flashforge Creator 5 Pro")]["not_support_bed_types"] = \
+        "Smooth Cool Plate;Cool Plate (SuperTack)"
+    offered = Target(multi_bed_lib, MACHINE, ORCA).bed_types
+    assert "Cool Plate" not in offered and "Supertack Plate" not in offered and "Textured PEI Plate" in offered
+
+
+def test_plate_is_fixed_without_multi_bed_support(lib, tmp_path):
+    assert Target(lib, MACHINE, ORCA).bed_types == []
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]), bed_type="Cool Plate")
+    assert s["curr_bed_type"] == "Textured PEI Plate"
+    assert any("Cool Plate" in w and "no está disponible" in w for w in result.report.warnings)
+
+
+@pytest.mark.parametrize("bed", ["Cool Plate", "Supertack Plate"])
+def test_chosen_plate_goes_to_the_project(multi_bed_lib, tmp_path, bed):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"curr_bed_type": "Textured PEI Plate"})
+    _, result, s = run(multi_bed_lib, path, bed_type=bed)
+    assert s["curr_bed_type"] == bed
+    assert result.report.ok and not any("placa" in w for w in result.report.warnings)
+
+
+def test_without_a_choice_the_printers_default_plate_applies(multi_bed_lib, tmp_path):
+    _, _, s = run(multi_bed_lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
+    assert s["curr_bed_type"] == "Textured PEI Plate"
+
+
+def test_plates_lose_their_own_type_and_follow_the_project(multi_bed_lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"], ["5"]], plate_bed="High Temp Plate")
+    _, result, s = run(multi_bed_lib, path, bed_type="Cool Plate")
+    plates = ET.fromstring(result.files[read_3mf.MODEL_SETTINGS]).findall("plate")
+    assert len(plates) == 2 and all("bed_type" not in meta(p) for p in plates)
+    assert s["curr_bed_type"] == "Cool Plate"
+    changes = [c for c in result.report.plates if "bed_type" in c.key]
+    assert len(changes) == 2 and changes[0].original == "High Temp Plate"
+
+
+def test_warns_when_the_slicer_will_refuse_a_filament_on_the_plate(multi_bed_lib, tmp_path):
+    for name, temp in (("Flashforge PETG Basic @FF C5P", "0"), ("Flashforge PLA Basic @FF C5P", "40")):
+        multi_bed_lib.raw[("filament", name)]["cool_plate_temp"] = [temp]
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PETG], [["2"]], paint=(2,))
+    _, result, _ = run(multi_bed_lib, path, bed_type="Cool Plate")
+    warnings = [w for w in result.report.warnings if "rechazará" in w]
+    assert len(warnings) == 1 and "#2 (PETG)" in warnings[0] and "#1" not in warnings[0]
+
+
+def test_no_plate_warning_for_a_filament_that_is_not_used(multi_bed_lib, tmp_path):
+    multi_bed_lib.raw[("filament", "Flashforge PETG Basic @FF C5P")]["cool_plate_temp"] = ["0"]
+    multi_bed_lib.raw[("filament", "Flashforge PLA Basic @FF C5P")]["cool_plate_temp"] = ["40"]
+    _, result, _ = run(multi_bed_lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA, PETG], [["2"]]), bed_type="Cool Plate")
+    assert result.report.ok and not any("rechazará" in w for w in result.report.warnings)
+
+
 def test_value_fixes_for_orca(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"raft_first_layer_expansion": "-1",
@@ -76,14 +139,195 @@ def test_value_fixes_for_orca(lib, tmp_path):
     assert o and o[0].final == "ensure_all"
 
 
+@pytest.mark.parametrize(("key", "value", "expected"), [
+    ("skin_infill_line_width", "100%", "0.4"),
+    ("skeleton_infill_line_width", " 100 % ", "0.4"),
+    ("line_width", "110%", "0.44"),
+    ("top_surface_line_width", "93.75%", "0.375"),
+    ("inner_wall_line_width", ["100%", "0.45"], ["0.4", "0.45"]),
+    ("inner_wall_line_width", "0.45", None),            # already in mm
+    ("inner_wall_line_width", ["0.45"], None),
+    ("sparse_infill_density", "15%", None),             # a real percentage, not a width
+    ("line_width", "auto%", None),
+])
+def test_percent_width_to_mm(key, value, expected):
+    assert rules.percent_width_to_mm(key, value, "0.4") == expected
+
+
+def test_percent_width_without_valid_nozzle_is_left_alone():
+    assert rules.percent_width_to_mm("line_width", "100%", "") is None
+
+
+def _designer_widths(**widths):
+    """Project settings where the designer changed these line widths."""
+    return {**widths, "different_settings_to_system": [";".join(widths), "", ""]}
+
+
+def test_percent_line_widths_become_mm_in_project_settings(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings=_designer_widths(
+        skin_infill_line_width="100%", outer_wall_line_width="0.42"))
+    _, result, s = run(lib, path)
+    assert s["skin_infill_line_width"] == "0.4"
+    assert s["outer_wall_line_width"] == "0.42"
+    change = next(c for c in result.report.changed if c.key == "skin_infill_line_width")
+    assert (change.original, change.final) == ("100%", "0.4")
+    assert "0.4 mm" in change.reason
+
+
+def test_percent_line_widths_use_the_target_nozzle(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings=_designer_widths(skin_infill_line_width="100%"))
+    _, _, s = run(lib, path, nozzle="0.6")
+    assert s["nozzle_diameter"][0] == "0.6"
+    assert s["skin_infill_line_width"] == "0.6"
+
+
+def test_percent_line_width_of_target_profile_becomes_mm(lib, tmp_path):
+    lib.raw[("process", "0.20mm Standard @FF C5")]["skeleton_infill_line_width"] = "110%"
+    _, _, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
+    assert s["skeleton_infill_line_width"] == "0.44"
+
+
+def test_percent_line_width_without_change_list_becomes_mm(lib, tmp_path):
+    """Without different_settings_to_system the project's own values stay: they are converted too."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "skin_infill_line_width": "100%", "different_settings_to_system": []})
+    _, _, s = run(lib, path)
+    assert s["skin_infill_line_width"] == "0.4"
+
+
+def test_percent_line_widths_become_mm_in_object_and_part_overrides(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
+                          part_overrides={"2": {"skin_infill_line_width": "100%", "outer_wall_speed": "100"}})
+    project, result, _ = run(lib, path)
+    root = ET.fromstring(result.files[read_3mf.MODEL_SETTINGS])
+    part = meta(root.find("object/part"))
+    assert part["skin_infill_line_width"] == "0.4"
+    assert part["outer_wall_speed"] == "100"
+    override = next(o for o in result.report.object_overrides if o.key == "skin_infill_line_width")
+    assert (override.part, override.original, override.final) == ("part2", "100%", "0.4")
+
+
+RANGES = """<?xml version="1.0" encoding="utf-8"?>
+<objects>
+ <object id="1">
+  <range min_z="0" max_z="1.5">
+   <option opt_key="layer_height">0.2</option>
+   <option opt_key="skeleton_infill_line_width">150%</option>
+  </range>
+ </object>
+</objects>
+"""
+
+
+def test_percent_line_widths_become_mm_in_height_ranges(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], extra_files={read_3mf.LAYER_CONFIG_RANGES: RANGES})
+    _, result, _ = run(lib, path)
+    ranges = ET.fromstring(result.files[read_3mf.LAYER_CONFIG_RANGES])
+    options = {o.get("opt_key"): o.text for o in ranges.iter("option")}
+    assert options == {"layer_height": "0.2", "skeleton_infill_line_width": "0.6"}
+    override = next(o for o in result.report.object_overrides if o.key == "skeleton_infill_line_width")
+    assert (override.original, override.final) == ("150%", "0.6")
+    assert "0–1.5 mm" in override.part
+
+
+@pytest.mark.parametrize("ranges", [RANGES.replace("150%", "0.5"), "not xml"])
+def test_height_ranges_without_percent_widths_are_not_rewritten(lib, tmp_path, ranges):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], extra_files={read_3mf.LAYER_CONFIG_RANGES: ranges})
+    _, result, _ = run(lib, path)
+    assert result.report.ok
+    assert read_3mf.LAYER_CONFIG_RANGES not in result.files
+
+
+def _model_preset(lib):
+    """Target process that differs from the project in the settings of the model."""
+    for name in ("0.20mm Standard @FF C5", "0.24mm Standard @FF C5"):
+        lib.raw[("process", name)].update(top_shell_layers="5", sparse_infill_pattern="grid", wall_loops="2")
+    return lib
+
+
+MODEL_VALUES = {"top_shell_layers": "6", "sparse_infill_pattern": "gyroid", "wall_loops": "2"}
+
+
+def test_without_a_process_of_that_height_only_the_layer_height_is_kept(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"layer_height": "0.16", **MODEL_VALUES})
+    _, result, s = run(_model_preset(lib), path)
+    assert result.report.presets["process"] == "0.20mm Standard @FF C5"
+    assert s["layer_height"] == "0.16"
+    # Everything else: the target's process.
+    assert (s["top_shell_layers"], s["sparse_infill_pattern"]) == ("5", "grid")
+    assert s["outer_wall_speed"] == "150" and s["initial_layer_print_height"] == "0.25"
+    [kept] = result.report.kept_project
+    assert (kept.key, kept.original, kept.final) == ("layer_height", "0.16", "0.2")
+    assert "layer_height" not in {c.key for c in (*result.report.kept_author, *result.report.changed)}
+    # The slicers reset what this list does not name, so it must name it.
+    assert "layer_height" in s["different_settings_to_system"][0].split(";")
+    assert "top_shell_layers" not in s["different_settings_to_system"][0]
+    text = result.report.to_text()
+    assert "Valores del proyecto conservados: 1" in text and "layer_height: 0.16" in text
+
+
+def test_with_a_process_of_that_height_only_the_designers_changes_are_kept(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"layer_height": "0.20", **MODEL_VALUES})
+    _, result, s = run(_model_preset(lib), path)
+    assert (s["top_shell_layers"], s["sparse_infill_pattern"]) == ("5", "grid")
+    assert not result.report.kept_project
+    assert "top_shell_layers" not in s["different_settings_to_system"][0]
+
+
+def test_with_a_process_of_that_height_the_designers_change_stays(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        **MODEL_VALUES, "different_settings_to_system": ["top_shell_layers", "", ""]})
+    _, result, s = run(_model_preset(lib), path)
+    assert (s["top_shell_layers"], s["sparse_infill_pattern"]) == ("6", "grid")
+    assert [c.key for c in result.report.kept_author] == ["top_shell_layers"]
+
+
+def test_first_layer_changed_by_the_designer_stays(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "initial_layer_print_height": "0.3", "different_settings_to_system": ["initial_layer_print_height", "", ""]})
+    _, _, s = run(lib, path)
+    assert s["initial_layer_print_height"] == "0.3"
+
+
+def test_kept_layer_height_outside_the_printers_limits_warns(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={"layer_height": "0.32"})
+    _, result, s = run(lib, path)
+    assert s["layer_height"] == "0.32"
+    assert any("0.32" in w for w in result.report.warnings)
+
+
+def test_purge_tower_stays_on_a_smaller_bed(lib, tmp_path):
+    lib.raw[("machine", MACHINE)]["printable_area"] = ["0x0", "180x0", "180x180", "0x180"]
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "wipe_tower_x": ["15", "90"], "wipe_tower_y": ["217.697", "128"]})
+    _, _, s = run(lib, path)
+    assert s["wipe_tower_x"] == ["5", "52"]    # 256 → 180: 38 mm closer, not past the edge
+    assert s["wipe_tower_y"] == ["140", "90"]  # 180 - 35 wide (slicer's default) - 5 margin
+
+
+def test_purge_tower_stays_where_it_was_on_the_same_bed(lib, tmp_path):
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
+                          settings={"wipe_tower_x": ["15"], "wipe_tower_y": ["217"]})
+    _, _, s = run(lib, path)
+    assert (s["wipe_tower_x"], s["wipe_tower_y"]) == (["15"], ["217"])
+
+
+def test_empty_filament_notes_become_a_list(lib, tmp_path):
+    """Prusa's start G-code reads filament_notes[0]: an empty value stops the slicer."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PETG], [["2"]], paint=(2,), settings={
+        "filament_notes": "", "different_settings_to_system": ["filament_notes", "", "", ""]})
+    _, _, s = run(lib, path)
+    assert s["filament_notes"] == ["", ""]
+
+
 def test_author_process_override_kept_and_limits_warned(lib, tmp_path):
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]],
                           settings={"sparse_infill_speed": "700", "line_width": "0.42"})
     _, result, s = run(lib, path)
     assert s["sparse_infill_speed"] == "700"          # ajuste del autor, sin cambio silencioso
     assert s["outer_wall_speed"] == "150"             # no tocado por el autor: perfil C5P
-    assert s["initial_layer_print_height"] == "0.2"   # del proyecto: objetos finos
-    assert any(c.key == "initial_layer_print_height" for c in result.report.kept_author)
+    assert s["initial_layer_print_height"] == "0.25"  # no la cambió el autor: la del perfil destino
+    assert not any(c.key == "initial_layer_print_height" for c in result.report.kept_author)
     assert any(c.key == "sparse_infill_speed" for c in result.report.kept_author)
     assert any("sparse_infill_speed=700" in w for w in result.report.warnings)
     # 700 mm/s × 0.42 × 0.2 = 58.8 mm³/s > 18: nota (el slicer limita solo), no advertencia
@@ -369,8 +613,7 @@ def test_printer_dependent_process_settings_come_from_the_target(lib, tmp_path):
     assert s["elefant_foot_compensation"] == "0.1"
     assert "xy_hole_compensation" not in s and "filename_format" not in s  # sin valor en el perfil: el del laminador
     assert s["wall_loops"] == "4"                                          # del modelo
-    assert s["different_settings_to_system"][0].split(";") == [
-        "enable_prime_tower", "initial_layer_print_height", "wall_loops"]
+    assert s["different_settings_to_system"][0].split(";") == ["enable_prime_tower", "wall_loops"]
     dropped = {d.key: d.reason for d in result.report.dropped}
     assert "impresora" in dropped["default_acceleration"] and "xy_hole_compensation" in dropped
     assert "enable_prime_tower" not in dropped
@@ -424,12 +667,9 @@ def test_designer_changes_compared_with_the_source_preset(lib, tmp_path):
     assert "wall_loops" in {c.key for c in result.report.kept_author} and not result.report.not_changed
 
 
-def test_rule_kept_first_layer_has_no_original_value_and_says_why(lib, tmp_path):
-    source = ProfileLibrary.from_bundles([{"vendor": "BBL", "files": {
-        "process/a1.json": {"type": "process", "name": "0.20mm Standard @BBL A1", "initial_layer_print_height": "0.2"},
-    }}])
-    _, result, _ = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]), source_lib=source)
-    first = next(c for c in result.report.kept_author if c.key == "initial_layer_print_height")
-    assert first.source_preset is None
-    line = next(x for x in result.report.to_text().splitlines() if "initial_layer_print_height" in x)
-    assert "→" not in line and "[" in line
+def test_first_layer_the_designer_did_not_change_is_not_declared_as_a_change(lib, tmp_path):
+    _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
+    assert s["initial_layer_print_height"] == "0.25"
+    assert "initial_layer_print_height" not in s["different_settings_to_system"][0]
+    kept = {c.key for c in (*result.report.kept_author, *result.report.kept_project)}
+    assert "initial_layer_print_height" not in kept

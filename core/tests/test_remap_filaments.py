@@ -1,6 +1,6 @@
 import pytest
 
-from betterbridge.remap_filaments import MapError, assign, parse_map
+from printnomad.remap_filaments import MapError, assign, parse_map
 
 
 def test_parse_map():

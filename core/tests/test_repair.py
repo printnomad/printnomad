@@ -7,11 +7,11 @@ from pathlib import Path
 import pytest
 from test_web import bundles_from
 
-from betterbridge import read_3mf, web, write_3mf
-from betterbridge.convert import convert
-from betterbridge.profiles import ProfileLibrary
-from betterbridge.target import Target
 from conftest import make_bambu_3mf
+from printnomad import read_3mf, web, write_3mf
+from printnomad.convert import convert
+from printnomad.profiles import ProfileLibrary
+from printnomad.target import Target
 
 MACHINE = "Flashforge Creator 5 Pro 0.4 nozzle"
 SAVED = {"printer_model": "Flashforge Creator 5 Pro", "printer_settings_id": MACHINE,

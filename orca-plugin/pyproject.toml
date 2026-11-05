@@ -1,8 +1,8 @@
 # Metadatos del plugin de OrcaSlicer. No se instala con pip: tools/build.py
 # genera una wheel con este paquete y una copia del núcleo (core/) dentro.
 [project]
-name = "betterbridge-orca"
+name = "printnomad-orca"
 version = "0.4.0"
-description = "OrcaSlicer plugin: convert the opened project to another printer with BetterBridge"
+description = "OrcaSlicer plugin: convert the opened project to another printer with PrintNomad"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"

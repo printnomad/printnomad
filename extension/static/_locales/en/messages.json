@@ -1,6 +1,6 @@
 {
   "ext_name": {
-    "message": "BetterBridge",
+    "message": "PrintNomad",
     "description": "Extension name"
   },
   "ext_description": {
@@ -33,9 +33,6 @@
   "profiles_status_error": {
     "message": "Profiles unavailable: $1"
   },
-  "convert_title": {
-    "message": "Convert a file"
-  },
   "convert_printer": {
     "message": "For"
   },
@@ -61,26 +58,65 @@
   "convert_report": {
     "message": "Conversion report"
   },
+  "convert_copy_report": {
+    "message": "Copy report"
+  },
+  "convert_copied": {
+    "message": "Copied"
+  },
+  "convert_copy_failed": {
+    "message": "Could not copy"
+  },
+  "report_comment": {
+    "message": "Anything to add? (optional)"
+  },
+  "report_contact": {
+    "message": "Email (optional), only if you want us to answer you"
+  },
+  "report_contact_invalid": {
+    "message": "That email does not look right. Fix it or leave it empty."
+  },
+  "report_send": {
+    "message": "Send report"
+  },
+  "report_sending": {
+    "message": "Sending…"
+  },
+  "report_sent": {
+    "message": "Sent, thank you!"
+  },
+  "report_send_failed": {
+    "message": "Could not send it. You can copy the report instead."
+  },
+  "report_send_hint": {
+    "message": "Sends only this text, never your 3MF file."
+  },
+  "report_what_is_sent": {
+    "message": "What is sent"
+  },
+  "report_close": {
+    "message": "Close"
+  },
+  "mw_error_title": {
+    "message": "This model could not be converted"
+  },
+  "issue_makerworld_suggestion": {
+    "message": "Try the download again. If it keeps failing, MakerWorld may have changed: please send this report."
+  },
+  "issue_engine_suggestion": {
+    "message": "Reload this page and try again. If it fails again, send this report."
+  },
   "convert_no_printers": {
     "message": "Add a printer first."
   },
   "convert_no_file": {
     "message": "Choose a .3mf file."
   },
-  "conversion_title": {
-    "message": "Conversion"
-  },
-  "conversion_advanced": {
-    "message": "Advanced"
-  },
   "conversion_reset": {
     "message": "Restore defaults"
   },
   "conversion_loading": {
     "message": "Loading options…"
-  },
-  "profiles_hint": {
-    "message": "The official profiles of each slicer, updated automatically. Your own presets will be available with the BetterBridge helper app."
   },
   "convert_saving": {
     "message": "Saving $1…",
@@ -95,23 +131,11 @@
   "nav_printers": {
     "message": "My printers"
   },
-  "hero_eyebrow": {
-    "message": "3MF projects for your printer"
-  },
   "hero_title": {
     "message": "Any model, ready for your printer."
   },
   "hero_text": {
-    "message": "BetterBridge converts MakerWorld and Bambu Studio projects for your printer and slicer, keeping what the designer tuned."
-  },
-  "hero_step1": {
-    "message": "Add your printer once."
-  },
-  "hero_step2": {
-    "message": "Drop the model's .3mf."
-  },
-  "hero_step3": {
-    "message": "Open it in your slicer and slice."
+    "message": "Drop a MakerWorld or Bambu Studio project: it comes out set up for your printer and slicer, keeping what the designer tuned."
   },
   "convert_drop_label": {
     "message": ".3mf project"
@@ -132,30 +156,6 @@
   "printers_add_title": {
     "message": "Add a printer"
   },
-  "conversion_hint": {
-    "message": "How BetterBridge decides which values to use."
-  },
-  "conversion_basic_tab": {
-    "message": "Basic"
-  },
-  "basic_model_title": {
-    "message": "What the designer tuned"
-  },
-  "basic_model_text": {
-    "message": "Supports, infill, speeds, ironing, purge tower… everything the designer changed is kept."
-  },
-  "basic_printer_title": {
-    "message": "What belongs to your machine"
-  },
-  "basic_printer_text": {
-    "message": "Bed, G-code, cooling, accelerations and calibration come from your printer's profile."
-  },
-  "basic_slicer_title": {
-    "message": "Ready in any slicer"
-  },
-  "basic_slicer_text": {
-    "message": "Filaments are assigned in automatic mode, so the project opens and slices in OrcaSlicer, Flash Studio and others."
-  },
   "picker_search_label": {
     "message": "Search printers"
   },
@@ -165,25 +165,43 @@
   "picker_close": {
     "message": "Close"
   },
-  "picker_brands": {
-    "message": "Brands"
-  },
   "picker_empty": {
     "message": "No printer matches. Try another name or brand."
   },
   "picker_nozzle": {
     "message": "Nozzle"
   },
-  "picker_featured": {
-    "message": "Popular"
-  },
-  "picker_all": {
-    "message": "All ($1)",
-    "description": "$1 = number of printer models"
-  },
   "printer_nozzle": {
     "message": "$1 mm",
     "description": "$1 = nozzle diameter"
+  },
+  "printers_bed": {
+    "message": "Build plate"
+  },
+  "printers_bed_default": {
+    "message": "$1 (default)",
+    "description": "$1 = build plate name"
+  },
+  "printers_bed_from_project": {
+    "message": "Build plate of the project"
+  },
+  "bed_cool_plate": {
+    "message": "Cool Plate"
+  },
+  "bed_engineering_plate": {
+    "message": "Engineering Plate"
+  },
+  "bed_high_temp_plate": {
+    "message": "Smooth High Temp Plate"
+  },
+  "bed_textured_pei_plate": {
+    "message": "Textured PEI Plate"
+  },
+  "bed_textured_cool_plate": {
+    "message": "Textured Cool Plate"
+  },
+  "bed_supertack_plate": {
+    "message": "Cool Plate SuperTack"
   },
   "convert_all_printers": {
     "message": "All my printers ($1)",
@@ -209,7 +227,7 @@
     "message": "By default each printer uses its brand's slicer (Flash Studio for Flashforge, Bambu Studio for Bambu Lab…) and OrcaSlicer for the rest. Turn it on if you open everything in OrcaSlicer. You can still change the slicer of a single printer on its card."
   },
   "mw_chip_title": {
-    "message": "$1 · converted by BetterBridge"
+    "message": "$1 · converted by PrintNomad"
   },
   "mw_download_for": {
     "message": "Download for $1"
@@ -231,6 +249,10 @@
   },
   "mw_status_error": {
     "message": "Could not convert"
+  },
+  "mw_status_error_code": {
+    "message": "Error $1",
+    "description": "$1 = error code"
   },
   "mw_error_timeout": {
     "message": "MakerWorld did not answer: are you signed in?"
@@ -270,5 +292,23 @@
   },
   "map_cancel": {
     "message": "Cancel"
+  },
+  "advanced_show": {
+    "message": "Advanced options"
+  },
+  "advanced_hide": {
+    "message": "Hide advanced options"
+  },
+  "printer_request_label": {
+    "message": "Your printer is not here? Tell us which one"
+  },
+  "printer_request_send": {
+    "message": "Ask for it"
+  },
+  "printer_request_sent": {
+    "message": "Thanks, we got it."
+  },
+  "printer_request_failed": {
+    "message": "Could not send it. Try again later."
   }
 }

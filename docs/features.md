@@ -1,6 +1,6 @@
-# How BetterBridge converts a project
+# How PrintNomad converts a project
 
-A 3MF project from MakerWorld or Bambu Studio mixes three kinds of values. BetterBridge
+A 3MF project from MakerWorld or Bambu Studio mixes three kinds of values. PrintNomad
 treats each one differently, so the converted project prints like the designer
 intended **on your printer**, and every change is written in the conversion report.
 
@@ -13,7 +13,7 @@ intended **on your printer**, and every change is written in the conversion repo
 ## The model's values, and only those
 
 A Bambu project stores *every* setting of its presets, but it also records which ones
-the designer changed (`different_settings_to_system`). BetterBridge keeps exactly those.
+the designer changed (`different_settings_to_system`). PrintNomad keeps exactly those.
 
 **Factory defaults of the source slicer are not carried over.** Values that are in the
 project only because Bambu's presets set them (about 200 per project) are removed when
@@ -23,12 +23,18 @@ the same result as picking your printer from scratch.
 *Why it matters:* converters that keep the whole project leave Bambu's factory values
 behind. When you select the printer again, the slicer lists them all as "modified"
 (Flash Studio's *Transfer or discard changes* dialog) and you cannot tell the designer's
-choices from leftovers. With BetterBridge that dialog only shows the designer's real
+choices from leftovers. With PrintNomad that dialog only shows the designer's real
 changes, so **Transfer** is the right answer.
+
+**A layer height your printer has no process for** is kept. A project made with Bambu's
+*0.16mm High Quality* on a printer with 0.12 and 0.20 processes prints at 0.16 mm over the
+nearest process; every other setting comes from that process, plus the designer's changes,
+and the report lists the layer height apart. The first layer also comes from your printer's
+process, unless the designer changed it.
 
 ## You see what the designer changed, and from what
 
-When the source slicer's profiles are available (BetterBridge downloads Bambu Studio's
+When the source slicer's profiles are available (PrintNomad downloads Bambu Studio's
 public profiles, or uses an installed Bambu Studio), the report shows each change with
 the original value of the preset the designer started from:
 
@@ -63,17 +69,26 @@ come out thin.
 Speeds stay the model's: your slicer caps every move at the filament's maximum
 volumetric speed when slicing, so a faster filament still benefits.
 
-The same rule applies to every printer: BetterBridge does not keep per-printer
+The same rule applies to every printer: PrintNomad does not keep per-printer
 exceptions, which would need someone to verify each machine. The printer maker's profile
 is the reference, and you decide when the model's values should win.
 
 Advanced mode can keep the model's cooling or printer settings anyway; each option
 explains its risk.
 
+## Your build plate
+
+Each printer in *My printers* can have its own build plate, when its slicer lets you choose
+one: the menu lists the plates that slicer offers for that printer, such as Cool Plate and
+Cool Plate SuperTack on the Flashforge Creator 5 Pro. Without a choice, the printer's default
+applies. The plates of a converted project all follow that choice, so changing it in the slicer
+updates every plate. If the slicer would refuse a filament on the chosen plate (PETG on a Cool
+Plate, for example), the report says so.
+
 ## Painted colours are read, not guessed
 
 Many MakerWorld projects define more colours than a printer has extruders but paint only
-a few of them on each plate. BetterBridge decodes the colour painting of every triangle
+a few of them on each plate. PrintNomad decodes the colour painting of every triangle
 (the same format OrcaSlicer and Bambu Studio use) to know which filaments each plate
 really needs, and assigns extruders plate by plate. A manual assignment is only needed
 when one plate truly uses more filaments than the printer has extruders.
@@ -85,8 +100,9 @@ never uses are removed, and when you send several colours to one extruder (a pla
 more colours than extruders) they become one filament. A 12-colour project for a
 4-extruder printer opens with 4 filaments, not 12 — and the slicer does not keep 12
 filament slots after you close it. Every place that names a filament is renumbered:
-filament settings, the purge table, objects and parts, plates, per-layer colour changes
-and the colour painting of each triangle (the meshes themselves are untouched; each
+filament settings, the purge table, objects and parts, plates, per-layer colour changes,
+height ranges, the filaments chosen for walls, infill, support or the purge tower, and the
+colour painting of each triangle (the meshes themselves are untouched; each
 rewritten paint code is checked to keep its shape and its new colours).
 
 ## A project that will not slice gets fixed
@@ -130,7 +146,7 @@ converter targets Snapmaker Orca, with an OrcaSlicer compatibility switch).
 Profiles come from the slicers' official releases, and the report names the source and
 version (for example *Flash Studio 1.7.20*). When a slicer's public repository lags behind
 its app — Flashforge's repository was at 1.7.15 while Flash Studio shipped 1.7.20 —
-BetterBridge uses the profiles of the released app. Copies of old profiles are what make
+PrintNomad uses the profiles of the released app. Copies of old profiles are what make
 slicers show "old vs new" values after a conversion.
 
 ## Right on MakerWorld

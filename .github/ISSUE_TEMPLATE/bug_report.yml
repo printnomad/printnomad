@@ -12,7 +12,7 @@ body:
     id: versions
     attributes:
       label: Versions
-      description: BetterBridge component version, source slicer and target slicer with versions, OS
+      description: PrintNomad component version, source slicer and target slicer with versions, OS
     validations: {required: true}
   - type: textarea
     id: what

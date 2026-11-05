@@ -103,7 +103,7 @@ XMLHttpRequest.prototype.send = function (this: XMLHttpRequest, body?: XMLHttpRe
   return nativeSend.call(this, body);
 };
 
-// Keep the original file from being saved while BetterBridge converts it.
+// Keep the original file from being saved while PrintNomad converts it.
 document.addEventListener("click", (e) => {
   if (blocking() && (e.target as Element | null)?.closest?.("a[download]")) {
     e.preventDefault();

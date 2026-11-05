@@ -1,4 +1,4 @@
-# BetterBridge browser extension
+# PrintNomad browser extension
 
 Chrome/Chromium extension (Manifest V3) that converts 3MF projects for the printers
 you register in **My printers**. It runs the same Python core as the CLI and the
@@ -36,7 +36,7 @@ lags behind):
 ```sh
 python tools/build_profile_catalog.py --slicer flashstudio \
   --profiles <Orca-Flashforge checkout>/resources/profiles --ref 1.7.15 --out /tmp/catalog
-BB_PROFILES_DIR=/tmp/catalog npm run build
+PN_PROFILES_DIR=/tmp/catalog npm run build
 ```
 
 Styles are Tailwind CSS v4 (`src/styles.css`); only classes that appear in `src/` are

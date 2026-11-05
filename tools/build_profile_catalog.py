@@ -36,9 +36,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "core" / "src"))
 
-from betterbridge.profiles import INDEXED_KINDS, KINDS, LIBRARY_VENDOR, ProfileLibrary  # noqa: E402
-from betterbridge.slicers import registry  # noqa: E402
-from betterbridge.web import usable_printers  # noqa: E402
+from printnomad.profiles import INDEXED_KINDS, KINDS, LIBRARY_VENDOR, ProfileLibrary  # noqa: E402
+from printnomad.slicers import registry  # noqa: E402
+from printnomad.web import usable_printers  # noqa: E402
 
 SCHEMA = 1
 COVER_SIZE = 192  # px; shown at 64–96 px, sharp on high-DPI screens
@@ -48,7 +48,7 @@ DISPLAY_NAMES = {"Bambulab": "Bambu Lab"}
 
 def vendor_display_name(root: Path, vendor: str) -> str:
     try:
-        name = json.loads((root / f"{vendor}.json").read_text(encoding="utf-8")).get("name") or vendor
+        name = json.loads((root / f"{vendor}.json").read_text(encoding="utf-8-sig")).get("name") or vendor
     except (OSError, ValueError):
         name = vendor
     return DISPLAY_NAMES.get(name, name)
@@ -89,7 +89,7 @@ def vendor_dirs(root: Path) -> list[Path]:
 def vendor_version(root: Path, vendor: str) -> str | None:
     meta = root / f"{vendor}.json"
     try:
-        return json.loads(meta.read_text(encoding="utf-8")).get("version")
+        return json.loads(meta.read_text(encoding="utf-8-sig")).get("version")
     except (OSError, ValueError):
         return None
 
@@ -100,7 +100,8 @@ def bundle_files(vendor_dir: Path) -> dict[str, dict]:
     for kind in KINDS:
         for f in sorted((vendor_dir / kind).rglob("*.json")):
             try:
-                data = json.loads(f.read_text(encoding="utf-8"))
+                # utf-8-sig, like the core's ProfileLibrary: some slicers save profiles with a BOM.
+                data = json.loads(f.read_text(encoding="utf-8-sig"))
             except (OSError, UnicodeDecodeError, ValueError):
                 continue
             if isinstance(data, dict) and data.get("type", kind) in INDEXED_KINDS:
@@ -108,9 +109,9 @@ def bundle_files(vendor_dir: Path) -> dict[str, dict]:
     return files
 
 
-def printers_by_vendor(lib: ProfileLibrary) -> dict[str, list[dict]]:
+def printers_by_vendor(lib: ProfileLibrary, slicer=None) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
-    for printer in usable_printers(lib):
+    for printer in usable_printers(lib, slicer):
         out.setdefault(printer.pop("vendor"), []).append(printer)
     return out
 
@@ -123,7 +124,7 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path, 
     # What reports show as the profile source.
     source = f"{repo}@{ref}" if repo else f"{known[slicer].name} {ref}"
     lib = ProfileLibrary.from_roots([profiles])
-    printers = printers_by_vendor(lib)
+    printers = printers_by_vendor(lib, known[slicer])
     has_library = (profiles / LIBRARY_VENDOR).is_dir()
 
     vendors: dict[str, dict] = {}
@@ -164,7 +165,7 @@ def build(slicer: str, profiles: Path, ref: str, commit: str | None, out: Path, 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--slicer", required=True, help="key from core/src/betterbridge/data/slicers.json")
+    ap.add_argument("--slicer", required=True, help="key from core/src/printnomad/data/slicers.json")
     ap.add_argument("--profiles", required=True, type=Path, help="resources/profiles of the slicer repository")
     ap.add_argument("--ref", required=True, help="release tag the profiles come from")
     ap.add_argument("--commit", help="commit sha of --ref")

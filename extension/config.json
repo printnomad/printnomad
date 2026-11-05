@@ -1,35 +1,52 @@
 {
-  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. Empty until the catalog is published (catalogUrlWhenPublished): only the profiles shipped with the extension are used and no request fails. fallbackProfiles: target printers to offer offline, plus the source profiles of Bambu projects (original values in reports). featuredModels: printer_model names shown first in the printer picker (the rest by search or brand); names missing from the catalog are ignored. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page).",
+  "_comment": "Build-time settings. catalogUrl is where CI publishes the profile catalog (.github/workflows/profiles.yml); its origin becomes the extension's host permission. Empty until the catalog is published (catalogUrlWhenPublished): only the profiles shipped with the extension are used and no request fails. reportUrl: the report worker (tools/report-worker); empty: only Copy report. fallbackProfiles: vendors shipped per slicer. supportedModels: printer_model names offered in the printer picker: only printers tested by converting and slicing real projects (.notes/PROGRESO.md); printers saved earlier keep working. makerworldOrigins: sites where the MakerWorld integration runs (content scripts and the bridge page).",
   "catalogUrl": "",
+  "reportUrl": "https://printnomad-reports.printnomad.workers.dev",
   "fallbackProfiles": {
-    "flashstudio": "*",
-    "bambustudio": "*",
-    "orcaslicer": "*"
+    "flashstudio": [
+      "Flashforge"
+    ],
+    "bambustudio": [
+      "BBL"
+    ],
+    "orcaslicer": [
+      "BBL",
+      "Flashforge",
+      "Creality",
+      "Elegoo",
+      "Anycubic",
+      "Prusa",
+      "Snapmaker"
+    ]
   },
-  "featuredModels": [
+  "supportedModels": [
     "Bambu Lab A1",
     "Bambu Lab A1 mini",
     "Bambu Lab P1S",
     "Bambu Lab P2S",
     "Bambu Lab X1 Carbon",
-    "Bambu Lab H2D",
-    "Bambu Lab H2S",
-    "Flashforge AD5X",
-    "Flashforge Creator 5",
-    "Flashforge Creator 5 Pro",
-    "Flashforge Adventurer 5M",
-    "Flashforge Adventurer 5M Pro",
+    "Prusa MK4S",
+    "Prusa MK4",
+    "Prusa CORE One",
+    "Prusa MK3S",
+    "Prusa MINI",
+    "Prusa XL",
     "Creality K1C",
-    "Creality K1 Max",
-    "Creality Ender-3 V3",
-    "Anycubic Kobra S1 Max",
+    "Creality K2 Plus",
+    "Creality Ender-3 V3 SE",
+    "Elegoo Centauri Carbon",
+    "Elegoo Centauri Carbon 2",
     "Elegoo Neptune 4 Pro",
-    "Qidi X-Max 3",
-    "Voron 2.4 350"
+    "Anycubic Kobra 3",
+    "Anycubic Kobra S1",
+    "Flashforge Creator 5 Pro",
+    "Flashforge AD5X",
+    "Flashforge Adventurer 5M",
+    "Snapmaker U1"
   ],
   "makerworldOrigins": [
     "https://makerworld.com",
     "https://makerworld.com.cn"
   ],
-  "catalogUrlWhenPublished": "https://betterbridge.github.io/profiles/catalog.json"
+  "catalogUrlWhenPublished": "https://printnomad.github.io/profiles/catalog.json"
 }

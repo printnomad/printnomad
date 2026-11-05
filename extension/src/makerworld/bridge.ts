@@ -4,7 +4,10 @@
 // origin) nor use chrome.downloads; this extension page can. It only talks to the
 // MakerWorld origins listed in config.json, and only to the page that embeds it.
 import { CONFIG } from "../config.ts";
+import type { Issue } from "../engine/protocol.ts";
 import { Converter, saveOutput } from "../lib/conversion.ts";
+import { clipboardReport } from "../lib/report-copy.ts";
+import { sendReport } from "../lib/report-send.ts";
 import { loadSettings, platformKey } from "../lib/settings.ts";
 import { buildModels, modelOfPreset } from "../options/printer-picker.ts";
 import { BRIDGE, CONTENT, type BridgeMessage, type BridgeRequest, type ConvertOutcome, type PagePrinter } from "./protocol.ts";
@@ -51,7 +54,18 @@ async function convert(printerId: string, name?: string, data?: ArrayBuffer, map
   const res = await converter.convert(printer, project.name, project.data, settings, platform, sourceBundles, map);
   if (res.alreadyTarget) return { status: "already" };
   if (!res.output && res.needsMap && res.plan) return { status: "needs-map", plan: res.plan };
-  if (!res.output) return { status: "error", message: res.text, needsMap: res.needsMap };
+  if (!res.output) {
+    const issue = (res.report?.issues as Issue[] | undefined)?.[0];
+    const report = clipboardReport({
+      version: CONFIG.version,
+      printer: printer.printer,
+      slicer: printer.slicer,
+      plate: printer.bedType,
+      file: project.name,
+      browser: navigator.userAgent,
+    }, res.text);
+    return { status: "error", message: res.text, needsMap: res.needsMap, issue, report };
+  }
   const download = await saveOutput(res.output);
   if (!download.saved) return { status: "cancelled" };
   const warnings = Array.isArray(res.report?.warnings) ? (res.report.warnings as unknown[]).length : 0;
@@ -65,6 +79,8 @@ window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
   try {
     const result = request.type === "printers" ? await printers()
       : request.type === "prepare" ? await prepare()
+      : request.type === "send-report"
+        ? await sendReport(CONFIG.reportUrl, { report: request.report, comment: request.comment, contact: request.contact, code: request.code, version: CONFIG.version })
       : await convert(request.printerId, request.name, request.data, request.map);
     reply({ source: BRIDGE, id: request.id, ok: true, result });
   } catch (err) {

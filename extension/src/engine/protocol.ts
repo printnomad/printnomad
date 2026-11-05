@@ -10,8 +10,10 @@ export interface ConvertRequest {
   slicer?: string;
   platform?: string;
   nozzle?: string;
+  /** Build plate chosen for this printer; missing: the printer's default. */
+  bedType?: string;
   map?: string;
-  /** Advanced options (core/src/betterbridge/options.py); missing ones take their defaults. */
+  /** Advanced options (core/src/printnomad/options.py); missing ones take their defaults. */
   options?: OptionValues;
   /** Profiles of the slicer the project was made with (see SourceInfo): original values in the report. */
   sourceBundles?: string[];
@@ -20,7 +22,7 @@ export interface ConvertRequest {
 
 export type OptionValues = Record<string, boolean | string>;
 
-/** One conversion option as described by the core (betterbridge.options.describe). */
+/** One conversion option as described by the core (printnomad.options.describe). */
 export interface OptionInfo {
   key: string;
   kind: "bool" | "choice";
@@ -32,7 +34,7 @@ export interface OptionInfo {
   warning?: string;
 }
 
-/** What an assignment screen needs (betterbridge.web.assignment_plan). */
+/** What an assignment screen needs (printnomad.web.assignment_plan). */
 export interface AssignmentPlan {
   extruders: number;
   filaments: { index: number; type: string; colour: string; profile: string; plates: string[] }[];
@@ -42,6 +44,14 @@ export interface AssignmentPlan {
   suggestion: string | null;
 }
 
+/** An error with its code (core/src/printnomad/issues.py). */
+export interface Issue {
+  code: string;
+  stage: string;
+  message: string;
+  suggestion: string;
+}
+
 export interface ConvertResult {
   ok: boolean;
   needsMap: boolean;
@@ -49,7 +59,7 @@ export interface ConvertResult {
   plan?: AssignmentPlan;
   /** The project is already set up for this printer: nothing to convert. */
   alreadyTarget: boolean;
-  /** Report as produced by betterbridge.report.Report.to_dict(), or null on input errors. */
+  /** Report as produced by printnomad.report.Report.to_dict() (`issues`: see Issue), or null. */
   report: Record<string, unknown> | null;
   /** Human-readable report in `lang`. */
   text: string;
@@ -57,7 +67,7 @@ export interface ConvertResult {
   ms: number;
 }
 
-/** What a project was made with (betterbridge.web.source_info). */
+/** What a project was made with (printnomad.web.source_info). */
 export interface SourceInfo {
   kind: string;
   /** Catalog slicer holding the presets the designer started from, e.g. "bambustudio". */

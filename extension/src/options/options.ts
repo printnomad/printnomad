@@ -1,21 +1,26 @@
 // Options page: My printers, profile status, conversion options and a manual "Convert a file".
 import { CONFIG } from "../config.ts";
-import type { OptionInfo } from "../engine/protocol.ts";
+import type { Issue, OptionInfo } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
 import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
 import { mapEditor } from "../lib/map-editor.ts";
+import { clipboardReport } from "../lib/report-copy.ts";
+import { reportPanel } from "../lib/report-panel.ts";
+import { sendReport } from "../lib/report-send.ts";
 import type { Catalog } from "../profiles/catalog.ts";
 import {
   allNozzles,
-  brands,
   buildModels,
+  keepBed,
   matches,
   modelOfPreset,
   pickSlicer,
   presetFor,
   slicersFor,
+  supportedOnly,
   type ModelChoice,
+  type Variant,
 } from "./printer-picker.ts";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -40,6 +45,8 @@ const { store, engine } = converter;
 let settings: Settings;
 let catalog: Catalog | null = null;
 let models: ModelChoice[] = [];
+/** What the picker offers; `models` also finds printers saved before the list was shortened. */
+let pickable: ModelChoice[] = [];
 
 async function loadCatalog() {
   const status = $("profiles-status");
@@ -48,6 +55,7 @@ async function loadCatalog() {
     const { catalog: c, url } = await store.catalog();
     catalog = c;
     models = buildModels(c, url);
+    pickable = supportedOnly(models, CONFIG.supportedModels);
     const sources = Object.values(c.slicers).map((s) => s.source ?? s.name).join(", ");
     status.textContent = url === CONFIG.catalogUrl
       ? t("profiles_status_ready", sources, new Date(c.generated).toLocaleDateString())
@@ -62,6 +70,32 @@ function slicerName(key: string): string {
 }
 
 // --- My printers ------------------------------------------------------------
+/** Plate names for people; the values are the slicers' (rules.BED_TYPES in the core). */
+function bedLabel(bed: string): string {
+  switch (bed) {
+    case "Cool Plate": return t("bed_cool_plate");
+    case "Engineering Plate": return t("bed_engineering_plate");
+    case "High Temp Plate": return t("bed_high_temp_plate");
+    case "Textured PEI Plate": return t("bed_textured_pei_plate");
+    case "Textured Cool Plate": return t("bed_textured_cool_plate");
+    case "Supertack Plate": return t("bed_supertack_plate");
+    default: return bed;
+  }
+}
+
+/** The plate menu of a printer's card: its default first, then what else the slicer offers. */
+function bedOptions(variant: Variant, chosen: string | undefined): HTMLOptionElement[] {
+  const first = variant.defaultBed
+    ? t("printers_bed_default", bedLabel(variant.defaultBed))
+    : t("printers_bed_from_project");
+  return [
+    new Option(first, "", false, !chosen),
+    ...variant.bedTypes
+      .filter((bed) => bed !== variant.defaultBed)
+      .map((bed) => new Option(bedLabel(bed), bed, false, bed === chosen)),
+  ];
+}
+
 function showCover(img: HTMLImageElement, placeholder: HTMLElement, url: string | undefined) {
   if (url) {
     img.src = url;
@@ -82,20 +116,28 @@ function renderPrinters() {
     const variant = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer);
     field("brand").textContent = model?.brand ?? "";
     field("name").textContent = model?.label ?? p.printer;
-    field("nozzle").textContent = variant ? t("printer_nozzle", variant.nozzle) : p.printer;
-    field("slicer").textContent = slicerName(p.slicer);
+    field("nozzle").textContent = variant ? `${t("printer_nozzle", variant.nozzle)} · ${slicerName(p.slicer)}` : p.printer;
     // Other slicers with the same printer and nozzle: change it from the card.
     const others = model && variant ? slicersFor(model, catalog!, variant.nozzle) : [];
-    if (model && variant && others.length > 1) {
+    if (settings.advanced && model && variant && others.length > 1) {
       const select = field<HTMLSelectElement>("slicer-select");
       select.replaceChildren(...others.map((o) => new Option(o.name, o.slicer, false, o.slicer === p.slicer)));
       select.title = t("printers_change_slicer");
       select.onchange = () => {
         const preset = presetFor(model, select.value, variant.nozzle);
-        if (preset) void replacePrinter(p.id, { ...p, slicer: select.value, printer: preset, slicerAuto: false });
+        if (preset) {
+          void replacePrinter(p.id, { ...p, slicer: select.value, printer: preset, slicerAuto: false,
+            bedType: keepBed(model, select.value, preset, p.bedType) });
+        }
       };
-      field("slicer").hidden = true;
       field("slicer-menu").hidden = false;
+    }
+    if (variant && variant.bedTypes.length > 1) {
+      const select = field<HTMLSelectElement>("bed-select");
+      select.replaceChildren(...bedOptions(variant, p.bedType));
+      select.title = t("printers_bed");
+      select.onchange = () => void replacePrinter(p.id, { ...p, bedType: select.value || undefined });
+      field("bed-menu").hidden = false;
     }
     showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
     const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
@@ -142,27 +184,14 @@ async function setGeneralSlicerForAll(on: boolean) {
     if (!model || !nozzle) return p;
     const slicer = pickSlicer(model, catalog!, on, nozzle);
     const preset = presetFor(model, slicer, nozzle);
-    return preset ? { ...p, slicer, printer: preset, slicerAuto: true } : p;
+    return preset ? { ...p, slicer, printer: preset, slicerAuto: true, bedType: keepBed(model, slicer, preset, p.bedType) } : p;
   }));
 }
 
 // --- printer picker -----------------------------------------------------------
-type BrandFilter = { kind: "featured" } | { kind: "all" } | { kind: "brand"; brand: string };
-const picker: { filter: BrandFilter; model: ModelChoice | null; slicer: string; nozzle: string } = {
-  filter: { kind: "featured" },
-  model: null,
-  slicer: "",
-  nozzle: "",
-};
-
-function featuredModels(): ModelChoice[] {
-  const featured = new Set(CONFIG.featuredModels);
-  return models.filter((m) => featured.has(m.model));
-}
+const picker: { model: ModelChoice | null; slicer: string; nozzle: string } = { model: null, slicer: "", nozzle: "" };
 
 function openPicker(focus = true) {
-  // With nothing featured in this catalog, start with every model.
-  picker.filter = featuredModels().length ? { kind: "featured" } : { kind: "all" };
   picker.model = null;
   $<HTMLInputElement>("picker-search").value = "";
   $("add-panel").hidden = false;
@@ -173,14 +202,6 @@ function openPicker(focus = true) {
 
 function closePicker() {
   $("add-panel").hidden = true;
-}
-
-function filterChip(label: string, pressed: boolean, onClick: () => void): HTMLElement {
-  const { node } = fromTemplate("tpl-filter-chip");
-  node.textContent = label;
-  node.ariaPressed = String(pressed);
-  node.onclick = onClick;
-  return node;
 }
 
 function choiceChip(label: string, checked: boolean, onClick: () => void): HTMLElement {
@@ -200,22 +221,7 @@ function selectModel(model: ModelChoice) {
 
 function renderPicker() {
   const query = $<HTMLInputElement>("picker-search").value.trim();
-  const f = picker.filter;
-  const setFilter = (filter: BrandFilter) => () => {
-    picker.filter = filter;
-    renderPicker();
-  };
-  const chips = [];
-  if (featuredModels().length) chips.push(filterChip(t("picker_featured"), f.kind === "featured" && !query, setFilter({ kind: "featured" })));
-  chips.push(filterChip(t("picker_all", models.length), f.kind === "all" || (f.kind === "featured" && !!query), setFilter({ kind: "all" })));
-  for (const { brand } of brands(models)) {
-    chips.push(filterChip(brand, f.kind === "brand" && f.brand === brand, setFilter({ kind: "brand", brand })));
-  }
-  $("picker-brands").replaceChildren(...chips);
-
-  // Typing searches every model, unless a brand is chosen.
-  const pool = f.kind === "featured" && !query ? featuredModels() : models;
-  const shown = pool.filter((m) => matches(m, query, f.kind === "brand" ? f.brand : null));
+  const shown = pickable.filter((m) => matches(m, query));
   $("picker-models").replaceChildren(...shown.map((m) => {
     const { node, field } = fromTemplate("tpl-model");
     const button = node.querySelector("button")!;
@@ -255,6 +261,26 @@ function addPickedPrinter() {
       { id: crypto.randomUUID(), slicer: picker.slicer, printer: preset, slicerAuto: true }]);
   }
   closePicker();
+}
+
+/** "My printer is not here": one click, no account, through the report service. */
+function wirePrinterRequest() {
+  const form = $<HTMLFormElement>("printer-request");
+  form.hidden = !CONFIG.reportUrl;
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const input = $<HTMLInputElement>("printer-request-name");
+    const name = input.value.trim();
+    if (!name) return;
+    const result = $("printer-request-result");
+    try {
+      await sendReport(CONFIG.reportUrl, { report: `Printer request: ${name}`, version: CONFIG.version });
+      input.value = "";
+      result.textContent = t("printer_request_sent");
+    } catch {
+      result.textContent = t("printer_request_failed");
+    }
+  };
 }
 
 // --- conversion options (advanced mode) -------------------------------------
@@ -304,9 +330,8 @@ function optionControl(o: OptionInfo): HTMLElement {
 
 function renderOptions() {
   const list = $("conversion-options");
-  $("mode-basic").ariaChecked = String(!settings.advanced);
-  $("mode-advanced").ariaChecked = String(settings.advanced);
-  $("conversion-basic").hidden = settings.advanced;
+  $("advanced-toggle").textContent = settings.advanced ? t("advanced_hide") : t("advanced_show");
+  $("advanced-toggle").ariaExpanded = String(settings.advanced);
   $("conversion-advanced").hidden = !settings.advanced;
   $("conversion-reset").hidden = Object.keys(settings.options).length === 0;
   if (!settings.advanced) return;
@@ -323,6 +348,7 @@ function renderOptions() {
 async function setAdvanced(advanced: boolean) {
   settings.advanced = advanced;
   await saveSettings({ advanced });
+  renderPrinters();
   await loadOptions();
 }
 
@@ -427,6 +453,32 @@ function resultRow(printer: MyPrinter, fileName: string) {
   field("printer").title = fileName;
   showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
   $("convert-results").append(node);
+  let reportCode: string | undefined;
+  const showReport = (text: string) => {
+    field("details").hidden = !text;
+    if (!text) return field("report-panel").replaceChildren();
+    const copied = clipboardReport({
+      version: CONFIG.version,
+      printer: printer.printer,
+      slicer: slicerName(printer.slicer),
+      plate: printer.bedType,
+      file: fileName,
+      browser: navigator.userAgent,
+    }, text);
+    field("report-panel").replaceChildren(reportPanel({
+      text: copied,
+      send: CONFIG.reportUrl
+        ? (extra) => sendReport(CONFIG.reportUrl, { report: copied, ...extra, code: reportCode, version: CONFIG.version })
+        : undefined,
+    }));
+  };
+  const showIssue = (issue: Pick<Issue, "code" | "message" | "suggestion"> | null) => {
+    reportCode = issue?.code;
+    field("issue").hidden = !issue;
+    if (!issue) return;
+    field("issue-message").textContent = `${issue.code} · ${issue.message}`;
+    field("issue-suggestion").textContent = issue.suggestion;
+  };
   const count = (report: Record<string, unknown>, key: string) =>
     (Array.isArray(report[key]) ? (report[key] as unknown[]).length : 0);
   return {
@@ -435,8 +487,7 @@ function resultRow(printer: MyPrinter, fileName: string) {
       field("status").textContent = text;
     },
     report(text: string, report: Record<string, unknown> | null) {
-      field("report").textContent = text;
-      field("details").hidden = !text;
+      showReport(text);
       if (!report) return;
       field("stats").textContent = t("result_stats", count(report, "kept_author"),
         count(report, "changed") + count(report, "source_defaults"), count(report, "warnings"));
@@ -450,6 +501,13 @@ function resultRow(printer: MyPrinter, fileName: string) {
     openDetails() {
       (field("details") as HTMLDetailsElement).open = true;
     },
+    issue: showIssue,
+    /** The engine itself failed: there is no report from the core, only this message. */
+    engineFailed(message: string) {
+      const issue = { code: ENGINE_ERROR, message, suggestion: t("issue_engine_suggestion") };
+      showIssue(issue);
+      showReport(`✗ [${issue.code}] ${message}`);
+    },
     /** Show (or hide, with null) the filament → extruder assignment screen. */
     map(editor: HTMLElement | null) {
       field("map").replaceChildren(...(editor ? [editor] : []));
@@ -460,10 +518,14 @@ function resultRow(printer: MyPrinter, fileName: string) {
 
 type ResultRow = ReturnType<typeof resultRow>;
 
+/** Next to the core's codes (issues.py): the engine did not start or stopped responding. */
+const ENGINE_ERROR = "PN902";
+
 async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: ArrayBuffer, platform: string,
   sourceBundles: string[], map?: string): Promise<boolean> {
   row.status("info", t("convert_busy"));
   row.map(null);
+  row.issue(null);
   try {
     const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles, map);
     row.report(res.alreadyTarget ? "" : res.text, res.report);
@@ -488,6 +550,7 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
     }
     if (!res.output) {
       row.status("error", res.needsMap ? t("convert_needs_map") : t("convert_failed"));
+      row.issue((res.report?.issues as Issue[] | undefined)?.[0] ?? null);
       row.openDetails();
       return false;
     }
@@ -502,7 +565,9 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
     row.status(warned ? "warn" : "ok", t("convert_ok", download.fileName, (res.ms / 1000).toFixed(1)));
     return true;
   } catch (e) {
-    row.status("error", (e as Error).message);
+    row.status("error", t("convert_failed"));
+    row.engineFailed((e as Error).message);
+    row.openDetails();
     return false;
   }
 }
@@ -523,8 +588,8 @@ async function main() {
   const general = $<HTMLInputElement>("general-slicer");
   general.checked = settings.generalSlicerForAll;
   general.onchange = () => void setGeneralSlicerForAll(general.checked);
-  $("mode-basic").onclick = () => void setAdvanced(false);
-  $("mode-advanced").onclick = () => void setAdvanced(true);
+  $("advanced-toggle").onclick = () => void setAdvanced(!settings.advanced);
+  wirePrinterRequest();
   $("conversion-reset").onclick = async () => {
     settings.options = {};
     await saveSettings({ options: {} });

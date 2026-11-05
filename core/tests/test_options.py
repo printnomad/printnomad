@@ -2,8 +2,8 @@
 
 import pytest
 
-from betterbridge import i18n, options, rules
-from betterbridge.convert import convert
+from printnomad import i18n, options, rules
+from printnomad.convert import convert
 
 
 def test_defaults_match_convert_signature():

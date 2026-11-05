@@ -1,4 +1,4 @@
-/* Panel del plugin BetterBridge para OrcaSlicer.
+/* Panel del plugin PrintNomad para OrcaSlicer.
  *
  * Protocolo con Python (window.orca.postMessage / orca.onMessage):
  *   página -> plugin: {type: "ready"} | {type: "preview", nozzle}
@@ -55,7 +55,7 @@
   };
 
   // ---------- i18n ----------
-  var MESSAGES = window.BB_I18N || {};
+  var MESSAGES = window.PN_I18N || {};
 
   function esc(v) {
     if (v === null || v === undefined) return '';

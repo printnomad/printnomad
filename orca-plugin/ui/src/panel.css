@@ -10,51 +10,51 @@
 /* Tokens semánticos: las utilidades (bg-surface, text-muted, border-line…) apuntan a
  * variables que cambian con el modo claro/oscuro del sistema (el de Orca). */
 @theme inline {
-  --color-surface: var(--bb-surface);
-  --color-card: var(--bb-card);
-  --color-fg: var(--bb-fg);
-  --color-muted: var(--bb-muted);
-  --color-line: var(--bb-line);
-  --color-accent: var(--bb-accent);
-  --color-on-accent: var(--bb-on-accent);
-  --color-warn-bg: var(--bb-warn-bg);
-  --color-warn-fg: var(--bb-warn-fg);
-  --color-err-bg: var(--bb-err-bg);
-  --color-err-fg: var(--bb-err-fg);
-  --color-ok-bg: var(--bb-ok-bg);
-  --color-ok-fg: var(--bb-ok-fg);
+  --color-surface: var(--pn-surface);
+  --color-card: var(--pn-card);
+  --color-fg: var(--pn-fg);
+  --color-muted: var(--pn-muted);
+  --color-line: var(--pn-line);
+  --color-accent: var(--pn-accent);
+  --color-on-accent: var(--pn-on-accent);
+  --color-warn-bg: var(--pn-warn-bg);
+  --color-warn-fg: var(--pn-warn-fg);
+  --color-err-bg: var(--pn-err-bg);
+  --color-err-fg: var(--pn-err-fg);
+  --color-ok-bg: var(--pn-ok-bg);
+  --color-ok-fg: var(--pn-ok-fg);
 }
 
 :root {
-  --bb-surface: #ffffff;
-  --bb-card: #f6f8fa;
-  --bb-fg: #1f2328;
-  --bb-muted: #656d76;
-  --bb-line: #d8dee4;
-  --bb-accent: #009688; /* verde de OrcaSlicer */
-  --bb-on-accent: #ffffff;
-  --bb-warn-bg: #fff8c5;
-  --bb-warn-fg: #7d4e00;
-  --bb-err-bg: #ffebe9;
-  --bb-err-fg: #a40e26;
-  --bb-ok-bg: #dafbe1;
-  --bb-ok-fg: #116329;
+  --pn-surface: #ffffff;
+  --pn-card: #f6f8fa;
+  --pn-fg: #1f2328;
+  --pn-muted: #656d76;
+  --pn-line: #d8dee4;
+  --pn-accent: #009688; /* verde de OrcaSlicer */
+  --pn-on-accent: #ffffff;
+  --pn-warn-bg: #fff8c5;
+  --pn-warn-fg: #7d4e00;
+  --pn-err-bg: #ffebe9;
+  --pn-err-fg: #a40e26;
+  --pn-ok-bg: #dafbe1;
+  --pn-ok-fg: #116329;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bb-surface: #1e1f22;
-    --bb-card: #26282c;
-    --bb-fg: #e6edf3;
-    --bb-muted: #9198a1;
-    --bb-line: #3d444d;
-    --bb-accent: #26a69a;
-    --bb-on-accent: #0d1117;
-    --bb-warn-bg: #3b2e05;
-    --bb-warn-fg: #e3b341;
-    --bb-err-bg: #3d1214;
-    --bb-err-fg: #ff7b72;
-    --bb-ok-bg: #0f2e1a;
-    --bb-ok-fg: #56d364;
+    --pn-surface: #1e1f22;
+    --pn-card: #26282c;
+    --pn-fg: #e6edf3;
+    --pn-muted: #9198a1;
+    --pn-line: #3d444d;
+    --pn-accent: #26a69a;
+    --pn-on-accent: #0d1117;
+    --pn-warn-bg: #3b2e05;
+    --pn-warn-fg: #e3b341;
+    --pn-err-bg: #3d1214;
+    --pn-err-fg: #ff7b72;
+    --pn-ok-bg: #0f2e1a;
+    --pn-ok-fg: #56d364;
   }
 }

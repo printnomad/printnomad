@@ -1,8 +1,10 @@
+import json
+
 import pytest
 
-from betterbridge import rules
-from betterbridge.profiles import ProfileError, ProfileLibrary
-from betterbridge.target import Target, find_printer, load_target, output_suffix
+from printnomad import rules
+from printnomad.profiles import ProfileError, ProfileLibrary
+from printnomad.target import Target, find_printer, load_target, output_suffix
 
 MACHINE = "Flashforge Creator 5 Pro 0.4 nozzle"
 
@@ -30,6 +32,90 @@ def test_misplaced_file_is_indexed_by_type(profiles_root):
     assert "Generic PLA @FF C5P" in lib.instantiable("filament", MACHINE)
 
 
+def test_profiles_with_utf8_bom_are_read(tmp_path):
+    """Snapmaker Orca 2.4.1 saves its profiles with a BOM; they must not be skipped."""
+    def write_with_bom(path, data):
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"\xef\xbb\xbf" + json.dumps(data).encode("utf-8"))
+
+    system = tmp_path / "system"
+    write_with_bom(system / "Snapmaker/machine/u1.json", {"type": "machine", "name": "U1", "gcode_flavor": "klipper"})
+    account = tmp_path / "user" / "default"
+    write_with_bom(account / "machine/mine.json", {"type": "machine", "name": "Mine", "inherits": "U1"})
+    lib = ProfileLibrary.from_roots([system], [account])
+    assert lib.settings("machine", "Mine")["gcode_flavor"] == "klipper"
+
+
+def _conditioned_process(lib, name, condition, layer="0.2"):
+    lib.raw[("process", name)] = {"type": "process", "name": name, "instantiation": "true", "layer_height": layer,
+                                  "compatible_printers_condition": condition}
+    lib.vendors[("process", name)] = "Flashforge"
+
+
+def test_process_compatible_by_condition(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    lib.raw[("machine", MACHINE)]["printer_notes"] = "PRINTER_MODEL_X"
+    _conditioned_process(lib, "A @X", "printer_notes=~/.*MODEL_X.*/ and nozzle_diameter[0]==0.4")
+    _conditioned_process(lib, "B @Y", "printer_notes=~/.*MODEL_Y.*/")
+    names = Target(lib, MACHINE).lib.instantiable("process", [MACHINE], Target(lib, MACHINE).settings)
+    assert "A @X" in names and "B @Y" not in names
+    assert "A @X" not in lib.instantiable("process", [MACHINE])         # without the printer's settings
+
+
+def test_a_printer_whose_processes_only_have_conditions_is_usable(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    lib.raw[("machine", MACHINE)]["printer_notes"] = "PRINTER_MODEL_X"
+    for key in [k for k in lib.raw if k[0] == "process"]:
+        del lib.raw[key]
+    assert not Target(lib, MACHINE).is_usable()
+    _conditioned_process(lib, "A @X", "printer_notes=~/.*MODEL_X.*/")
+    assert Target(lib, MACHINE).is_usable()
+
+
+def test_process_the_printer_proposes_wins_a_tie(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    for key in [k for k in lib.raw if k[0] == "process"]:
+        del lib.raw[key]
+    lib.raw[("machine", MACHINE)].update(default_print_profile="0.20mm SPEED", printer_notes="X")
+    for name in ("0.20mm SOLUBLE", "0.20mm SPEED", "0.20mm AAA"):
+        _conditioned_process(lib, name, "printer_notes=~/X/")
+    assert Target(lib, MACHINE).pick_process(0.2) == "0.20mm SPEED"
+
+
+def test_soluble_process_only_if_nothing_else(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    for key in [k for k in lib.raw if k[0] == "process"]:
+        del lib.raw[key]
+    lib.raw[("machine", MACHINE)]["printer_notes"] = "X"
+    for name in ("0.20mm SOLUBLE", "0.20mm SPEED"):
+        _conditioned_process(lib, name, "printer_notes=~/X/")
+    assert Target(lib, MACHINE).pick_process(0.2) == "0.20mm SPEED"
+
+
+def test_library_filaments_only_when_the_printer_has_none_of_that_material(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    target = Target(lib, MACHINE)
+    lib.raw[("filament", "Generic ASA @System")] = {"type": "filament", "name": "Generic ASA @System",
+                                                     "instantiation": "true", "filament_type": ["ASA"]}
+    lib.vendors[("filament", "Generic ASA @System")] = "OrcaFilamentLibrary"
+    lib.raw[("filament", "Generic PLA @Lib")] = {"type": "filament", "name": "Generic PLA @Lib",
+                                                  "instantiation": "true", "filament_type": ["PLA"]}
+    lib.vendors[("filament", "Generic PLA @Lib")] = "OrcaFilamentLibrary"
+    assert target.pick_filament("ASA", "Bambu ASA @BBL A1") == "Generic ASA @System"
+    assert target.pick_filament("PLA", "Bambu PLA Basic @BBL A1") == "Flashforge PLA Basic @FF C5P"
+    assert target.pick_filament("PC", "Bambu PC @BBL A1") is None
+
+
+def test_process_tie_goes_to_the_finer_one(profiles_root):
+    lib = ProfileLibrary.load(profiles_root)
+    target = Target(lib, MACHINE)
+    lib.raw[("process", "0.12mm Standard @FF C5")] = {"type": "process", "name": "0.12mm Standard @FF C5",
+                                                      "instantiation": "true", "layer_height": "0.12",
+                                                      "compatible_printers": [MACHINE]}
+    lib.vendors[("process", "0.12mm Standard @FF C5")] = "Flashforge"
+    assert target.pick_process(0.16) == "0.12mm Standard @FF C5"
+
+
 def test_missing_parent_raises(profiles_root):
     lib = ProfileLibrary.load(profiles_root)
     with pytest.raises(ProfileError):
@@ -43,7 +129,7 @@ def test_load_target_from_profiles_dir_and_errors(profiles_root, monkeypatch):
         load_target("No existe", profiles_dir=profiles_root)
     with pytest.raises(ProfileError):
         load_target("x", slicer="nope")
-    monkeypatch.setenv("BETTERBRIDGE_PROFILES", str(profiles_root))
+    monkeypatch.setenv("PRINTNOMAD_PROFILES", str(profiles_root))
     assert load_target(MACHINE).machine == MACHINE
 
 
@@ -123,7 +209,7 @@ def test_inheritance_resolved_within_vendor_then_library(tmp_path):
 
 
 def test_most_restrictive_quirk_applies(profiles_root):
-    from betterbridge.slicers import Slicer
+    from printnomad.slicers import Slicer
     flash = Slicer(key="flashstudio", name="Flash Studio")
     orca = Slicer(key="orcaslicer", name="OrcaSlicer", quirks={"manual_map_max_extruder": 2})
     lib = ProfileLibrary.load(profiles_root)

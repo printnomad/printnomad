@@ -1,0 +1,227 @@
+"""Presets de laminadores leídos en runtime (sistema y usuario).
+
+No se copia ningún JSON al repositorio: se leen las carpetas de perfiles del
+laminador instalado, se indexan por nombre y se resuelve la cadena `inherits`.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from . import conditions
+from .i18n import t
+
+ENV_PROFILES = "PRINTNOMAD_PROFILES"
+
+KINDS = ("machine", "process", "filament")
+# Además se indexa "machine_model" (datos del modelo, p. ej. la placa por defecto).
+INDEXED_KINDS = (*KINDS, "machine_model")
+
+# Claves que describen el perfil en sí y no van al proyecto.
+META_KEYS = frozenset({
+    "type", "name", "inherits", "from", "instantiation", "setting_id",
+    "is_custom_defined", "version", "compatible_printers",
+    "compatible_printers_condition", "compatible_prints",
+    "compatible_prints_condition", "filament_id", "description",
+})
+
+
+class ProfileError(Exception):
+    pass
+
+
+USER_VENDOR = "user"  # pseudo-fabricante de los presets de usuario
+# Biblioteca común de filamentos de Orca y sus derivados: los perfiles de cualquier
+# fabricante pueden heredar de ella (p. ej. "Generic PLA @System").
+LIBRARY_VENDOR = "OrcaFilamentLibrary"
+
+
+@dataclass
+class ProfileLibrary:
+    """Presets de un laminador (sistema + usuario), indexados por (tipo, nombre).
+
+    Lee todas las carpetas de fabricante (las que tienen `machine/`, `process/` o
+    `filament/`) de cada raíz de sistema, y los presets de usuario
+    (`user/<cuenta>/<tipo>/*.json`, que heredan de un preset de sistema por nombre).
+    La primera aparición de un nombre gana: el orden de las raíces es la prioridad.
+    """
+
+    roots: list[Path] = field(default_factory=list)
+    # Where the profiles come from, for the report (folders, or repo@ref of the bundles).
+    source: str = ""
+    raw: dict[tuple[str, str], dict] = field(default_factory=dict)
+    vendors: dict[tuple[str, str], str] = field(default_factory=dict)
+    # Mismo nombre en varios fabricantes (p. ej. fdm_filament_pla en Flashforge y en
+    # OrcaFilamentLibrary, con contenido distinto): la herencia se resuelve primero
+    # dentro del fabricante del hijo, como hace OrcaSlicer.
+    by_vendor: dict[str, dict[tuple[str, str], dict]] = field(default_factory=dict)
+    _cache: dict[tuple[str, str], dict] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def load(cls, root: Path) -> ProfileLibrary:
+        """Compatibilidad: una sola raíz de sistema."""
+        return cls.from_roots([Path(root)])
+
+    @classmethod
+    def from_roots(cls, system_roots: list[Path], user_dirs: list[Path] = ()) -> ProfileLibrary:
+        lib = cls(roots=[*system_roots, *user_dirs])
+        lib.source = ", ".join(str(r) for r in lib.roots if Path(r).is_dir())
+        for root in system_roots:
+            if not root.is_dir():
+                continue
+            for vendor_dir in sorted(d for d in root.iterdir() if d.is_dir()):
+                for kind in KINDS:
+                    lib._scan(vendor_dir / kind, kind, vendor_dir.name)
+        for account in user_dirs:
+            for kind in KINDS:
+                lib._scan(Path(account) / kind, kind, USER_VENDOR)
+        if not lib.raw:
+            raise ProfileError(t("profiles.error.none_found", root=", ".join(map(str, lib.roots))))
+        return lib
+
+    @classmethod
+    def from_bundles(cls, bundles: list[dict]) -> ProfileLibrary:
+        """Library from profile bundles (tools/build_profile_catalog.py), without touching disk.
+
+        Each bundle is {"vendor": name, "files": {"<kind>/<path>.json": data}}. Vendors
+        are indexed in name order, as `from_roots` does with vendor folders, so both
+        give the same library for the same profiles.
+        """
+        lib = cls()
+        sources = (b.get("source") or (f"{b['repo']}@{b['ref']}" if b.get("repo") else b["vendor"]) for b in bundles)
+        lib.source = ", ".join(dict.fromkeys(sources))
+        for bundle in sorted(bundles, key=lambda b: b["vendor"]):
+            for rel, data in sorted(bundle.get("files", {}).items()):
+                kind = rel.split("/", 1)[0]
+                if kind in KINDS:
+                    lib._add(data, kind, bundle["vendor"], Path(rel).stem)
+        if not lib.raw:
+            raise ProfileError(t("profiles.error.none_found", root=", ".join(b.get("vendor", "?") for b in bundles)))
+        return lib
+
+    def _scan(self, folder: Path, kind: str, vendor: str) -> None:
+        if not folder.is_dir():
+            return
+        for f in sorted(folder.rglob("*.json")):
+            try:
+                # utf-8-sig: Snapmaker Orca 2.4.1 saves its profiles with a BOM.
+                data = json.loads(f.read_text(encoding="utf-8-sig"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            self._add(data, kind, vendor, f.stem)
+
+    def _add(self, data, kind: str, vendor: str, stem: str) -> None:
+        if not isinstance(data, dict):
+            return
+        name = data.get("name") or (stem if vendor == USER_VENDOR else None)
+        # Hay archivos guardados en la carpeta equivocada: manda el campo "type".
+        real_kind = data.get("type", kind)
+        if not name or real_kind not in INDEXED_KINDS:
+            return
+        self.by_vendor.setdefault(vendor, {}).setdefault((real_kind, name), data)
+        if (real_kind, name) not in self.raw:
+            self.raw[(real_kind, name)] = data
+            self.vendors[(real_kind, name)] = vendor
+
+    def has(self, kind: str, name: str) -> bool:
+        return (kind, name) in self.raw
+
+    def names(self, kind: str) -> list[str]:
+        return sorted(n for k, n in self.raw if k == kind)
+
+    def _lookup(self, kind: str, name: str, vendor: str | None) -> tuple[dict | None, str | None]:
+        """Preset `name` buscado en el fabricante dado, luego en la biblioteca común y luego en cualquiera."""
+        for v in (vendor, LIBRARY_VENDOR):
+            data = self.by_vendor.get(v, {}).get((kind, name)) if v else None
+            if data is not None:
+                return data, v
+        key = (kind, name)
+        return self.raw.get(key), self.vendors.get(key)
+
+    def _chain(self, kind: str, name: str) -> list[tuple[str, dict]]:
+        """[(nombre, datos)] desde `name` hasta el ancestro más lejano."""
+        chain: list[tuple[str, dict]] = []
+        seen: set[str] = set()
+        current: str | None = name
+        data, vendor = self.raw.get((kind, name)), self.vendors.get((kind, name))
+        while current:
+            if current in seen:
+                raise ProfileError(t("profiles.error.circular", kind=kind, name=current))
+            seen.add(current)
+            if data is None:
+                raise ProfileError(t("profiles.error.not_found", kind=kind, name=current, child=name))
+            chain.append((current, data))
+            current = data.get("inherits") or None
+            if current:
+                # Un preset de usuario hereda de uno de sistema: buscarlo en todos.
+                data, vendor = self._lookup(kind, current, None if vendor == USER_VENDOR else vendor)
+        return chain
+
+    def ancestors(self, kind: str, name: str) -> list[str]:
+        """`name` y los presets de los que hereda (del más cercano al más lejano)."""
+        try:
+            return [n for n, _ in self._chain(kind, name)]
+        except ProfileError:
+            return [name] if (kind, name) in self.raw else []
+
+    def resolve(self, kind: str, name: str) -> dict:
+        """Perfil con la cadena `inherits` aplicada (padre primero)."""
+        key = (kind, name)
+        if key in self._cache:
+            return self._cache[key]
+        merged: dict = {}
+        for _, data in reversed(self._chain(kind, name)):
+            merged.update(data)
+        merged["name"] = name
+        merged.pop("inherits", None)
+        self._cache[key] = merged
+        return merged
+
+    def settings(self, kind: str, name: str) -> dict:
+        """Solo las claves de configuración (sin metadatos del perfil)."""
+        return {k: v for k, v in self.resolve(kind, name).items() if k not in META_KEYS}
+
+    def instantiable(self, kind: str, compatible_with: str | list[str], printer: dict | None = None) -> list[str]:
+        """Presets elegibles compatibles con una impresora.
+
+        `compatible_with` puede ser el nombre del preset de máquina o la lista con sus
+        ancestros: un preset de usuario es compatible con lo que lo sea su preset padre.
+        `printer`: ajustes de la impresora, para evaluar `compatible_printers_condition` en los
+        presets sin lista (Prusa MK4S, CORE One…), como el laminador (Preset.cpp).
+        """
+        machines = {compatible_with} if isinstance(compatible_with, str) else set(compatible_with)
+        out = []
+        for (k, name), data in self.raw.items():
+            if k != kind or str(data.get("instantiation", "true")).lower() != "true":
+                continue
+            try:
+                resolved = self.resolve(kind, name)
+            except ProfileError:
+                continue
+            compatible = resolved.get("compatible_printers") or []
+            condition = resolved.get("compatible_printers_condition")
+            if machines & set(compatible) or (
+                    not compatible and condition and printer is not None and conditions.matches(condition, printer)):
+                out.append(name)
+        return sorted(out)
+
+    def library_filaments(self) -> list[str]:
+        """Filaments of the common library that name no printer: for every printer (Preset.cpp).
+
+        A printer's own profiles often stop at these (Voron, Sovol SV06).
+        """
+        out = []
+        for (kind, name), data in self.raw.items():
+            if kind != "filament" or self.vendors.get((kind, name)) != LIBRARY_VENDOR:
+                continue
+            if str(data.get("instantiation", "true")).lower() != "true":
+                continue
+            try:
+                resolved = self.resolve(kind, name)
+            except ProfileError:
+                continue
+            if not resolved.get("compatible_printers") and not resolved.get("compatible_printers_condition"):
+                out.append(name)
+        return sorted(out)

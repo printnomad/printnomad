@@ -1,6 +1,6 @@
 {
   "ext_name": {
-    "message": "BetterBridge"
+    "message": "PrintNomad"
   },
   "ext_description": {
     "message": "Abre modelos 3D de MakerWorld y otros sitios ya preparados para tu impresora y tu laminador."
@@ -29,9 +29,6 @@
   "profiles_status_error": {
     "message": "Perfiles no disponibles: $1"
   },
-  "convert_title": {
-    "message": "Convertir un archivo"
-  },
   "convert_printer": {
     "message": "Para"
   },
@@ -56,26 +53,65 @@
   "convert_report": {
     "message": "Reporte de la conversión"
   },
+  "convert_copy_report": {
+    "message": "Copiar reporte"
+  },
+  "convert_copied": {
+    "message": "Copiado"
+  },
+  "convert_copy_failed": {
+    "message": "No se pudo copiar"
+  },
+  "report_comment": {
+    "message": "¿Algo que añadir? (opcional)"
+  },
+  "report_contact": {
+    "message": "Email (opcional), solo si quieres que te respondamos"
+  },
+  "report_contact_invalid": {
+    "message": "Ese email no parece correcto. Corrígelo o déjalo vacío."
+  },
+  "report_send": {
+    "message": "Enviar reporte"
+  },
+  "report_sending": {
+    "message": "Enviando…"
+  },
+  "report_sent": {
+    "message": "¡Enviado, gracias!"
+  },
+  "report_send_failed": {
+    "message": "No se pudo enviar. Puedes copiar el reporte."
+  },
+  "report_send_hint": {
+    "message": "Envía solo este texto, nunca tu archivo 3MF."
+  },
+  "report_what_is_sent": {
+    "message": "Qué se envía"
+  },
+  "report_close": {
+    "message": "Cerrar"
+  },
+  "mw_error_title": {
+    "message": "No se pudo convertir este modelo"
+  },
+  "issue_makerworld_suggestion": {
+    "message": "Intenta la descarga de nuevo. Si sigue fallando, puede que MakerWorld haya cambiado: envía este reporte."
+  },
+  "issue_engine_suggestion": {
+    "message": "Recarga esta página e inténtalo de nuevo. Si vuelve a fallar, envía este reporte."
+  },
   "convert_no_printers": {
     "message": "Primero añade una impresora."
   },
   "convert_no_file": {
     "message": "Elige un archivo .3mf."
   },
-  "conversion_title": {
-    "message": "Conversión"
-  },
-  "conversion_advanced": {
-    "message": "Avanzado"
-  },
   "conversion_reset": {
     "message": "Restablecer valores por defecto"
   },
   "conversion_loading": {
     "message": "Cargando opciones…"
-  },
-  "profiles_hint": {
-    "message": "Los perfiles oficiales de cada laminador, actualizados automáticamente. Tus propios presets estarán disponibles con la app auxiliar de BetterBridge."
   },
   "convert_saving": {
     "message": "Guardando $1…"
@@ -89,23 +125,11 @@
   "nav_printers": {
     "message": "Mis impresoras"
   },
-  "hero_eyebrow": {
-    "message": "Proyectos 3MF para tu impresora"
-  },
   "hero_title": {
     "message": "Cualquier modelo, listo para tu impresora."
   },
   "hero_text": {
-    "message": "BetterBridge convierte proyectos de MakerWorld y Bambu Studio para tu impresora y tu laminador, manteniendo lo que el diseñador ajustó."
-  },
-  "hero_step1": {
-    "message": "Añade tu impresora una sola vez."
-  },
-  "hero_step2": {
-    "message": "Suelta el .3mf del modelo."
-  },
-  "hero_step3": {
-    "message": "Ábrelo en tu laminador y lamina."
+    "message": "Suelta un proyecto de MakerWorld o Bambu Studio: sale preparado para tu impresora y laminador, con lo que ajustó el diseñador."
   },
   "convert_drop_label": {
     "message": "Proyecto .3mf"
@@ -125,30 +149,6 @@
   "printers_add_title": {
     "message": "Añadir impresora"
   },
-  "conversion_hint": {
-    "message": "Cómo decide BetterBridge qué valores usar."
-  },
-  "conversion_basic_tab": {
-    "message": "Básico"
-  },
-  "basic_model_title": {
-    "message": "Lo que ajustó el diseñador"
-  },
-  "basic_model_text": {
-    "message": "Soportes, relleno, velocidades, planchado, torre de purga… todo lo que el diseñador cambió se mantiene."
-  },
-  "basic_printer_title": {
-    "message": "Lo que es de tu máquina"
-  },
-  "basic_printer_text": {
-    "message": "Plato, G-code, enfriamiento, aceleraciones y calibración vienen del perfil de tu impresora."
-  },
-  "basic_slicer_title": {
-    "message": "Listo en cualquier laminador"
-  },
-  "basic_slicer_text": {
-    "message": "Los filamentos se asignan en modo automático: el proyecto abre y lamina en OrcaSlicer, Flash Studio y otros."
-  },
   "picker_search_label": {
     "message": "Buscar impresoras"
   },
@@ -158,23 +158,42 @@
   "picker_close": {
     "message": "Cerrar"
   },
-  "picker_brands": {
-    "message": "Marcas"
-  },
   "picker_empty": {
     "message": "Ninguna impresora coincide. Prueba con otro nombre o marca."
   },
   "picker_nozzle": {
     "message": "Boquilla"
   },
-  "picker_featured": {
-    "message": "Populares"
-  },
-  "picker_all": {
-    "message": "Todas ($1)"
-  },
   "printer_nozzle": {
     "message": "$1 mm"
+  },
+  "printers_bed": {
+    "message": "Placa de impresión"
+  },
+  "printers_bed_default": {
+    "message": "$1 (por defecto)",
+    "description": "$1 = build plate name"
+  },
+  "printers_bed_from_project": {
+    "message": "La placa del proyecto"
+  },
+  "bed_cool_plate": {
+    "message": "Cool Plate"
+  },
+  "bed_engineering_plate": {
+    "message": "Placa de ingeniería"
+  },
+  "bed_high_temp_plate": {
+    "message": "Placa lisa de alta temperatura"
+  },
+  "bed_textured_pei_plate": {
+    "message": "PEI texturizada"
+  },
+  "bed_textured_cool_plate": {
+    "message": "Cool Plate texturizada"
+  },
+  "bed_supertack_plate": {
+    "message": "Cool Plate SuperTack"
   },
   "convert_all_printers": {
     "message": "Todas mis impresoras ($1)"
@@ -198,7 +217,7 @@
     "message": "Por defecto cada impresora usa el laminador de su marca (Flash Studio para Flashforge, Bambu Studio para Bambu Lab…) y OrcaSlicer para las demás. Actívalo si abres todo en OrcaSlicer. Igual puedes cambiar el laminador de una impresora en su tarjeta."
   },
   "mw_chip_title": {
-    "message": "$1 · convertido por BetterBridge"
+    "message": "$1 · convertido por PrintNomad"
   },
   "mw_download_for": {
     "message": "Descargar para $1"
@@ -220,6 +239,10 @@
   },
   "mw_status_error": {
     "message": "No se pudo convertir"
+  },
+  "mw_status_error_code": {
+    "message": "Error $1",
+    "description": "$1 = error code"
   },
   "mw_error_timeout": {
     "message": "MakerWorld no respondió: ¿iniciaste sesión?"
@@ -259,5 +282,23 @@
   },
   "map_cancel": {
     "message": "Cancelar"
+  },
+  "advanced_show": {
+    "message": "Opciones avanzadas"
+  },
+  "advanced_hide": {
+    "message": "Ocultar opciones avanzadas"
+  },
+  "printer_request_label": {
+    "message": "¿No está tu impresora? Dinos cuál"
+  },
+  "printer_request_send": {
+    "message": "Pedirla"
+  },
+  "printer_request_sent": {
+    "message": "Gracias, lo recibimos."
+  },
+  "printer_request_failed": {
+    "message": "No se pudo enviar. Inténtalo más tarde."
   }
 }

@@ -3,13 +3,16 @@
 import io
 import json
 import re
+import xml.etree.ElementTree as ET
 import zipfile
 
-from betterbridge import model_edit, read_3mf, renumber, write_3mf
-from betterbridge.convert import convert
-from betterbridge.profiles import ProfileLibrary
-from betterbridge.target import Target
+import pytest
+
 from conftest import FAKE_PRINTER, make_bambu_3mf
+from printnomad import model_edit, read_3mf, renumber, write_3mf
+from printnomad.convert import convert, plate_usage
+from printnomad.profiles import ProfileLibrary
+from printnomad.target import Target
 
 COLOURS = ["#000000", "#2A2E32", "#FFFFFF", "#FF6A13", "#136935", "#EFB1D5"]
 LAYERS = (b'<?xml version="1.0"?><custom_gcodes_per_layer><plate><plate_info id="1"/>'
@@ -30,6 +33,137 @@ def project_with_everything(tmp_path):
         out.writestr("Metadata/custom_gcode_per_layer.xml", LAYERS)
     path.write_bytes(buffer.getvalue())
     return read_3mf.load(path)
+
+
+def _ranges(*objects):
+    """Height ranges file: each object is {option: value} of one range; position = its index."""
+    body = "".join(
+        f'<object id="{i}"><range min_z="0" max_z="1">'
+        + "".join(f'<option opt_key="{k}">{v}</option>' for k, v in options.items())
+        + "</range></object>" for i, options in objects)
+    return f'<?xml version="1.0" encoding="utf-8"?><objects>{body}</objects>'
+
+
+THREE_PLA = [("PLA", "Bambu PLA Basic @BBL A1", c) for c in ("#FF0000", "#00FF00", "#0000FF")]
+
+
+def test_filament_chosen_in_a_height_range_counts_on_the_plate_of_its_object(tmp_path):
+    ranges = _ranges((2, {"layer_height": "0.2", "extruder": "3"}))
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"], ["5"]],
+                          extra_files={read_3mf.LAYER_CONFIG_RANGES: ranges})
+    # The file counts by position: index 2 is the second object (id 5), on plate 2.
+    assert plate_usage(read_3mf.load(path), 3) == {"1": {1}, "2": {1, 3}}
+
+
+@pytest.mark.parametrize(("key", "value", "used"), [
+    ("extruder", "0", {1}),                        # 0 = inherit
+    ("sparse_infill_filament", "2", {1, 2}),       # Bambu Studio
+    ("outer_wall_filament_id", "2", {1, 2}),       # OrcaSlicer
+    ("extruder", "9", {1}),                        # no such filament
+    ("layer_height", "2", {1}),                    # not a filament
+])
+def test_height_range_options_that_choose_a_filament(tmp_path, key, value, used):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]],
+                          extra_files={read_3mf.LAYER_CONFIG_RANGES: _ranges((1, {key: value}))})
+    assert plate_usage(read_3mf.load(path), 3) == {"1": used}
+
+
+def test_height_range_of_unknown_object_counts_on_every_plate(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"], ["5"]],
+                          extra_files={read_3mf.LAYER_CONFIG_RANGES: _ranges((7, {"extruder": "2"}))})
+    assert plate_usage(read_3mf.load(path), 3) == {"1": {1, 2}, "2": {1, 2}}
+
+
+def test_unreadable_height_ranges_change_nothing(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]],
+                          extra_files={read_3mf.LAYER_CONFIG_RANGES: "not xml"})
+    project = read_3mf.load(path)
+    assert plate_usage(project, 3) == {"1": {1}}
+    assert model_edit.remap_range_filaments(b"not xml", {1: 2}) == b"not xml"
+
+
+def test_height_range_filaments_survive_the_conversion_renumbered(profiles_root, tmp_path):
+    """Filament 2 is listed but unused, 3 only in a range: 2 goes, 3 becomes 2 with its width in mm."""
+    ranges = _ranges((1, {"extruder": "3", "skin_infill_line_width": "100%"}))
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]], extra_files={read_3mf.LAYER_CONFIG_RANGES: ranges})
+    target = Target(ProfileLibrary.load(profiles_root), FAKE_PRINTER)
+    result = convert(read_3mf.load(path), target)
+    assert result.report.ok, result.report.errors
+    settings = json.loads(result.files[read_3mf.PROJECT_SETTINGS])
+    assert settings["filament_colour"] == ["#FF0000", "#0000FF"]
+    written = ET.fromstring(result.files[read_3mf.LAYER_CONFIG_RANGES])
+    options = {o.get("opt_key"): o.text for o in written.iter("option")}
+    assert options == {"extruder": "2", "skin_infill_line_width": "0.4"}
+
+
+@pytest.mark.parametrize(("settings", "used"), [
+    ({"support_filament": "3", "enable_support": "1"}, {1, 3}),
+    ({"support_interface_filament": "2", "enable_support": "1"}, {1, 2}),
+    ({"support_filament": "3", "raft_layers": "2"}, {1, 3}),
+    ({"support_filament": "3", "enforce_support_layers": "5"}, {1, 3}),
+    ({"support_filament": "3", "enable_support": "0"}, {1}),         # support off: not printed
+    ({"support_filament": "0", "enable_support": "1"}, {1}),         # 0 = the object's own
+    ({"wall_filament": "3"}, {1, 3}),
+    ({"outer_wall_filament_id": "2"}, {1, 2}),
+    ({"sparse_infill_filament": "1"}, {1}),                          # legacy default: inherit
+    ({"wall_filament": "9"}, {1}),                                   # no such filament
+    ({"wipe_tower_filament": "3"}, {1}),                             # plate with one filament: no tower
+])
+def test_filaments_chosen_per_feature_in_project_settings(tmp_path, settings, used):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]], settings=settings)
+    assert plate_usage(read_3mf.load(path), 3) == {"1": used}
+
+
+def test_legacy_default_does_not_keep_an_unused_filament_1(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]], object_extruders={"2": 2},
+                          settings={"wall_filament": "1", "sparse_infill_filament": "1"})
+    assert plate_usage(read_3mf.load(path), 3) == {"1": {2}}
+
+
+def test_purge_tower_filament_counts_when_the_plate_changes_filament(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]], paint=(2,), settings={"wipe_tower_filament": "3"})
+    assert plate_usage(read_3mf.load(path), 3) == {"1": {1, 2, 3}}
+    off = make_bambu_3mf(tmp_path / "off.3mf", THREE_PLA, [["2"]], paint=(2,),
+                         settings={"wipe_tower_filament": "3", "enable_prime_tower": "0"})
+    assert plate_usage(read_3mf.load(off), 3) == {"1": {1, 2}}
+
+
+def test_filament_chosen_on_an_object_or_part_counts_only_on_its_plate(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"], ["5"]],
+                          part_overrides={"5": {"sparse_infill_filament": "3"}})
+    assert plate_usage(read_3mf.load(path), 3) == {"1": {1}, "2": {1, 3}}
+
+
+def test_feature_filaments_are_renumbered_in_settings_and_objects(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]], settings={
+        "support_filament": "3", "enable_support": "1", "wall_filament": "1"},
+        part_overrides={"2": {"outer_wall_filament_id": "3", "support_interface_filament": "2"}})
+    project = read_3mf.load(path)
+    reduced, changed = renumber.apply(project, renumber.plan(3, {1, 3}, None))
+    assert reduced.project_settings["support_filament"] == "2"       # old 3 → 2
+    assert reduced.project_settings["wall_filament"] == "1"          # legacy default stays
+    assert b'key="outer_wall_filament_id" value="2"' in changed[read_3mf.MODEL_SETTINGS]
+    # Part setting without effect on usage: filament 2 was removed, back to the object's own.
+    assert b'key="support_interface_filament" value="0"' in changed[read_3mf.MODEL_SETTINGS]
+
+
+def test_support_filament_that_is_not_printed_goes_back_to_the_objects_own(tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]], settings={"support_filament": "3"})
+    project = read_3mf.load(path)
+    reduced, _ = renumber.apply(project, renumber.plan(3, plate_usage(project, 3)["1"], None))
+    assert reduced.project_settings["support_filament"] == "0"
+    assert reduced.project_settings["filament_colour"] == ["#FF0000"]
+
+
+def test_support_filament_survives_the_conversion(profiles_root, tmp_path):
+    path = make_bambu_3mf(tmp_path / "p.3mf", THREE_PLA, [["2"]], settings={
+        "support_filament": "3", "enable_support": "1",
+        "different_settings_to_system": ["enable_support;support_filament", "", "", "", ""]})
+    result = convert(read_3mf.load(path), Target(ProfileLibrary.load(profiles_root), FAKE_PRINTER))
+    assert result.report.ok, result.report.errors
+    settings = json.loads(result.files[read_3mf.PROJECT_SETTINGS])
+    assert settings["filament_colour"] == ["#FF0000", "#0000FF"]
+    assert settings["support_filament"] == "2"
 
 
 def test_plan():

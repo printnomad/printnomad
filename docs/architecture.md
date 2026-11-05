@@ -2,7 +2,7 @@
 
 ## Goal
 
-From any model repository, open a project in the slicer of **your** printer with the designer's settings preserved. BetterBridge targets OrcaSlicer and the slicers derived from it (Flash Studio, Snapmaker Orca, Elegoo Slicer, Creality Print, Bambu Studio…).
+From any model repository, open a project in the slicer of **your** printer with the designer's settings preserved. PrintNomad targets OrcaSlicer and the slicers derived from it (Flash Studio, Snapmaker Orca, Elegoo Slicer, Creality Print, Bambu Studio…).
 
 ## Components
 
@@ -21,7 +21,7 @@ tools/build_profile_catalog.py  turns slicer releases into the profile catalog t
 
 ### Extension internals
 
-- **Engine**: Pyodide in a module Web Worker started by extension pages (`extension/src/engine/`). MV3 service workers cannot `import()` Pyodide. The core is shipped as `core.json` and written into Pyodide's file system; `betterbridge.web.convert_file()` takes profile bundles and returns plain JSON. Boot ~1 s; a 3 MB project converts in ~0.5 s.
+- **Engine**: Pyodide in a module Web Worker started by extension pages (`extension/src/engine/`). MV3 service workers cannot `import()` Pyodide. The core is shipped as `core.json` and written into Pyodide's file system; `printnomad.web.convert_file()` takes profile bundles and returns plain JSON. Boot ~1 s; a 3 MB project converts in ~0.5 s.
 - **Profiles** (automatic, nothing to configure):
   1. *Catalog* built weekly by CI from the latest release of each slicer repository (`.github/workflows/profiles.yml` → GitHub Pages): one minified bundle per vendor, sha256-verified and cached by release. When a repository lags behind its app (Flashforge: repository 1.7.15, Flash Studio 1.7.20), the catalog can be built from the released app instead (`tools/build_profile_catalog.py --from-app`).
   2. *Shipped copy*: every bundle of the configured slicers (`extension/config.json` → `fallbackProfiles`, `"*"` = all vendors), gzipped (~1.4 MB for Flash Studio, Bambu Studio and OrcaSlicer). Used offline, before the catalog is published, and whenever the online bundle has the same sha256.
@@ -42,7 +42,7 @@ A small native program the extension talks to through Native Messaging. Besides 
 - the **exact profiles of the installed slicer** (system profiles of the installed version), and
 - the user's **own presets** (calibrated filaments, modified printers) in *My printers*.
 
-It reads the slicer folders listed in `core/src/betterbridge/data/slicers.json` and returns them as profile bundles in the catalog format (user presets under the vendor `user`), or converts by itself with the same core. Proposed messages (JSON, `"v": 1`): `hello`, `list_profiles {slicer}` → `{bundles, source}`, `convert {input_path, printer, options}`, `open {output_path, slicer, same_window}`.
+It reads the slicer folders listed in `core/src/printnomad/data/slicers.json` and returns them as profile bundles in the catalog format (user presets under the vendor `user`), or converts by itself with the same core. Proposed messages (JSON, `"v": 1`): `hello`, `list_profiles {slicer}` → `{bundles, source}`, `convert {input_path, printer, options}`, `open {output_path, slicer, same_window}`.
 
 Without the helper, a planned advanced-mode alternative is **Import presets** from the bundle the slicer exports (*File → Export → Export preset bundle*), which lands in Downloads where the browser may read it.
 

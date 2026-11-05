@@ -68,6 +68,7 @@ export class Converter {
       bundles: await this.bundlesFor(printer),
       slicer: printer.slicer,
       platform,
+      bedType: printer.bedType,
       lang: uiLanguage(),
       // Basic mode: the core's defaults, whatever was chosen earlier in advanced mode.
       options: settings.advanced ? settings.options : {},

@@ -1,6 +1,6 @@
 # Security policy
 
-BetterBridge reads and writes project files and, in some components, starts local processes or a local HTTP server. Please report vulnerabilities privately.
+PrintNomad reads and writes project files and, in some components, starts local processes or a local HTTP server. Please report vulnerabilities privately.
 
 ## Reporting a vulnerability
 

@@ -16,12 +16,12 @@ from pathlib import Path
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent          # orca-plugin/
 sys.path.insert(0, str(PLUGIN_ROOT.parent / "core" / "src"))
 
-from betterbridge import i18n, read_3mf, write_3mf  # noqa: E402
-from betterbridge.convert import convert  # noqa: E402
-from betterbridge.target import load_target  # noqa: E402
+from printnomad import i18n, read_3mf, write_3mf  # noqa: E402
+from printnomad.convert import convert  # noqa: E402
+from printnomad.target import load_target  # noqa: E402
 
 BUILT_PANEL = PLUGIN_ROOT / "ui" / "dist" / "panel.html"   # npm run build en orca-plugin/ui
-i18n.add_catalog_dir(PLUGIN_ROOT / "betterbridge_orca" / "locales")
+i18n.add_catalog_dir(PLUGIN_ROOT / "printnomad_orca" / "locales")
 
 SHIM = """<script>
 window.orca = (function(){
@@ -80,7 +80,7 @@ def main() -> None:
     shim = SHIM % json.dumps({"preview": preview, "result": res}, ensure_ascii=False).replace("</", "<\\/")
     messages = {k: v for k, v in i18n.catalog().items() if k.startswith("panel.")}
     page = BUILT_PANEL.read_text(encoding="utf-8").replace(
-        "__BB_I18N__", json.dumps(messages, ensure_ascii=False).replace("</", "<\\/"), 1)
+        "__PN_I18N__", json.dumps(messages, ensure_ascii=False).replace("</", "<\\/"), 1)
     args.out.write_text(page.replace("<script>", shim + "\n<script>", 1), encoding="utf-8")
     print(f"abre: {args.out.resolve()}")
 
