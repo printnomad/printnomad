@@ -4,11 +4,9 @@
 // pages start this module worker instead. Boot takes ~1 s and happens once per worker.
 import type { PyodideAPI } from "pyodide";
 import type {
-  AssignmentPlan,
   ConvertRequest,
   ConvertResult,
   ListPrintersRequest,
-  OptionInfo,
   PrinterInfo,
   Request,
   Response,
@@ -70,8 +68,6 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
     const res = toJs<{
       ok: boolean;
       output: string | null;
-      needs_map: boolean;
-      plan?: AssignmentPlan;
       already_target: boolean;
       report: Record<string, unknown> | null;
       text: string;
@@ -81,7 +77,6 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
         platform: args.platform ?? null,
         nozzle: args.nozzle ?? null,
         bed_type: args.bedType ?? null,
-        map_text: args.map ?? null,
         options: py.toPy(args.options ?? {}),
         source_bundles: args.sourceBundles?.length ? pyBundles(py, args.sourceBundles) : null,
         lang: args.lang ?? null,
@@ -94,8 +89,6 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
     }
     return {
       ok: res.ok,
-      needsMap: res.needs_map,
-      plan: res.plan,
       alreadyTarget: res.already_target,
       report: res.report,
       text: res.text,
@@ -110,11 +103,6 @@ async function convert(args: ConvertRequest): Promise<ConvertResult> {
 async function listPrinters(args: ListPrintersRequest): Promise<PrinterInfo[]> {
   const py = await engine();
   return toJs<PrinterInfo[]>(py.pyimport("printnomad.web").list_printers(pyBundles(py, args.bundles)));
-}
-
-async function listOptions(lang?: string): Promise<OptionInfo[]> {
-  const py = await engine();
-  return toJs<OptionInfo[]>(py.pyimport("printnomad.web").list_options(lang ?? null));
 }
 
 async function sourceInfo(name: string, data: ArrayBuffer): Promise<SourceInfo> {
@@ -134,8 +122,6 @@ async function handle(request: Request): Promise<unknown> {
       return convert(request.args);
     case "listPrinters":
       return listPrinters(request.args);
-    case "listOptions":
-      return listOptions(request.args.lang);
     case "warm":
       // Start Pyodide and import the core ahead of the first conversion.
       return (await engine()).pyimport("printnomad.web") && null;

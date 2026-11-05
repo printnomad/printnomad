@@ -341,9 +341,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
         # Si se convierte sin tocar la tabla, se reutiliza este cálculo.
         self._cached = (result.report.presets.get("nozzle"), result)
         rep = result.report
-        needs_map = rep.needs_map
         errors = rep.errors
-        n = len(rep.filaments)
         filaments = []
         for f in rep.filaments:
             plates = sorted((p for p, used in result.usage.items() if used is None or f.index in used), key=str)
@@ -351,8 +349,7 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
             filaments.append({"index": f.index, "type": f.source_type, "colour": f.colour,
                               "source": f.source_profile, "target": f.target_profile,
                               "plates": plates, "extruder": ext})
-        # Los errores de asignación se resuelven en la tabla del panel; cualquier otro bloquea.
-        blocking = bool(rep.errors) and not needs_map
+        blocking = bool(rep.errors)
         self._post({
             "type": "preview",
             "project": self._path.name,
@@ -363,7 +360,6 @@ class Creator5ProConverter(orca.script.ScriptPluginCapabilityBase):
             "nozzles": list(target.nozzle_variants()),
             "process": rep.presets.get("process", ""),
             "filaments": filaments,
-            "needs_map": needs_map and n > 0,
             "blocking": blocking,
             "errors": errors,
             "warnings": rep.warnings,

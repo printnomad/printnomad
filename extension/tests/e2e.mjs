@@ -41,15 +41,64 @@ try {
       const [slicer, preset] = entry.split("|");
       return { id: `p${i}`, slicer, printer: preset };
     });
+  if (!process.env.PN_E2E_FILE) {
+    // First run: the three steps, only while there is no printer.
+    await page.waitForSelector("#step-1:not([hidden])");
+    if (!(await page.$eval("#home-view", (e) => e.hidden))) throw new Error("the home page shows without a printer");
+    await page.click('[data-model="Flashforge Creator 5 Pro"]');
+    await page.click("#step-1-next");
+    await page.waitForSelector("#step-2:not([hidden])");
+    await page.click("#setup-finish");
+    await page.waitForSelector("#step-3:not([hidden])");
+    const saved = await page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers);
+    if (saved.length !== 1 || saved[0].printer !== "Flashforge Creator 5 Pro 0.4 nozzle") throw new Error(`first printer: ${JSON.stringify(saved)}`);
+    await page.click("#done-preferences");
+    await page.waitForSelector("#home-view:not([hidden])");
+    console.log("OK: first run sets up a printer in three steps");
+  }
   await page.evaluate((printers) => chrome.storage.sync.set({ printers }), printers);
   await page.reload();
   await page.waitForFunction(() => document.querySelectorAll("#convert-printer option").length > 0);
 
   if (!process.env.PN_E2E_FILE) {
-    // The build plate menu of the printer's card reaches the conversion (checked below).
-    await page.select('[data-field="bed-select"]', "Supertack Plate");
+    // Edit opens in the printer's own card; nothing is stored until Save. The plate chosen
+    // there reaches the conversion (checked below).
+    const stored = () => page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers[0]);
+    await page.click('[data-action="edit"]');
+    await page.waitForSelector('[data-edit="bed"]', { visible: true });
+    if (!(await page.$eval('[data-action="save"]', (b) => b.disabled))) throw new Error("Save is on with nothing changed");
+    await page.select('[data-edit="nozzle"]', "0.6");
+    await page.waitForFunction(() => document.querySelector('[data-edit="nozzle"]')?.value === "0.6");
+    if ((await stored()).printer.includes("0.6")) throw new Error("the change was stored before Save");
+    await page.click('[data-action="cancel"]');
+    await page.waitForFunction(() => !document.querySelector('[data-edit="nozzle"]:not([hidden])'));
+    if ((await stored()).printer.includes("0.6")) throw new Error("Cancel stored the change");
+    await page.click('[data-action="edit"]');
+    await page.waitForSelector('[data-edit="bed"]', { visible: true });
+    await page.select('[data-edit="bed"]', "Supertack Plate");
+    await page.waitForFunction(() => document.querySelector('[data-edit="bed"]')?.value === "Supertack Plate");
+    if ((await stored()).bedType) throw new Error("the plate was stored before Save");
+    await page.click('[data-action="save"]');
     await page.waitForFunction(async () =>
       (await chrome.storage.sync.get("printers")).printers[0].bedType === "Supertack Plate");
+    await page.waitForFunction(() => !document.querySelector('[data-edit="bed"]:not([hidden])'));
+
+    // Adding has its own screen under the same header; picking a model is all it takes.
+    await page.click("#add-printer");
+    await page.waitForSelector('#add-view:not([hidden]) [data-model="Flashforge Creator 5 Pro"]', { visible: true });
+    if (!(await page.$eval("#home", (e) => e.hidden))) throw new Error("the home page shows behind the add screen");
+    if (await page.$eval("header", (e) => getComputedStyle(e).display === "none")) throw new Error("the add screen lost the header");
+    await page.keyboard.press("Escape");
+    await page.waitForSelector("#home:not([hidden])");
+    await page.click("#add-printer");
+    await page.waitForSelector('#add-view:not([hidden]) [data-model="Flashforge Creator 5 Pro"]', { visible: true });
+    await page.click('#add-view [data-model="Flashforge Creator 5 Pro"]');
+    await page.waitForSelector("#home:not([hidden])");
+    await page.waitForSelector('[data-action="cancel"]', { visible: true });
+    const count = await page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers.length);
+    if (count !== 1) throw new Error(`${count} printers after adding one already there`);
+    await page.click('[data-action="cancel"]');
+    console.log("OK: edit in the card, add on its own screen");
   }
 
   const started = Date.now();
@@ -105,16 +154,17 @@ try {
   }
 
   if (painted) {
-    // More colours on a plate than extruders: the assignment screen, then the conversion.
+    // More colours on a plate than extruders: converted without asking, with a warning.
     await (await page.$("#convert-file")).uploadFile(painted);
     await page.click("#convert-button");
-    await page.waitForSelector('#convert-results [data-field="map"] .btn-primary', { timeout: 120_000 });
-    const groups = await page.$$eval('#convert-results [data-field="map"] [role="radio"][aria-checked="true"]', (c) => c.length);
-    if (groups !== 5) throw new Error(`assignment rows: ${groups}`);
-    await page.click('#convert-results [data-field="map"] .btn-primary');
-    await page.waitForFunction(() => /Saved/.test(document.querySelector('#convert-results [data-field="status"]').textContent),
-      { timeout: 120_000 });
-    console.log("OK: assignment screen and conversion with the chosen extruders");
+    let status = "";
+    for (let i = 0; i < 240 && !/Saved/.test(status); i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      status = await page.$eval('#convert-results [data-field="status"]', (s) => s.textContent);
+    }
+    if (!/more colours than the printer has extruders/.test(status)) throw new Error(`status: ${status}`);
+    if (await page.$('#convert-results [data-field="map"]')) throw new Error("assignment screen still there");
+    console.log("OK: more colours than extruders converted, with a warning");
 
     // A damaged file: code, suggestion and "Copy report".
     const damaged = join(work, "damaged.3mf");

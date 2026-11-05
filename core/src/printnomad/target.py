@@ -116,11 +116,15 @@ class Target:
     @property
     def bed_type(self) -> str | None:
         """Placa por defecto: la del preset o la del modelo (`machine_model`); None = no tocar."""
-        own = _first(self.settings.get("default_bed_type"))
-        if own:
-            return str(own)
         model = self.lib.raw.get(("machine_model", self.printer_model)) or {}
-        return model.get("default_bed_type") or None
+        named = _first(self.settings.get("default_bed_type")) or model.get("default_bed_type")
+        if not named:
+            return None
+        # Some profiles give the slicer's enum number (Elegoo Centauri Carbon: "4"; Preset.cpp).
+        text = str(named)
+        if text.isdigit():
+            return rules.BED_TYPES[int(text) - 1] if 1 <= int(text) <= len(rules.BED_TYPES) else None
+        return text
 
     @property
     def bed_types(self) -> list[str]:
@@ -262,6 +266,9 @@ class Target:
                 if ctype not in wanted:
                     continue
                 cand = _tokens(name)
+                # A support material has the type of what it supports: only for a project using one.
+                if "support" in cand and "support" not in source_tokens:
+                    continue
                 score = 4 * len(source_tokens & cand)
                 if ctype == ftype.upper():
                     score += 3

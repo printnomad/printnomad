@@ -168,6 +168,10 @@ def test_pick_process_closest_layer_height(profiles_root):
     ("PLA", "Generic PLA @BBL A1", "Generic PLA @FF C5P"),
     ("PETG", "Bambu PETG Basic @BBL A1", "Flashforge PETG Basic @FF C5P"),
     ("PC", "Bambu PC @BBL A1", None),
+    # A support material has the type of what it supports: never the plain PLA of a project…
+    ("PLA", "Bambu PLA Galaxy @BBL A1", "Flashforge PLA Basic @FF C5P"),
+    # …only for a project that uses one.
+    ("PLA", "Bambu Support For PLA @BBL A1", "Flashforge Breakaway Support For PLA @FF C5P"),
 ])
 def test_pick_filament(profiles_root, ftype, source, expected):
     lib = ProfileLibrary.load(profiles_root)

@@ -6,7 +6,7 @@ export interface MyPrinter {
   slicer: string;
   /** Machine preset name, e.g. "Flashforge Creator 5 Pro 0.4 nozzle". */
   printer: string;
-  /** The slicer was picked by the rule (brand's own / general for all), not by the user. */
+  /** The slicer is the one the rule picks (the brand's own), not another the user chose. */
   slicerAuto?: boolean;
   /** Build plate chosen for this printer (curr_bed_type); absent: the printer's default. */
   bedType?: string;
@@ -14,19 +14,44 @@ export interface MyPrinter {
 
 export interface Settings {
   printers: MyPrinter[];
-  /** Advanced mode shows the conversion options; basic mode always uses their defaults. */
-  advanced: boolean;
-  /** Values of the conversion options changed in advanced mode. */
+  /** The last choice in "Convert a file" (a printer's id or all of them); absent: the first printer. */
+  convertPrinterId?: string;
+  /** Conversion options changed from their defaults (DEFAULT_OPTIONS). */
   options: Record<string, boolean | string>;
-  /** Use the general slicer (OrcaSlicer) for every printer instead of each brand's own. */
-  generalSlicerForAll: boolean;
 }
 
-const DEFAULTS: Settings = { printers: [], advanced: false, options: {}, generalSlicerForAll: false };
+/** The core's defaults (core/src/printnomad/options.py); a test keeps them in step. */
+export const DEFAULT_OPTIONS: Record<string, boolean | string> = {
+  map_mode: "compatible",
+  keep_designer_filament: true,
+  keep_designer_cooling: false,
+  keep_designer_printer_settings: false,
+};
+
+const DEFAULTS: Settings = { printers: [], options: {} };
+
+/**
+ * Settings saved by earlier versions, updated; nothing when already up to date.
+ * - `advanced` is gone: options now always apply. They used to apply only in advanced mode, so
+ *   with it off they are dropped, and nobody's conversions change.
+ * - `generalSlicerForAll` is gone: the slicer is chosen per printer, and each printer already
+ *   stores the one that switch gave it.
+ * - `defaultPrinterId` is gone: on MakerWorld the printer is chosen on the page.
+ */
+export function migrateSettings(stored: Record<string, unknown>): { set: Partial<Settings>; remove: string[] } {
+  const remove = ["advanced", "generalSlicerForAll", "defaultPrinterId"].filter((key) => key in stored);
+  return { set: "advanced" in stored && stored.advanced !== true ? { options: {} } : {}, remove };
+}
 
 export async function loadSettings(): Promise<Settings> {
-  // Passing the defaults returns them for the keys that were never saved.
-  return (await chrome.storage.sync.get({ ...DEFAULTS })) as Settings;
+  const stored = await chrome.storage.sync.get(null);
+  const { set, remove } = migrateSettings(stored);
+  if (remove.length) {
+    await chrome.storage.sync.set(set);
+    await chrome.storage.sync.remove(remove);
+  }
+  for (const key of remove) delete stored[key];
+  return { ...DEFAULTS, ...stored, ...set } as Settings;
 }
 
 export async function saveSettings(patch: Partial<Settings>): Promise<void> {

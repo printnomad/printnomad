@@ -30,16 +30,15 @@ def test_cli_end_to_end(profiles_root, tmp_path, capsys):
         assert json.loads(a.read(read_3mf.PROJECT_SETTINGS))["printer_model"] == "Flashforge Creator 5 Pro"
 
 
-def test_cli_refuses_overwrite_and_needs_map_exit_code(profiles_root, tmp_path):
+def test_cli_refuses_overwrite_and_converts_too_many_colours(profiles_root, tmp_path):
     src = make_bambu_3mf(tmp_path / "p.3mf", [PLA], [["2"]])
     assert cli.main([str(src), *cli_target(profiles_root)]) == cli.EXIT_OK
     assert cli.main([str(src), *cli_target(profiles_root)]) == cli.EXIT_ERROR
     assert cli.main([str(src), *cli_target(profiles_root), "--force"]) == cli.EXIT_OK
 
     painted = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=(1, 2, 3, 4, 5))
-    assert cli.main([str(painted), *cli_target(profiles_root)]) == cli.EXIT_NEEDS_INPUT
-    assert not (tmp_path / "m_CREATOR5_PRO.3mf").exists()
-    assert cli.main([str(painted), *cli_target(profiles_root),
+    assert cli.main([str(painted), *cli_target(profiles_root)]) == cli.EXIT_OK
+    assert cli.main([str(painted), *cli_target(profiles_root), "--force",
                      "--map", "1:1,2:2,3:3,4:4,5:4"]) == cli.EXIT_OK
 
 

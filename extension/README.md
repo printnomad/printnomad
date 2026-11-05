@@ -10,7 +10,7 @@ OrcaSlicer plugin (`core/`), inside the browser with [Pyodide](https://pyodide.o
 |---|---|
 | `src/engine/` | Web Worker running Pyodide + the core (`worker.ts`) and its promise API (`client.ts`) |
 | `src/profiles/` | Profile catalog published by CI, with the bundled fallback (`catalog.ts`) |
-| `src/options/` | Options page: My printers, profile status, conversion options (advanced mode), convert a file |
+| `src/options/` | Options page: conversion preferences, My printers, convert a file; onboarding, also for adding and editing a printer |
 | `src/makerworld/` | MakerWorld integration: content script (chips, button, menu), page-world capture of the 3MF download, bridge page running the engine |
 | `src/lib/` | i18n (`chrome.i18n`), settings (`chrome.storage.sync`) and the shared conversion (`conversion.ts`) |
 | `static/` | `manifest.json` template and `_locales/<lang>/messages.json` |
@@ -28,6 +28,15 @@ npm run test:e2e       # real browser (Chrome, Chromium or Brave; set CHROME_PAT
 
 Extensions cannot read the installed slicer's folders (Chromium blocks them); see
 "Helper app" in [docs/architecture.md](../docs/architecture.md).
+
+To make the Chrome Web Store package (`out/printnomad-<version>.zip`, no source maps, checked):
+
+```sh
+(cd .. && tools/build_release_catalog.sh /tmp/pn-catalog)    # pinned slicer tags
+PN_PROFILES_DIR=/tmp/pn-catalog/site npm run package
+```
+
+The beta ships its profiles in the package (`catalogUrl` is empty), so it makes no request to any catalog.
 
 To bundle fallback profiles, build a catalog first and point the build at it (from a
 repository checkout, or with `--from-app` from an installed app when its repository

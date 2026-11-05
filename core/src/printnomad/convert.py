@@ -171,12 +171,11 @@ def convert(
     except ET.ParseError:
         return _convert(project, target, nozzle, user_map, **options)
     used = set().union(*usage.values())
-    fits = target.shared_nozzle or all(len(u) <= target.extruders for u in usage.values())
     chosen = None if target.shared_nozzle else user_map
     valid_map = chosen is None or (
         all(f in chosen for f in used)
         and all(len({types[f - 1] for f in used if chosen[f] == e}) == 1 for e in set(chosen.values())))
-    plan = renumber.plan(len(types), used, chosen) if (chosen is not None or fits) and valid_map else None
+    plan = renumber.plan(len(types), used, chosen) if valid_map else None
     if not plan:
         return _convert(project, target, nozzle, user_map, known_usage=usage, **options)
     reduced, changed = renumber.apply(project, plan)
@@ -359,10 +358,10 @@ def _convert(
     result.usage = usage
     assignment = assign(ftypes, usage, target.extruders, user_map, shared_nozzle=target.shared_nozzle)
     report.warnings.extend(assignment.warnings)
-    report.needs_map = assignment.needs_map
+    report.over_extruders = assignment.over_plates
     if assignment.errors:
         for error in assignment.errors:
-            report.fail(issues.NEEDS_MAP if assignment.needs_map else issues.BAD_MAP, error)
+            report.fail(issues.BAD_MAP, error)
         for i in range(n):
             report.filaments.append(FilamentMapping(
                 i + 1, fids[i], ftypes[i], colours[i], target.pick_filament(ftypes[i], fids[i])))
@@ -438,7 +437,8 @@ def _convert(
     # (OrcaSlicer 2.5: E1–E2); se lee del registro de laminadores (quirk).
     manual_limit = target.manual_map_max_extruder
     over_limit = manual_limit is not None and highest > manual_limit
-    slicer_map_mode = _slicer_map_mode(map_mode, user_map, over_limit, target.extruders, report)
+    slicer_map_mode = _slicer_map_mode(map_mode, user_map, over_limit, target.extruders, report,
+                                       bool(assignment.over_plates))
     put("filament_map_mode", slicer_map_mode, t("reason.filament_map_mode"))
     masks = [target.filament_printable_of(p) for p in fprofiles]
     put("filament_printable", masks, t("reason.filament_printable", count=target.extruders))
@@ -467,7 +467,7 @@ def _convert(
     if bed_type and not chosen_bed:
         report.warnings.append(t("convert.warn.bed_not_available", bed=bed_type, target=target.display_name,
                                  options=", ".join(offered) or "-"))
-    bed = chosen_bed or target.bed_type
+    bed = chosen_bed or target.bed_type or (None if offered else rules.FIXED_PLATE_DEFAULT)
     if bed and (chosen_bed or "curr_bed_type" in out) and out.get("curr_bed_type") != bed:
         put("curr_bed_type", bed, t("reason.chosen_bed") if chosen_bed else t("reason.target_bed"))
     if offered:
@@ -726,13 +726,18 @@ def _warn_bed_temperatures(out: dict, types: list[str], used: set[int], report: 
         report.warnings.append(t("convert.warn.bed_refuses_filament", bed=bed, filaments=", ".join(refused)))
 
 
-def _slicer_map_mode(map_mode: str, user_map, over_limit: bool, extruders: int, report: Report) -> str:
+def _slicer_map_mode(map_mode: str, user_map, over_limit: bool, extruders: int, report: Report,
+                     over_plates: bool = False) -> str:
     """Slicer's `filament_map_mode` for the `map_mode` option.
 
     An assignment the user chose by hand (`user_map`) is always enforced (manual).
     Otherwise: compatible → automatic; exact → manual; slicer → manual unless the
     target slicer rejects manual mode on the extruders in use.
+    A plate with more colours than extruders stays automatic whatever the option: only the
+    slicer can resolve it, and OrcaSlicer refuses such a plate in manual mode.
     """
+    if over_plates and user_map is None:
+        return rules.MAP_MODE_AUTO
     if user_map is not None or map_mode == rules.MAP_EXACT or (map_mode == rules.MAP_BY_SLICER and not over_limit):
         if over_limit:
             report.warnings.append(t("convert.warn.map_manual_e34"))

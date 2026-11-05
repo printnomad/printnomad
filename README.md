@@ -14,8 +14,7 @@ PrintNomad converts 3MF projects made in Bambu Studio (and PrusaSlicer, basic su
 |---|---|---|
 | [`core/`](core/) | `printnomad` Python package: 3MF reading, profile resolution, conversion, report, CLI. Standard library only. | Working (Creator 5 Pro) |
 | [`orca-plugin/`](orca-plugin/) | OrcaSlicer plugin: offers to convert the opened project, previews filament → extruder mapping, writes the copy and opens it. | Working (OrcaSlicer 2.5 beta) |
-| `extension/` | Browser extension: "Open with [slicer]" button on MakerWorld and other repositories. | Planned |
-| `helper/` | Optional local helper to open the converted project directly in the chosen slicer. | Planned (experimental) |
+| [`extension/`](extension/) | Browser extension: converts 3MF projects from MakerWorld, or any file you pick, for your printer and slicer. | Beta |
 | [`tools/`](tools/) | Developer tools, e.g. validating converted files by slicing them with the OrcaSlicer CLI. | — |
 
 See [docs/features.md](docs/features.md) for how a project is converted and why, and [docs/architecture.md](docs/architecture.md) for how the pieces fit together.
@@ -49,6 +48,10 @@ python -m venv .venv && .venv/bin/pip install -e core pytest ruff
 ```
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Translations are welcome: see [docs/translating.md](docs/translating.md).
+
+## Privacy
+
+The conversion runs in your browser and your files are never uploaded. See [docs/privacy.md](docs/privacy.md).
 
 ## License
 

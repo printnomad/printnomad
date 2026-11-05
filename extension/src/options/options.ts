@@ -1,25 +1,28 @@
 // Options page: My printers, profile status, conversion options and a manual "Convert a file".
 import { CONFIG } from "../config.ts";
-import type { Issue, OptionInfo } from "../engine/protocol.ts";
+import type { Issue } from "../engine/protocol.ts";
 import { localize, t, uiLanguage } from "../lib/i18n.ts";
-import { loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
+import { DEFAULT_OPTIONS, loadSettings, platformKey, saveSettings, type MyPrinter, type Settings } from "../lib/settings.ts";
 import { Converter, saveOutput, showInFolder } from "../lib/conversion.ts";
-import { mapEditor } from "../lib/map-editor.ts";
 import { clipboardReport } from "../lib/report-copy.ts";
 import { reportPanel } from "../lib/report-panel.ts";
 import { sendReport } from "../lib/report-send.ts";
 import type { Catalog } from "../profiles/catalog.ts";
+import { bedLabel } from "./labels.ts";
+import { createOnboarding } from "./onboarding.ts";
 import {
   allNozzles,
   buildModels,
-  keepBed,
-  matches,
   modelOfPreset,
   pickSlicer,
   presetFor,
+  printerFromSetup,
   slicersFor,
   supportedOnly,
+  withNozzle,
+  withSlicer,
   type ModelChoice,
+  type Setup,
   type Variant,
 } from "./printer-picker.ts";
 
@@ -40,7 +43,7 @@ function fromTemplate(id: string) {
 }
 
 const converter = new Converter();
-const { store, engine } = converter;
+const { store } = converter;
 
 let settings: Settings;
 let catalog: Catalog | null = null;
@@ -70,32 +73,6 @@ function slicerName(key: string): string {
 }
 
 // --- My printers ------------------------------------------------------------
-/** Plate names for people; the values are the slicers' (rules.BED_TYPES in the core). */
-function bedLabel(bed: string): string {
-  switch (bed) {
-    case "Cool Plate": return t("bed_cool_plate");
-    case "Engineering Plate": return t("bed_engineering_plate");
-    case "High Temp Plate": return t("bed_high_temp_plate");
-    case "Textured PEI Plate": return t("bed_textured_pei_plate");
-    case "Textured Cool Plate": return t("bed_textured_cool_plate");
-    case "Supertack Plate": return t("bed_supertack_plate");
-    default: return bed;
-  }
-}
-
-/** The plate menu of a printer's card: its default first, then what else the slicer offers. */
-function bedOptions(variant: Variant, chosen: string | undefined): HTMLOptionElement[] {
-  const first = variant.defaultBed
-    ? t("printers_bed_default", bedLabel(variant.defaultBed))
-    : t("printers_bed_from_project");
-  return [
-    new Option(first, "", false, !chosen),
-    ...variant.bedTypes
-      .filter((bed) => bed !== variant.defaultBed)
-      .map((bed) => new Option(bedLabel(bed), bed, false, bed === chosen)),
-  ];
-}
-
 function showCover(img: HTMLImageElement, placeholder: HTMLElement, url: string | undefined) {
   if (url) {
     img.src = url;
@@ -109,58 +86,80 @@ function showCover(img: HTMLImageElement, placeholder: HTMLElement, url: string 
   }
 }
 
+function printerLabel(p: MyPrinter): string {
+  return modelOfPreset(models, p.slicer, p.printer)?.label ?? p.printer;
+}
+
 function renderPrinters() {
   const items = settings.printers.map((p) => {
     const { node, field } = fromTemplate("tpl-printer");
     const model = modelOfPreset(models, p.slicer, p.printer);
-    const variant = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer);
+    const editing = editingId === p.id && draft !== null;
+    const shownSlicer = editing ? draft!.slicer : p.slicer;
+    const shownPreset = editing && model ? presetFor(model, draft!.slicer, draft!.nozzle) : p.printer;
+    const variant = model?.variants.find((v) => v.slicer === shownSlicer && v.preset === shownPreset);
+    const label = model?.label ?? p.printer;
+    const card = field("card");
+    card.dataset.editing = String(editing);
+    card.ariaLabel = label;
+    card.dataset.printer = p.id;
     field("brand").textContent = model?.brand ?? "";
-    field("name").textContent = model?.label ?? p.printer;
-    field("nozzle").textContent = variant ? `${t("printer_nozzle", variant.nozzle)} · ${slicerName(p.slicer)}` : p.printer;
-    // Other slicers with the same printer and nozzle: change it from the card.
-    const others = model && variant ? slicersFor(model, catalog!, variant.nozzle) : [];
-    if (settings.advanced && model && variant && others.length > 1) {
-      const select = field<HTMLSelectElement>("slicer-select");
-      select.replaceChildren(...others.map((o) => new Option(o.name, o.slicer, false, o.slicer === p.slicer)));
-      select.title = t("printers_change_slicer");
-      select.onchange = () => {
-        const preset = presetFor(model, select.value, variant.nozzle);
-        if (preset) {
-          void replacePrinter(p.id, { ...p, slicer: select.value, printer: preset, slicerAuto: false,
-            bedType: keepBed(model, select.value, preset, p.bedType) });
-        }
-      };
-      field("slicer-menu").hidden = false;
-    }
-    if (variant && variant.bedTypes.length > 1) {
-      const select = field<HTMLSelectElement>("bed-select");
-      select.replaceChildren(...bedOptions(variant, p.bedType));
-      select.title = t("printers_bed");
-      select.onchange = () => void replacePrinter(p.id, { ...p, bedType: select.value || undefined });
-      field("bed-menu").hidden = false;
-    }
+    field("name").textContent = label;
     showCover(field<HTMLImageElement>("cover"), field("placeholder"), model?.cover);
+
+    const bed = (editing ? draft!.bed : p.bedType) ?? variant?.defaultBed;
+    const values: Record<string, string> = {
+      nozzle: variant ? t("printer_nozzle", variant.nozzle) : "—",
+      // Fixed plate without a name in the profile: the slicer's own (rules.FIXED_PLATE_DEFAULT).
+      bed: bed ? bedLabel(bed) : variant && variant.bedTypes.length < 2 ? t("printers_bed_fixed") : t("printers_bed_from_project"),
+      slicer: slicerName(shownSlicer),
+    };
+    for (const [name, value] of Object.entries(values)) {
+      const shown = node.querySelector(`[data-value="${name}"]`) as HTMLElement;
+      shown.textContent = value;
+      const select = node.querySelector(`[data-edit="${name}"]`) as HTMLSelectElement;
+      select.id = `${p.id}-${name}`;
+      select.closest(".card-row")!.querySelector("label")!.htmlFor = select.id;
+    }
+    if (editing && model && variant) wireEditor(node, p, model, variant);
+
+    const edit = node.querySelector<HTMLButtonElement>('[data-action="edit"]')!;
+    edit.textContent = t("printers_edit");
+    edit.ariaLabel = t("printers_edit_named", label);
+    edit.hidden = editing;
+    edit.onclick = () => {
+      if (!model || !variant) return;
+      editingId = p.id;
+      draft = { nozzle: variant.nozzle, slicer: p.slicer, bed: p.bedType };
+      renderPrinters();
+      document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(p.id)}"] select`)?.focus();
+    };
     const remove = node.querySelector<HTMLButtonElement>('[data-action="remove"]')!;
-    remove.title = remove.ariaLabel = t("printers_remove");
-    remove.onclick = () => updatePrinters(settings.printers.filter((x) => x.id !== p.id));
+    remove.hidden = !editing;
+    remove.onclick = () => void removePrinter(p.id);
+    field("edit-actions").hidden = !editing;
     return node;
   });
   const add = fromTemplate("tpl-add-card");
-  add.node.querySelector("button")!.onclick = () => openPicker();
+  add.node.querySelector("button")!.onclick = openAddView;
   $("printers").replaceChildren(...items, add.node);
 
   const select = $<HTMLSelectElement>("convert-printer");
-  const selected = select.value;
-  const options = settings.printers.map((p) => {
-    const label = modelOfPreset(models, p.slicer, p.printer)?.label ?? p.printer;
-    return new Option(`${label} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected);
-  });
-  // Several printers: one click converts for all of them (one file each), the default.
-  if (options.length > 1) {
-    options.unshift(new Option(t("convert_all_printers", options.length), ALL_PRINTERS, false,
-      !selected || selected === ALL_PRINTERS));
-  }
+  const selected = select.value || settings.convertPrinterId;
+  const options = settings.printers.map((p) =>
+    new Option(`${printerLabel(p)} · ${slicerName(p.slicer)}`, p.id, false, p.id === selected));
+  // Several printers: converting for all of them (one file each) stays one choice away.
+  if (options.length > 1) options.push(new Option(t("convert_all_printers", options.length), ALL_PRINTERS, false, selected === ALL_PRINTERS));
   select.replaceChildren(...(options.length ? options : [new Option(t("convert_no_printers"), "")]));
+  select.onchange = () => void saveSettings({ convertPrinterId: select.value });
+  renderExamples();
+}
+
+async function removePrinter(id: string) {
+  editingId = null;
+  draft = null;
+  await updatePrinters(settings.printers.filter((p) => p.id !== id));
+  if (!settings.printers.length) onboarding.start();
 }
 
 async function updatePrinters(printers: MyPrinter[]) {
@@ -169,202 +168,216 @@ async function updatePrinters(printers: MyPrinter[]) {
   renderPrinters();
 }
 
-function replacePrinter(id: string, printer: MyPrinter) {
-  return updatePrinters(settings.printers.map((p) => (p.id === id ? printer : p)));
+// --- first run, adding and editing a printer -----------------------------------------
+let editingId: string | null = null;
+/** The card being edited: what its selects say, until Save. */
+let draft: Setup | null = null;
+
+const onboarding = createOnboarding({
+  catalog: () => catalog,
+  pickable: () => pickable,
+  async save(printer) {
+    await updatePrinters([...settings.printers, printer]);
+  },
+  picked(model) {
+    void addPrinter(model);
+  },
+  showHome,
+  sendRequest: CONFIG.reportUrl
+    ? (name) => sendReport(CONFIG.reportUrl, { report: `Printer request: ${name}`, version: CONFIG.version })
+    : undefined,
+});
+
+function showHome(anchor?: string) {
+  onboarding.hide();
+  if (anchor) document.getElementById(anchor)?.scrollIntoView();
+  else window.scrollTo(0, 0);
 }
 
-/** Re-pick the slicer of every printer whose slicer was chosen by the rule. */
-async function setGeneralSlicerForAll(on: boolean) {
-  settings.generalSlicerForAll = on;
-  await saveSettings({ generalSlicerForAll: on });
-  await updatePrinters(settings.printers.map((p) => {
-    if (p.slicerAuto === false) return p;
-    const model = modelOfPreset(models, p.slicer, p.printer);
-    const nozzle = model?.variants.find((v) => v.slicer === p.slicer && v.preset === p.printer)?.nozzle;
-    if (!model || !nozzle) return p;
-    const slicer = pickSlicer(model, catalog!, on, nozzle);
-    const preset = presetFor(model, slicer, nozzle);
-    return preset ? { ...p, slicer, printer: preset, slicerAuto: true, bedType: keepBed(model, slicer, preset, p.bedType) } : p;
-  }));
+/** Adding a printer has its own screen, under the same header. */
+function openAddView() {
+  editingId = null;
+  draft = null;
+  $("home").hidden = true;
+  $("home-footer").hidden = true;
+  $("add-view").hidden = false;
+  onboarding.openPicker($("add-picker"), $("add-request"));
+  window.scrollTo(0, 0);
+  history.pushState({ adding: true }, "");
+  $("picker-search").focus();
 }
 
-// --- printer picker -----------------------------------------------------------
-const picker: { model: ModelChoice | null; slicer: string; nozzle: string } = { model: null, slicer: "", nozzle: "" };
-
-function openPicker(focus = true) {
-  picker.model = null;
-  $<HTMLInputElement>("picker-search").value = "";
-  $("add-panel").hidden = false;
-  renderPicker();
-  // Opened by itself on load: do not scroll the page to it.
-  if (focus) $("picker-search").focus();
+function closeAddView() {
+  if ($("add-view").hidden) return;
+  $("add-view").hidden = true;
+  $("home").hidden = false;
+  $("home-footer").hidden = false;
 }
 
-function closePicker() {
-  $("add-panel").hidden = true;
+function backToPrinters() {
+  closeAddView();
+  $("printers-section").scrollIntoView({ behavior: "instant" });
 }
 
-function choiceChip(label: string, checked: boolean, onClick: () => void): HTMLElement {
-  const { node } = fromTemplate("tpl-choice-chip");
-  node.textContent = label;
-  node.ariaChecked = String(checked);
-  node.onclick = onClick;
-  return node;
+/** Added with the model's usual setup, and open to change it right there. */
+async function addPrinter(model: ModelChoice) {
+  const nozzle = allNozzles(model).preferred;
+  const slicer = pickSlicer(model, catalog!, nozzle);
+  const printer = printerFromSetup(crypto.randomUUID(), model, catalog!, { nozzle, slicer, bed: undefined });
+  if (!printer) return;
+  const existing = settings.printers.find((p) => p.printer === printer.printer && p.slicer === printer.slicer);
+  const added = existing ?? printer;
+  editingId = added.id;
+  draft = { nozzle, slicer: added.slicer, bed: added.bedType };
+  backToPrinters();
+  if (existing) renderPrinters();
+  else await updatePrinters([...settings.printers, printer]);
+  const card = document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(editingId)}"]`);
+  card?.scrollIntoView({ behavior: "instant", block: "center" });
+  card?.querySelector("select")?.focus();
 }
 
-function selectModel(model: ModelChoice) {
-  picker.model = model;
-  picker.nozzle = allNozzles(model).preferred;
-  picker.slicer = pickSlicer(model, catalog!, settings.generalSlicerForAll, picker.nozzle);
-  renderPicker();
-}
-
-function renderPicker() {
-  const query = $<HTMLInputElement>("picker-search").value.trim();
-  const shown = pickable.filter((m) => matches(m, query));
-  $("picker-models").replaceChildren(...shown.map((m) => {
-    const { node, field } = fromTemplate("tpl-model");
-    const button = node.querySelector("button")!;
-    button.ariaPressed = String(picker.model?.key === m.key);
-    button.onclick = () => selectModel(m);
-    field("label").textContent = m.label;
-    field("brand").textContent = m.brand;
-    showCover(field<HTMLImageElement>("cover"), field("placeholder"), m.cover);
-    return node;
-  }));
-  $("picker-empty").hidden = shown.length > 0;
-
-  const model = picker.model;
-  $("picker-selection").hidden = !model;
-  if (!model) return;
-  $("selection-brand").textContent = model.brand;
-  $("selection-label").textContent = model.label;
-  const cover = $<HTMLImageElement>("selection-cover");
-  cover.hidden = !model.cover;
-  if (model.cover) cover.src = model.cover;
-  // The slicer is chosen by the rule; it can be changed afterwards on the printer's card.
-  $("selection-slicer").textContent = slicerName(picker.slicer);
-  $("selection-nozzles").replaceChildren(...allNozzles(model).nozzles.map((nozzle) =>
-    choiceChip(t("printer_nozzle", nozzle), nozzle === picker.nozzle, () => {
-      picker.nozzle = nozzle;
-      picker.slicer = pickSlicer(model, catalog!, settings.generalSlicerForAll, nozzle);
-      renderPicker();
-    })));
-}
-
-function addPickedPrinter() {
-  const model = picker.model;
-  const preset = model && presetFor(model, picker.slicer, picker.nozzle);
-  if (!preset) return;
-  if (!settings.printers.some((p) => p.slicer === picker.slicer && p.printer === preset)) {
-    void updatePrinters([...settings.printers,
-      { id: crypto.randomUUID(), slicer: picker.slicer, printer: preset, slicerAuto: true }]);
+/** Edit: in the card itself, each value becomes a select; nothing is stored until Save. */
+function wireEditor(node: HTMLElement, p: MyPrinter, model: ModelChoice, variant: Variant) {
+  const select = (name: string) => node.querySelector(`[data-edit="${name}"]`) as HTMLSelectElement;
+  const setup = draft!;
+  const change = (next: Setup, focus: string) => {
+    draft = next;
+    renderPrinters();
+    document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(p.id)}"] [data-edit="${focus}"]`)?.focus();
+  };
+  const show = (name: string, on: boolean) => {
+    select(name).hidden = !on;
+    (node.querySelector(`[data-value="${name}"]`) as HTMLElement).hidden = on;
+  };
+  select("nozzle").replaceChildren(...allNozzles(model).nozzles.map((n) =>
+    new Option(t("printer_nozzle", n), n, false, n === setup.nozzle)));
+  select("nozzle").onchange = () => change(withNozzle(model, catalog!, setup, select("nozzle").value), "nozzle");
+  show("nozzle", true);
+  const others = slicersFor(model, catalog!, setup.nozzle);
+  select("slicer").replaceChildren(...others.map((o) => new Option(o.name, o.slicer, false, o.slicer === setup.slicer)));
+  select("slicer").onchange = () => change(withSlicer(model, setup, select("slicer").value), "slicer");
+  show("slicer", true);
+  // A plate that cannot be chosen stays as text, in the same row.
+  if (variant.bedTypes.length > 1) {
+    const first = variant.defaultBed ? bedLabel(variant.defaultBed) : t("printers_bed_from_project");
+    select("bed").replaceChildren(new Option(first, "", false, !setup.bed), ...variant.bedTypes
+      .filter((b) => b !== variant.defaultBed)
+      .map((b) => new Option(bedLabel(b), b, false, b === setup.bed)));
+    select("bed").onchange = () => change({ ...setup, bed: select("bed").value || undefined }, "bed");
+    show("bed", true);
   }
-  closePicker();
-}
-
-/** "My printer is not here": one click, no account, through the report service. */
-function wirePrinterRequest() {
-  const form = $<HTMLFormElement>("printer-request");
-  form.hidden = !CONFIG.reportUrl;
-  form.onsubmit = async (e) => {
-    e.preventDefault();
-    const input = $<HTMLInputElement>("printer-request-name");
-    const name = input.value.trim();
-    if (!name) return;
-    const result = $("printer-request-result");
-    try {
-      await sendReport(CONFIG.reportUrl, { report: `Printer request: ${name}`, version: CONFIG.version });
-      input.value = "";
-      result.textContent = t("printer_request_sent");
-    } catch {
-      result.textContent = t("printer_request_failed");
-    }
+  const printer = printerFromSetup(p.id, model, catalog!, setup);
+  const save = node.querySelector<HTMLButtonElement>('[data-action="save"]')!;
+  save.disabled = !printer || (printer.printer === p.printer && printer.slicer === p.slicer && printer.bedType === p.bedType);
+  save.onclick = async () => {
+    if (!printer) return;
+    editingId = null;
+    draft = null;
+    await updatePrinters(settings.printers
+      .filter((x) => x.id === p.id || !(x.printer === printer.printer && x.slicer === printer.slicer))
+      .map((x) => (x.id === p.id ? printer : x)));
+  };
+  node.querySelector<HTMLButtonElement>('[data-action="cancel"]')!.onclick = () => {
+    editingId = null;
+    draft = null;
+    renderPrinters();
   };
 }
 
-// --- conversion options (advanced mode) -------------------------------------
-let optionInfo: OptionInfo[] | null = null;
-
-function optionValue(o: OptionInfo): boolean | string {
-  return settings.options[o.key] ?? o.default;
+// --- conversion preferences -----------------------------------------------------
+function optionValue(key: string): boolean | string {
+  return settings.options[key] ?? DEFAULT_OPTIONS[key];
 }
 
-async function setOption(o: OptionInfo, value: boolean | string) {
+async function setOption(key: string, value: boolean | string) {
   const options = { ...settings.options };
-  if (value === o.default) delete options[o.key];
-  else options[o.key] = value;
+  if (value === DEFAULT_OPTIONS[key]) delete options[key];
+  else options[key] = value;
   settings.options = options;
   await saveSettings({ options });
-  renderOptions();
+  renderPrefs();
 }
 
-function optionControl(o: OptionInfo): HTMLElement {
-  const value = optionValue(o);
-  const { node, field } = fromTemplate(o.kind === "bool" ? "tpl-option-bool" : "tpl-option-choice");
-  field("label").textContent = o.label;
-  field("help").textContent = o.help;
-  if (o.kind === "bool") {
-    const input = field<HTMLInputElement>("input");
-    input.checked = value === true;
-    input.onchange = () => void setOption(o, input.checked);
-  } else {
-    field("choices").replaceChildren(...(o.choices ?? []).map((choice) => {
-      const item = fromTemplate("tpl-choice");
-      const input = item.field<HTMLInputElement>("input");
-      input.name = `option-${o.key}`;
-      input.value = choice.value;
-      input.checked = value === choice.value;
-      input.onchange = () => void setOption(o, choice.value);
-      item.field("label").textContent = choice.label;
-      return item.node;
-    }));
-  }
-  const warning = field("warning");
-  if (o.warning !== undefined && value === o.warn_when) {
-    warning.textContent = o.warning;
-    warning.hidden = false;
-  }
-  return node;
+const WARNING_OF: Record<string, string> = { keep_designer_cooling: "cooling", keep_designer_printer_settings: "tuning" };
+const EXAMPLE_COLOURS = [
+  { name: () => t("assign_colour_red"), colour: "#D64541" },
+  { name: () => t("assign_colour_white"), colour: "#FFFFFF" },
+  { name: () => t("assign_colour_black"), colour: "#222222" },
+];
+
+function exampleTarget(mode: string, slot: number): string {
+  if (mode === "exact") return t("assign_example_exact", slot);
+  if (mode === "slicer") return t("assign_example_slicer", slot);
+  return t("assign_example_compatible");
 }
 
-function renderOptions() {
-  const list = $("conversion-options");
-  $("advanced-toggle").textContent = settings.advanced ? t("advanced_hide") : t("advanced_show");
-  $("advanced-toggle").ariaExpanded = String(settings.advanced);
-  $("conversion-advanced").hidden = !settings.advanced;
-  $("conversion-reset").hidden = Object.keys(settings.options).length === 0;
-  if (!settings.advanced) return;
-  if (!optionInfo) {
-    const loading = document.createElement("li");
-    loading.className = "p-5 text-muted";
-    loading.textContent = t("conversion_loading");
-    list.replaceChildren(loading);
-    return;
-  }
-  list.replaceChildren(...optionInfo.map(optionControl));
+function assignLabel(mode: string): string {
+  if (mode === "exact") return t("assign_exact");
+  if (mode === "slicer") return t("assign_slicer");
+  return t("assign_compatible");
 }
 
-async function setAdvanced(advanced: boolean) {
-  settings.advanced = advanced;
-  await saveSettings({ advanced });
-  renderPrinters();
-  await loadOptions();
+function renderPrefs() {
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-option]")) {
+    const key = button.dataset.option!;
+    const on = optionValue(key) === true;
+    button.setAttribute("aria-checked", String(on));
+    const row = button.closest("[data-pref]")!;
+    const tile = row.querySelector("[data-icon-tile]")!;
+    tile.classList.toggle("bg-accent-soft", on);
+    tile.classList.toggle("text-accent-strong", on);
+    tile.classList.toggle("bg-bg", !on);
+    tile.classList.toggle("text-faint", !on);
+    const warning = WARNING_OF[key] && row.querySelector<HTMLElement>(`[data-warning="${WARNING_OF[key]}"]`);
+    if (warning) warning.hidden = !on;
+  }
+  const mode = String(optionValue("map_mode"));
+  for (const card of document.querySelectorAll<HTMLButtonElement>("[data-map-mode]")) {
+    const on = card.dataset.mapMode === mode;
+    card.setAttribute("aria-checked", String(on));
+    card.tabIndex = on ? 0 : -1;
+  }
+  $("assign-example-title").textContent = t("assign_example_title", assignLabel(mode));
+  $("assign-example").replaceChildren(...EXAMPLE_COLOURS.map((c, i) => {
+    const pill = document.createElement("div");
+    pill.className = "flex items-center gap-2.5 rounded-full bg-surface py-2 pr-3.5 pl-2 text-sm";
+    const dot = document.createElement("span");
+    dot.className = "size-6 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.15)]";
+    dot.style.background = c.colour;
+    const name = document.createElement("span");
+    name.className = "font-semibold";
+    name.textContent = c.name();
+    const target = document.createElement("span");
+    target.className = "text-fg-2";
+    target.textContent = `→ ${exampleTarget(mode, i + 1)}`;
+    pill.append(dot, name, target);
+    return pill;
+  }));
 }
 
-async function loadOptions() {
-  renderOptions();
-  if (!settings.advanced || optionInfo) return;
-  try {
-    optionInfo = await engine.listOptions(uiLanguage());
-  } catch (e) {
-    const error = document.createElement("li");
-    error.className = "p-5 text-err";
-    error.textContent = (e as Error).message;
-    $("conversion-options").replaceChildren(error);
-    return;
+function renderExamples() {
+  const printer = settings.printers[0];
+  const title = t("pref_example", printer ? printerLabel(printer) : "", "Bambu Lab A1");
+  for (const el of document.querySelectorAll("[data-example-title]")) el.textContent = title;
+}
+
+function wirePrefs() {
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-option]")) {
+    button.onclick = () => void setOption(button.dataset.option!, optionValue(button.dataset.option!) !== true);
   }
-  renderOptions();
+  const cards = [...document.querySelectorAll<HTMLButtonElement>("[data-map-mode]")];
+  for (const [i, card] of cards.entries()) {
+    card.onclick = () => void setOption("map_mode", card.dataset.mapMode!);
+    // A radio group moves with the arrow keys.
+    card.onkeydown = (e) => {
+      const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+      if (!step) return;
+      e.preventDefault();
+      const next = cards[(i + step + cards.length) % cards.length];
+      void setOption("map_mode", next.dataset.mapMode!).then(() => next.focus());
+    };
+  }
 }
 
 // --- convert a file ----------------------------------------------------------
@@ -508,11 +521,6 @@ function resultRow(printer: MyPrinter, fileName: string) {
       showIssue(issue);
       showReport(`✗ [${issue.code}] ${message}`);
     },
-    /** Show (or hide, with null) the filament → extruder assignment screen. */
-    map(editor: HTMLElement | null) {
-      field("map").replaceChildren(...(editor ? [editor] : []));
-      field("map").hidden = !editor;
-    },
   };
 }
 
@@ -522,34 +530,18 @@ type ResultRow = ReturnType<typeof resultRow>;
 const ENGINE_ERROR = "PN902";
 
 async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: ArrayBuffer, platform: string,
-  sourceBundles: string[], map?: string): Promise<boolean> {
+  sourceBundles: string[]): Promise<boolean> {
   row.status("info", t("convert_busy"));
-  row.map(null);
   row.issue(null);
   try {
-    const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles, map);
+    const res = await converter.convert(printer, file.name, data, settings, platform, sourceBundles);
     row.report(res.alreadyTarget ? "" : res.text, res.report);
     if (res.alreadyTarget) {
       row.status("info", t("convert_already"));
       return false;
     }
-    if (!res.output && res.needsMap && res.plan) {
-      // More filaments on a plate than extruders: let the user choose, then convert again.
-      row.status("warn", t("convert_choose_extruders"));
-      const label = modelOfPreset(models, printer.slicer, printer.printer)?.label ?? printer.printer;
-      row.map(mapEditor({
-        plan: res.plan,
-        printerLabel: label,
-        onConvert: (chosen) => void convertFor(printer, row, file, data, platform, sourceBundles, chosen),
-        onCancel: () => {
-          row.map(null);
-          row.status("info", t("convert_not_converted"));
-        },
-      }));
-      return false;
-    }
     if (!res.output) {
-      row.status("error", res.needsMap ? t("convert_needs_map") : t("convert_failed"));
+      row.status("error", t("convert_failed"));
       row.issue((res.report?.issues as Issue[] | undefined)?.[0] ?? null);
       row.openDetails();
       return false;
@@ -562,7 +554,12 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
     }
     row.saved(download.id);
     const warned = res.report && (res.report.warnings as unknown[]).length;
-    row.status(warned ? "warn" : "ok", t("convert_ok", download.fileName, (res.ms / 1000).toFixed(1)));
+    const seconds = (res.ms / 1000).toFixed(1);
+    if ((res.report?.over_extruders as unknown[] | undefined)?.length) {
+      row.status("warn", t("convert_ok_check_colours", download.fileName, seconds));
+    } else {
+      row.status(warned ? "warn" : "ok", t("convert_ok", download.fileName, seconds));
+    }
     return true;
   } catch (e) {
     row.status("error", t("convert_failed"));
@@ -575,27 +572,24 @@ async function convertFor(printer: MyPrinter, row: ResultRow, file: File, data: 
 // --- wiring -----------------------------------------------------------------
 async function main() {
   localize();
+  $<HTMLAnchorElement>("privacy-link").href = CONFIG.privacyUrl;
+  $<HTMLAnchorElement>("source-link").href = CONFIG.sourceUrl;
   settings = await loadSettings();
   await loadCatalog();
   wireDropzone();
   renderPrinters();
-  void loadOptions();
-  if (!settings.printers.length) openPicker(false);
-
-  $<HTMLInputElement>("picker-search").oninput = renderPicker;
-  $("picker-close").onclick = closePicker;
-  $("picker-add").onclick = addPickedPrinter;
-  const general = $<HTMLInputElement>("general-slicer");
-  general.checked = settings.generalSlicerForAll;
-  general.onchange = () => void setGeneralSlicerForAll(general.checked);
-  $("advanced-toggle").onclick = () => void setAdvanced(!settings.advanced);
-  wirePrinterRequest();
-  $("conversion-reset").onclick = async () => {
-    settings.options = {};
-    await saveSettings({ options: {} });
-    renderOptions();
-  };
-  $<HTMLFormElement>("convert").onsubmit = (e) => void convertFile(e as SubmitEvent);
+  wirePrefs();
+  renderPrefs();
+  $("add-back").onclick = () => history.back();
+  // The browser's Back leaves the add screen too, and the header always leads home.
+  window.addEventListener("popstate", backToPrinters);
+  for (const link of document.querySelectorAll("header a")) link.addEventListener("click", closeAddView);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !$("add-view").hidden) history.back();
+  });
+  if (settings.printers.length) showHome();
+  else onboarding.start();
+  $<HTMLFormElement>("convert-form").onsubmit = (e) => void convertFile(e as SubmitEvent);
 }
 
 void main();

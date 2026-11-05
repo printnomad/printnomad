@@ -8,8 +8,7 @@
 // MakerWorld's class names are generated (mw-css-…): elements are found by structure
 // (span.primaryButton, .swiper-wrapper, MUI menus) and by "3MF" in menu texts.
 import { CONFIG } from "../config.ts";
-import type { AssignmentPlan, Issue } from "../engine/protocol.ts";
-import { mapEditor } from "../lib/map-editor.ts";
+import type { Issue } from "../engine/protocol.ts";
 import { clipboardReport } from "../lib/report-copy.ts";
 import { reportPanel } from "../lib/report-panel.ts";
 import { BRIDGE, CONTENT, type BridgeMessage, type ConvertOutcome, type FromMain, type PagePrinter } from "./protocol.ts";
@@ -420,7 +419,7 @@ async function download() {
     const outcome = await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, name, data }, [data]);
     console.info(`[PrintNomad] 3MF from MakerWorld ${downloadMs} ms · total ${Math.round(performance.now() - started)} ms`
       + (outcome.status === "saved" ? ` · conversion ${outcome.convertMs} ms` : ""));
-    await showOutcome(printer, outcome);
+    showOutcome(outcome);
   } catch (e) {
     console.warn("[PrintNomad]", e);
     // Most likely MakerWorld changed its page or the download failed: worth reporting.
@@ -439,36 +438,24 @@ async function download() {
   }
 }
 
-const outcomeText = (status: Exclude<ConvertOutcome["status"], "needs-map">) => ({
-  saved: t("mw_status_saved"),
+const outcomeText = (outcome: ConvertOutcome) => ({
+  saved: outcome.status === "saved" && outcome.checkColours ? t("mw_status_saved_check_colours") : t("mw_status_saved"),
   cancelled: t("mw_status_cancelled"),
   already: t("mw_status_already"),
   error: t("mw_status_error"),
-})[status];
+})[outcome.status];
 
-async function showOutcome(printer: PagePrinter, outcome: ConvertOutcome) {
-  if (outcome.status === "needs-map") {
-    setStatus(null);
-    const map = await askAssignment(printer, outcome.plan);
-    if (!map) return;
-    setStatus(t("mw_status_converting", printer.label));
-    // The bridge kept the project: converting again does not download it again.
-    await showOutcome(printer, await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, map }));
-    return;
-  }
+function showOutcome(outcome: ConvertOutcome) {
   // The status replaces the button's label: an error shows its code, and the details in a panel.
   const code = outcome.status === "error" ? outcome.issue?.code : undefined;
-  setStatus(code ? t("mw_status_error_code", code) : outcomeText(outcome.status), RESULT_VISIBLE_MS);
+  setStatus(code ? t("mw_status_error_code", code) : outcomeText(outcome), RESULT_VISIBLE_MS);
   if (outcome.status === "error") {
     console.warn("[PrintNomad]", outcome.message);
     showError(outcome.issue, outcome.report ?? outcome.message);
   }
 }
 
-/**
- * The assignment screen in a modal over MakerWorld, isolated in a shadow root with the
- * extension's own styles. Resolves with the chosen map, or null when cancelled.
- */
+/** A modal over MakerWorld, isolated in a shadow root with the extension's own styles. */
 function openModal(onClose: () => void) {
   const host = document.createElement("div");
   host.dataset.pnModal = "1";
@@ -494,22 +481,6 @@ function openModal(onClose: () => void) {
   shadow.append(style, overlay);
   document.documentElement.append(host);
   return { panel, close };
-}
-
-function askAssignment(printer: PagePrinter, plan: AssignmentPlan): Promise<string | null> {
-  return new Promise((resolve) => {
-    let chosen: string | null = null;
-    const { panel, close } = openModal(() => resolve(chosen));
-    panel.append(mapEditor({
-      plan,
-      printerLabel: printer.label,
-      onConvert: (map) => {
-        chosen = map;
-        close();
-      },
-      onCancel: close,
-    }));
-  });
 }
 
 /** Why it failed and what to do, with the report to copy or send. */

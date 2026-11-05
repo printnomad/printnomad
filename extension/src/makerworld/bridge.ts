@@ -40,20 +40,13 @@ async function prepare(): Promise<null> {
   return null;
 }
 
-// The last project received: converting again with an assignment does not download it again.
-let lastProject: { name: string; data: ArrayBuffer } | null = null;
-
-async function convert(printerId: string, name?: string, data?: ArrayBuffer, map?: string): Promise<ConvertOutcome> {
-  if (name && data) lastProject = { name, data };
-  if (!lastProject) return { status: "error", message: "no project" };
+async function convert(printerId: string, name: string, data: ArrayBuffer): Promise<ConvertOutcome> {
   const settings = await loadSettings();
   const printer = settings.printers.find((p) => p.id === printerId);
   if (!printer) return { status: "error", message: "printer not found" };
-  const project = lastProject;
-  const [platform, sourceBundles] = await Promise.all([platformKey(), converter.sourceProfiles(project.name, project.data)]);
-  const res = await converter.convert(printer, project.name, project.data, settings, platform, sourceBundles, map);
+  const [platform, sourceBundles] = await Promise.all([platformKey(), converter.sourceProfiles(name, data)]);
+  const res = await converter.convert(printer, name, data, settings, platform, sourceBundles);
   if (res.alreadyTarget) return { status: "already" };
-  if (!res.output && res.needsMap && res.plan) return { status: "needs-map", plan: res.plan };
   if (!res.output) {
     const issue = (res.report?.issues as Issue[] | undefined)?.[0];
     const report = clipboardReport({
@@ -61,15 +54,16 @@ async function convert(printerId: string, name?: string, data?: ArrayBuffer, map
       printer: printer.printer,
       slicer: printer.slicer,
       plate: printer.bedType,
-      file: project.name,
+      file: name,
       browser: navigator.userAgent,
     }, res.text);
-    return { status: "error", message: res.text, needsMap: res.needsMap, issue, report };
+    return { status: "error", message: res.text, issue, report };
   }
   const download = await saveOutput(res.output);
   if (!download.saved) return { status: "cancelled" };
   const warnings = Array.isArray(res.report?.warnings) ? (res.report.warnings as unknown[]).length : 0;
-  return { status: "saved", fileName: download.fileName, warnings, convertMs: Math.round(res.ms) };
+  const checkColours = Array.isArray(res.report?.over_extruders) && res.report.over_extruders.length > 0;
+  return { status: "saved", fileName: download.fileName, warnings, convertMs: Math.round(res.ms), checkColours };
 }
 
 window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
@@ -81,7 +75,7 @@ window.addEventListener("message", async (e: MessageEvent<BridgeRequest>) => {
       : request.type === "prepare" ? await prepare()
       : request.type === "send-report"
         ? await sendReport(CONFIG.reportUrl, { report: request.report, comment: request.comment, contact: request.contact, code: request.code, version: CONFIG.version })
-      : await convert(request.printerId, request.name, request.data, request.map);
+      : await convert(request.printerId, request.name, request.data);
     reply({ source: BRIDGE, id: request.id, ok: true, result });
   } catch (err) {
     reply({ source: BRIDGE, id: request.id, ok: false, error: err instanceof Error ? err.message : String(err) });

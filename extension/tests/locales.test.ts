@@ -19,7 +19,7 @@ function sources(dir: string): string[] {
 
 const used = new Set<string>();
 for (const text of [...sources(join(root, "src")), readFileSync(join(root, "static", "manifest.json"), "utf8")]) {
-  for (const m of text.matchAll(/data-i18n(?:-placeholder|-title)?="([a-z0-9_]+)"|\bt\("([a-z0-9_]+)"|__MSG_([a-z0-9_]+)__/g)) {
+  for (const m of text.matchAll(/data-i18n(?:-placeholder|-title|-aria)?="([a-z0-9_]+)"|\bt\("([a-z0-9_]+)"|__MSG_([a-z0-9_]+)__/g)) {
     used.add(m[1] ?? m[2] ?? m[3]);
   }
 }

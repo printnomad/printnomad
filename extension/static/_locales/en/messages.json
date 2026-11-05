@@ -4,7 +4,7 @@
     "description": "Extension name"
   },
   "ext_description": {
-    "message": "Open 3D models from MakerWorld and other sites already set up for your printer and slicer.",
+    "message": "Converts 3MF projects from MakerWorld and other sites for your printer and slicer.",
     "description": "Store description"
   },
   "printers_title": {
@@ -12,9 +12,6 @@
   },
   "printers_slicer": {
     "message": "Slicer"
-  },
-  "printers_add": {
-    "message": "Add"
   },
   "printers_remove": {
     "message": "Remove"
@@ -34,7 +31,7 @@
     "message": "Profiles unavailable: $1"
   },
   "convert_printer": {
-    "message": "For"
+    "message": "For printer"
   },
   "convert_button": {
     "message": "Convert"
@@ -48,9 +45,6 @@
   },
   "convert_failed": {
     "message": "The project could not be converted. See the report."
-  },
-  "convert_needs_map": {
-    "message": "This project has more filaments than the printer has extruders; choosing the assignment is coming soon."
   },
   "convert_show": {
     "message": "Show in Finder"
@@ -89,7 +83,7 @@
     "message": "Could not send it. You can copy the report instead."
   },
   "report_send_hint": {
-    "message": "Sends only this text, never your 3MF file."
+    "message": "Sent to the PrintNomad developers: only this text, never your 3MF file."
   },
   "report_what_is_sent": {
     "message": "What is sent"
@@ -112,12 +106,6 @@
   "convert_no_file": {
     "message": "Choose a .3mf file."
   },
-  "conversion_reset": {
-    "message": "Restore defaults"
-  },
-  "conversion_loading": {
-    "message": "Loading options…"
-  },
   "convert_saving": {
     "message": "Saving $1…",
     "description": "$1 = file name"
@@ -129,29 +117,23 @@
     "message": "Open it as it is: your printer is already selected. If you pick the printer again in the slicer, choose “Transfer” to keep the model's values (“Discard” resets them to your printer's profile)."
   },
   "nav_printers": {
-    "message": "My printers"
+    "message": "Printers"
   },
   "hero_title": {
-    "message": "Any model, ready for your printer."
-  },
-  "hero_text": {
-    "message": "Drop a MakerWorld or Bambu Studio project: it comes out set up for your printer and slicer, keeping what the designer tuned."
-  },
-  "convert_drop_label": {
-    "message": ".3mf project"
+    "message": "You're all set."
   },
   "convert_drop_title": {
-    "message": "Drop your project here"
+    "message": "Drop a .3mf here"
   },
   "convert_drop_hint": {
-    "message": "or click to choose a file"
+    "message": "or click to choose"
   },
   "convert_file_ready": {
     "message": "$1 · ready to convert",
     "description": "$1 = file size"
   },
   "printers_hint": {
-    "message": "The printers you convert for. Their profiles download by themselves."
+    "message": "Set them up once. Their profiles are included."
   },
   "printers_add_title": {
     "message": "Add a printer"
@@ -160,10 +142,7 @@
     "message": "Search printers"
   },
   "picker_search": {
-    "message": "Search your printer (e.g. Creator 5 Pro, P1S…)"
-  },
-  "picker_close": {
-    "message": "Close"
+    "message": "Search by model, e.g. P1S"
   },
   "picker_empty": {
     "message": "No printer matches. Try another name or brand."
@@ -177,10 +156,6 @@
   },
   "printers_bed": {
     "message": "Build plate"
-  },
-  "printers_bed_default": {
-    "message": "$1 (default)",
-    "description": "$1 = build plate name"
   },
   "printers_bed_from_project": {
     "message": "Build plate of the project"
@@ -217,18 +192,6 @@
     "message": "$1 from the model · $2 from your printer · $3 warnings",
     "description": "$1, $2, $3 = numbers of settings and warnings"
   },
-  "printers_change_slicer": {
-    "message": "Slicer this printer's projects are converted for"
-  },
-  "general_slicer_label": {
-    "message": "Use OrcaSlicer for every printer"
-  },
-  "general_slicer_help": {
-    "message": "By default each printer uses its brand's slicer (Flash Studio for Flashforge, Bambu Studio for Bambu Lab…) and OrcaSlicer for the rest. Turn it on if you open everything in OrcaSlicer. You can still change the slicer of a single printer on its card."
-  },
-  "mw_chip_title": {
-    "message": "$1 · converted by PrintNomad"
-  },
   "mw_download_for": {
     "message": "Download for $1"
   },
@@ -236,10 +199,8 @@
     "message": "Getting the 3MF…"
   },
   "mw_status_converting": {
-    "message": "Converting for $1…"
-  },
-  "mw_status_saved": {
-    "message": "Saved ✓"
+    "message": "Converting for $1…",
+    "description": "$1 = value"
   },
   "mw_status_cancelled": {
     "message": "Not saved"
@@ -263,44 +224,8 @@
   "mw_error_menu": {
     "message": "MakerWorld's download menu was not found"
   },
-  "convert_choose_extruders": {
-    "message": "Choose which extruder prints each colour"
-  },
-  "convert_not_converted": {
-    "message": "Not converted"
-  },
-  "map_title": {
-    "message": "Assign $1 colours to the $2 extruders of $3"
-  },
-  "map_hint": {
-    "message": "A plate uses more colours than the printer has extruders, so some colours will print the same. Suggested: similar colours of the same material share an extruder; change it if you like."
-  },
-  "map_extruder": {
-    "message": "Extruder $1"
-  },
-  "map_plates": {
-    "message": "Plates $1"
-  },
-  "map_unused": {
-    "message": "$1 colours of the project are not used and follow a similar one."
-  },
-  "map_mixed": {
-    "message": "Extruder $1 has different materials: one material per extruder."
-  },
-  "map_convert": {
-    "message": "Convert"
-  },
-  "map_cancel": {
-    "message": "Cancel"
-  },
-  "advanced_show": {
-    "message": "Advanced options"
-  },
-  "advanced_hide": {
-    "message": "Hide advanced options"
-  },
   "printer_request_label": {
-    "message": "Your printer is not here? Tell us which one"
+    "message": "Which printer?"
   },
   "printer_request_send": {
     "message": "Ask for it"
@@ -310,5 +235,309 @@
   },
   "printer_request_failed": {
     "message": "Could not send it. Try again later."
+  },
+  "nav_label": {
+    "message": "Sections"
+  },
+  "nav_prefs": {
+    "message": "Preferences"
+  },
+  "nav_convert": {
+    "message": "Convert a file"
+  },
+  "hero_eyebrow": {
+    "message": "Ready on MakerWorld"
+  },
+  "open_makerworld": {
+    "message": "Open MakerWorld"
+  },
+  "prefs_title": {
+    "message": "Conversion preferences"
+  },
+  "prefs_intro": {
+    "message": "You decide what stays from the designer's tuning and what comes from your printer. These apply to every download."
+  },
+  "prefs_saved": {
+    "message": "Saved automatically"
+  },
+  "keep_title": {
+    "message": "Keep from the original model"
+  },
+  "keep_hint": {
+    "message": "Off means your printer profile wins."
+  },
+  "pref_recommended": {
+    "message": "Recommended"
+  },
+  "pref_advanced": {
+    "message": "Advanced"
+  },
+  "pref_illustrative": {
+    "message": "Illustrative values only"
+  },
+  "pref_example": {
+    "message": "Example: $1 → $2",
+    "description": "$1 = your printer, $2 = source printer"
+  },
+  "pref_higher": {
+    "message": "↑ higher"
+  },
+  "pref_lower": {
+    "message": "↓ lower"
+  },
+  "pref_temps": {
+    "message": "Filament temperatures"
+  },
+  "pref_temps_desc": {
+    "message": "Nozzle and bed temperatures and density set by the designer, on top of your filament profile."
+  },
+  "pref_cooling": {
+    "message": "Cooling"
+  },
+  "pref_cooling_desc": {
+    "message": "Fan and cooling values set by the designer, instead of your profile."
+  },
+  "pref_cooling_warn_title": {
+    "message": "Fan percentages don't travel well"
+  },
+  "pref_cooling_warn": {
+    "message": "A percentage means a different airflow on each printer. A stronger fan can over-cool (weak layers, warping in PETG/ABS); a weaker one can under-cool (sagging overhangs and bridges). Use it only when the model's cooling is essential."
+  },
+  "pref_cooling_verdict": {
+    "message": "Leave it off"
+  },
+  "pref_cooling_advice": {
+    "message": "unless the designer says the cooling is key, e.g. for long bridges or a print-in-place part."
+  },
+  "pref_cooling_row1": {
+    "message": "Part cooling fan"
+  },
+  "pref_cooling_row2": {
+    "message": "Overhang fan"
+  },
+  "pref_cooling_row3": {
+    "message": "Fan off for first N layers"
+  },
+  "pref_tuning": {
+    "message": "Printer tuning"
+  },
+  "pref_tuning_desc": {
+    "message": "Accelerations, elephant foot, XY compensation, first-layer flow, arc fitting and the G-code file name."
+  },
+  "pref_tuning_warn_title": {
+    "message": "These values belong to the designer's machine"
+  },
+  "pref_tuning_warn": {
+    "message": "Accelerations follow the source printer's motion system, and calibration values (elephant foot, XY compensation, first-layer flow) were measured on that machine, not yours."
+  },
+  "pref_tuning_verdict": {
+    "message": "Turn it on only"
+  },
+  "pref_tuning_advice": {
+    "message": "when you know what you're doing, e.g. you've checked these values suit your printer or you want to try the designer's tuning."
+  },
+  "pref_tuning_row1": {
+    "message": "Outer wall acceleration"
+  },
+  "pref_tuning_row2": {
+    "message": "Elephant foot"
+  },
+  "pref_tuning_row3": {
+    "message": "First-layer flow"
+  },
+  "assign_title": {
+    "message": "Filament assignment"
+  },
+  "assign_intro": {
+    "message": "Multicolor models come with a plan: which color goes in which slot of your AMS or multi-material unit. This decides who has the final say, the file or your slicer."
+  },
+  "assign_pick_when": {
+    "message": "Pick it when"
+  },
+  "assign_compatible": {
+    "message": "Compatible"
+  },
+  "assign_compatible_desc": {
+    "message": "The file keeps the model's colors, and your slicer matches them to your spools when you open it. Works in every slicer."
+  },
+  "assign_compatible_when": {
+    "message": "you're not sure. It never blocks a file."
+  },
+  "assign_exact": {
+    "message": "Exact"
+  },
+  "assign_exact_desc": {
+    "message": "Each color arrives locked to a slot, exactly as the designer planned. Some slicers refuse files like this."
+  },
+  "assign_exact_when": {
+    "message": "your spools are loaded in the same order as the designer's plan."
+  },
+  "assign_slicer": {
+    "message": "Depends on the slicer"
+  },
+  "assign_slicer_desc": {
+    "message": "Exact when your slicer accepts it, Compatible when it doesn't. Decided for you on each download."
+  },
+  "assign_slicer_when": {
+    "message": "you want Exact but switch between slicers."
+  },
+  "assign_example_title": {
+    "message": "Example: a 3-color model with $1",
+    "description": "$1 = value"
+  },
+  "assign_example_compatible": {
+    "message": "You match it in the slicer"
+  },
+  "assign_example_exact": {
+    "message": "Slot $1",
+    "description": "$1 = value"
+  },
+  "assign_example_slicer": {
+    "message": "Slot $1 if your slicer allows",
+    "description": "$1 = value"
+  },
+  "assign_colour_red": {
+    "message": "Red"
+  },
+  "assign_colour_white": {
+    "message": "White"
+  },
+  "assign_colour_black": {
+    "message": "Black"
+  },
+  "printer_setup_nozzle": {
+    "message": "$1 mm nozzle",
+    "description": "$1 = value"
+  },
+  "convert_title": {
+    "message": "Convert a file manually"
+  },
+  "convert_intro": {
+    "message": "For a .3mf you already have, like a Bambu Studio project. Not needed for MakerWorld."
+  },
+  "onboarding_1_title": {
+    "message": "Which printer do you use?"
+  },
+  "onboarding_1_hint": {
+    "message": "Pick one to start. You can add more later."
+  },
+  "onboarding_step_1": {
+    "message": "Step 1 of 2"
+  },
+  "onboarding_step_2": {
+    "message": "Step 2 of 2"
+  },
+  "onboarding_back": {
+    "message": "Back"
+  },
+  "onboarding_continue": {
+    "message": "Continue"
+  },
+  "onboarding_continue_with": {
+    "message": "Continue with $1",
+    "description": "$1 = name"
+  },
+  "picker_all": {
+    "message": "All"
+  },
+  "picker_brands": {
+    "message": "Brands"
+  },
+  "request_prompt": {
+    "message": "Not on the list?"
+  },
+  "request_open": {
+    "message": "Ask us to add it"
+  },
+  "onboarding_2_title": {
+    "message": "Is this your setup?"
+  },
+  "onboarding_2_hint": {
+    "message": "We picked the most common one. Change only what's different on yours."
+  },
+  "setup_nozzle_hint": {
+    "message": "Printed on the nozzle"
+  },
+  "setup_bed_hint": {
+    "message": "The one you use most"
+  },
+  "setup_slicer_hint": {
+    "message": "Where you open the files"
+  },
+  "setup_for_slicer": {
+    "message": "for $1",
+    "description": "$1 = name"
+  },
+  "setup_profiles": {
+    "message": "Profiles are included"
+  },
+  "setup_prefs_note": {
+    "message": "Conversion preferences start with safe defaults. You can fine-tune them any time."
+  },
+  "setup_finish": {
+    "message": "Looks right, finish"
+  },
+  "onboarding_3_title": {
+    "message": "You're ready."
+  },
+  "onboarding_3_text": {
+    "message": "From now on, open any model on MakerWorld, pick your printer in Print Files and download. That's it."
+  },
+  "onboarding_see_prefs": {
+    "message": "See conversion preferences"
+  },
+  "onboarding_pin_tip": {
+    "message": "Tip: pin PrintNomad in Chrome's toolbar to come back here."
+  },
+  "onboarding_every_model": {
+    "message": "On every MakerWorld model"
+  },
+  "onboarding_look_for": {
+    "message": "Your printers appear with MakerWorld's."
+  },
+  "add_hint": {
+    "message": "Pick it and it's added. You can change its setup right after."
+  },
+  "printers_add_time": {
+    "message": "Takes a few seconds"
+  },
+  "printers_edit_named": {
+    "message": "Edit $1",
+    "description": "$1 = printer"
+  },
+  "printers_bed_fixed": {
+    "message": "Set by your slicer"
+  },
+  "hero_text": {
+    "message": "Open any model on MakerWorld, pick your printer next to Bambu's in Print Files, and download. The file comes out ready for your printer and slicer."
+  },
+  "printers_save": {
+    "message": "Save"
+  },
+  "printers_cancel": {
+    "message": "Cancel"
+  },
+  "printers_edit": {
+    "message": "Edit"
+  },
+  "mw_status_saved": {
+    "message": "Saved ✓"
+  },
+  "mw_chip_title": {
+    "message": "$1 · converted by PrintNomad",
+    "description": "$1 = printer"
+  },
+  "convert_ok_check_colours": {
+    "message": "Saved $1 ($2 s). This model has more colours than the printer has extruders: choose which extruder prints each one in your slicer.",
+    "description": "$1 = file name, $2 = seconds"
+  },
+  "mw_status_saved_check_colours": {
+    "message": "Saved ✓ · check colours"
+  },
+  "footer_source": {
+    "message": "Source code"
+  },
+  "footer_privacy": {
+    "message": "Privacy"
   }
 }

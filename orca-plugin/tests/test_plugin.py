@@ -200,7 +200,7 @@ def test_notification_panel_preview_and_convert(plugin, tmp_path, monkeypatch):
     assert len(calls) == n
 
 
-def test_panel_map_from_table(plugin, tmp_path):
+def test_too_many_colours_do_not_block_and_a_map_still_applies(plugin, tmp_path):
     module, orca, state = plugin
     src = make_bambu_3mf(tmp_path / "m.3mf", [PLA] * 5, [["2"]], paint=(1, 2, 3, 4, 5))
     cap = open_project(module, orca, state, src)
@@ -208,8 +208,7 @@ def test_panel_map_from_table(plugin, tmp_path):
     panel = state["panels"][0]
     send(cap, panel, {"type": "ready"})
     preview = panel.posts[-1]
-    assert preview["needs_map"] and not preview["blocking"]
-    assert "a mano" in preview["errors"][0]
+    assert not preview["blocking"] and not preview["errors"] and preview["warnings"]
     send(cap, panel, {"type": "convert", "map": "1:1,2:2,3:3,4:4,5:1", "nozzle": "0.4"})
     assert panel.posts[-1]["ok"]
 

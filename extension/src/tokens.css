@@ -1,0 +1,131 @@
+/* Design tokens from the PrintNomad design handoff. Fonts are bundled (MV3 blocks remote ones). */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("fonts/archivo-latin-800-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("fonts/archivo-latin-900-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/inter-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("fonts/inter-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("fonts/inter-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("fonts/inter-latin-700-normal.woff2") format("woff2");
+}
+
+:root,
+:host {
+  /* Neutrals */
+  --pn-bg: #F3F3F6;            /* page background, chip / input fill */
+  --pn-surface: #FFFFFF;       /* cards */
+  --pn-surface-sunken: #F7F7F9;/* value tiles inside warnings */
+  --pn-ink: #16181A;           /* primary text, dark buttons */
+  --pn-ink-2: #4B5055;         /* secondary text, nav */
+  --pn-muted: #5E6368;         /* descriptions, labels */
+  --pn-faint: #6B7076;         /* placeholders, strikethrough values */
+  --pn-line: #E3E4E8;          /* card / input borders */
+  --pn-line-soft: #ECEDF0;     /* row dividers */
+  --pn-border-strong: #D5D7DC; /* outline buttons, toggle off */
+  --pn-border-dashed: #C4C7CD; /* drop zone */
+  --pn-radio-off: #9A9FA5;
+
+  /* Brand */
+  --pn-brand: #2E7466;         /* primary buttons, toggles on, selected */
+  --pn-brand-dark: #245E53;    /* links, text on brand-soft */
+  --pn-brand-soft: #E4F1EE;    /* tags, icon tiles on, focus ring */
+  --pn-brand-tint: #F1F8F6;    /* selected card background */
+  --pn-mint: #7FC8B6;          /* accents on dark surfaces */
+  --pn-mint-ink: #0E2A24;      /* text on mint buttons */
+
+  /* Dark surfaces (hero, logo tile) */
+  --pn-dark: #16181A;
+  --pn-dark-2: #24272A;
+  --pn-dark-3: #1F2225;
+  --pn-dark-line: #3A3E42;
+  --pn-dark-muted: #9EA3A8;
+  --pn-dark-text: #C9CDD1;
+
+  /* Warning (cooling / printer tuning) */
+  --pn-warn-bg: #FDF6E7;
+  --pn-warn-border: #F1DFB8;
+  --pn-warn-title: #5C3D00;
+  --pn-warn-text: #6E4A00;
+  --pn-warn-icon: #8A5A00;
+  --pn-tag-adv-bg: #FBEFD9;
+  --pn-tag-adv-fg: #7A4B00;
+
+  /* Logo / illustration accents (approximate slicer colors, decorative only) */
+  --pn-accent-green: #00AE42;
+  --pn-accent-orange: #FA6831;
+  --pn-accent-blue: #3D8BFD;
+  --pn-accent-teal: #1FB5A0;
+
+  /* Type */
+  --pn-font-display: "Archivo", system-ui, sans-serif;
+  --pn-font-ui: "Inter", system-ui, sans-serif;
+  --pn-fs-hero: 64px;     /* Archivo 900, lh .98, ls -1.5px */
+  --pn-fs-h1: 48px;       /* onboarding titles, Archivo 900, ls -1px */
+  --pn-fs-h2: 34px;       /* section titles, Archivo 900, ls -.5px */
+  --pn-fs-h3: 18px;       /* card titles, Inter 700 */
+  --pn-fs-lead: 17px;     /* section intros */
+  --pn-fs-body: 15px;
+  --pn-fs-small: 14px;
+  --pn-fs-caption: 13px;
+  --pn-fs-eyebrow: 13px;  /* Inter 700, uppercase, ls 1.2px */
+  --pn-fs-tag: 12px;      /* Inter 700 */
+
+  /* Radii */
+  --pn-r-pill: 999px;
+  --pn-r-hero: 28px;
+  --pn-r-card: 20px;
+  --pn-r-tile: 16px;
+  --pn-r-inner: 12px;
+  --pn-r-control: 10px;
+
+  /* Spacing */
+  --pn-page-max: 1120px;
+  --pn-page-pad: 24px;
+  --pn-section-gap: 56px;
+  --pn-card-pad: 28px;
+  --pn-hero-pad: 64px 56px;
+
+  /* Elevation */
+  --pn-shadow-knob: 0 1px 3px rgba(0,0,0,.25);
+  --pn-shadow-menu: 0 12px 32px rgba(22,24,26,.18), 0 0 0 1px var(--pn-line);
+  --pn-ring: 0 0 0 4px var(--pn-brand-soft);
+
+  /* Sizes */
+  --pn-touch: 44px;       /* minimum hit target */
+  --pn-btn-lg: 52px;
+  --pn-toggle-w: 56px;
+  --pn-toggle-h: 32px;
+}

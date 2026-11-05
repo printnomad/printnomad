@@ -5,9 +5,15 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 ## [Unreleased]
 
 ### Changed
+- **More colours than extruders no longer stops the conversion**: every colour is kept, the project stays in automatic assignment and a warning says to choose the extruders in the slicer. The assignment screen, the `needs_map` report flag and error PN303 are gone; `--map` remains in the CLI.
 - **Renamed from BetterBridge to PrintNomad** (the old name was taken on GitHub). Python packages are now `printnomad` and `printnomad_orca`; environment variables `PRINTNOMAD_PROFILES` and `PRINTNOMAD_LANG` replace `BETTERBRIDGE_*`.
 
+### Added
+- **Store package:** `npm run package` makes a checked release zip, with profiles from pinned public slicer tags (`tools/build_release_catalog.sh`). Privacy policy (`docs/privacy.md`) and third-party notices.
+
 ### Fixed
+- **Support materials are no longer picked as a project's plain filament:** a Snapmaker U1 project in PLA could get "Breakaway Support For PLA".
+- **Bed temperature on printers with a fixed plate** (Prusa, Neptune, Kobra 3…): they kept the project's plate, so a Bambu project on a Cool Plate printed PLA at 35 °C. They now use the plate the slicer would pick. A default plate given as a number (Elegoo Centauri Carbon) is understood; it also printed at 35 °C.
 - **Printers whose profiles use conditions** (`compatible_printers_condition`: Prusa MK4S, CORE One…) are now offered: the expressions are evaluated (`conditions.py`). Filaments of the common library back up printers that have none of a material (Voron, Sovol SV06).
 - **Purge tower kept on smaller beds**, moved like the objects: its position in the project made the slicer refuse to slice. An empty `filament_notes` no longer stops Prusa's start G-code.
 - **Layer height kept when the printer has no process for it**: a 0.16 mm project on a printer with 0.12 and 0.20 processes was silently printed at 0.12 mm. The project's layer height is now kept over the nearest process and listed apart in the report; every other setting comes from that process.
@@ -19,6 +25,9 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Faster verification of the written 3MF**: copied entries are checked by the CRC-32 and size the ZIP records for them instead of decompressing the whole file and hashing the geometry twice (half of the conversion time in the browser: SpeedBoat 435 → 217 ms in Pyodide). Replaced entries are still compared byte by byte.
 - Bambu G-code from a Bambu target profile is no longer flagged; `retraction_distances_when_cut = 0` (rejected by the slicer, shipped in a Flash Studio profile) is dropped; Standard processes win layer-height ties.
 - **Filament diameter 2.85 mm instead of 1.75 mm** for Flashforge PLA profiles: profile inheritance now resolves parents within the same vendor, then the common filament library, as OrcaSlicer does. Projects converted with earlier versions must be converted again before printing.
+
+### Changed
+- **New design**: home page with the conversion preferences always visible, first-run onboarding, printers as cards edited in place with a Save button, and a separate screen to add one in two clicks. Light theme only for now. Advanced mode and the switch for one slicer on every printer are gone; settings saved by earlier versions are migrated.
 
 ### Added
 - **A short list of tested printers** (`supportedModels` in `extension/config.json`) and a simpler page; printers saved earlier keep working. Your printer not on the list? Ask for it in one click.

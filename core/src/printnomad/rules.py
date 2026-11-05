@@ -150,6 +150,10 @@ BED_TEMP_KEYS = {
     "Supertack Plate": "supertack_plate_temp",
 }
 BED_TYPES = tuple(BED_TEMP_KEYS)
+# What the slicer uses for a printer whose plate cannot be chosen and whose profile names none
+# (Preset::get_default_bed_type). Keeping the project's would print PLA at 35 °C on a printer
+# that was never on a Cool Plate, and the slicer's menu is off, so nobody could change it.
+FIXED_PLATE_DEFAULT = "High Temp Plate"
 # The model's not_support_bed_types lists the slicers' labels, which differ from the values.
 BED_LABELS = {
     "Cool Plate": ("Cool Plate", "Smooth Cool Plate"),

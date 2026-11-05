@@ -3,6 +3,7 @@
 // The catalog lists machine presets ("Flashforge Creator 5 Pro 0.4 nozzle"), one per
 // nozzle and slicer. Users think in printer models: a model card holds every preset
 // of that model across slicers; the nozzle and slicer are picked afterwards.
+import type { MyPrinter } from "../lib/settings.ts";
 import type { Catalog } from "../profiles/catalog.ts";
 
 export interface Variant {
@@ -69,10 +70,15 @@ export function buildModels(catalog: Catalog, catalogUrl: string): ModelChoice[]
   return [...models.values()].sort((a, b) => a.brand.localeCompare(b.brand) || a.label.localeCompare(b.label, undefined, { numeric: true }));
 }
 
-/** The models offered for new printers: only those tested (config.json supportedModels). */
+/** The models offered for new printers: only those tested, in the order of the list (config.json supportedModels). */
 export function supportedOnly(models: ModelChoice[], supported: string[]): ModelChoice[] {
-  const names = new Set(supported);
-  return models.filter((m) => names.has(m.model));
+  const rank = new Map(supported.map((name, i) => [name, i]));
+  return models.filter((m) => rank.has(m.model)).sort((a, b) => rank.get(a.model)! - rank.get(b.model)!);
+}
+
+/** The brands of these models, in their order. */
+export function brandsOf(models: ModelChoice[]): string[] {
+  return [...new Set(models.map((m) => m.brand))];
 }
 
 /** All words of the query appear in the brand or the model. */
@@ -94,11 +100,9 @@ export function slicersFor(model: ModelChoice, catalog: Catalog, nozzle?: string
   return [...seen].map(([slicer, name]) => ({ slicer, name })).sort((a, b) => rank(b.slicer) - rank(a.slicer));
 }
 
-/** The slicer a new printer gets: its brand's, or the general one for every printer when asked. */
-export function pickSlicer(model: ModelChoice, catalog: Catalog, generalForAll: boolean, nozzle?: string): string {
-  const options = slicersFor(model, catalog, nozzle);
-  const general = options.find((o) => catalog.slicers[o.slicer]?.general);
-  return (generalForAll && general ? general : options[0]).slicer;
+/** The slicer a new printer gets: its brand's, else the general one. */
+export function pickSlicer(model: ModelChoice, catalog: Catalog, nozzle?: string): string {
+  return slicersFor(model, catalog, nozzle)[0].slicer;
 }
 
 /** Nozzles available for the model in a slicer, smallest first; the default is 0.4 when offered. */
@@ -122,6 +126,32 @@ export function presetFor(model: ModelChoice, slicer: string, nozzle: string): s
 export function keepBed(model: ModelChoice, slicer: string, preset: string, bed: string | undefined): string | undefined {
   const variant = model.variants.find((v) => v.slicer === slicer && v.preset === preset);
   return bed && variant?.bedTypes.includes(bed) ? bed : undefined;
+}
+
+/** What a user chooses for a printer. */
+export interface Setup {
+  nozzle: string;
+  slicer: string;
+  bed: string | undefined;
+}
+
+/** Another nozzle: the same slicer if it has it, else the model's; the plate if still on offer. */
+export function withNozzle(model: ModelChoice, catalog: Catalog, setup: Setup, nozzle: string): Setup {
+  const slicer = presetFor(model, setup.slicer, nozzle) ? setup.slicer : pickSlicer(model, catalog, nozzle);
+  return { nozzle, slicer, bed: keepBed(model, slicer, presetFor(model, slicer, nozzle)!, setup.bed) };
+}
+
+/** Another slicer: the plate if still on offer. */
+export function withSlicer(model: ModelChoice, setup: Setup, slicer: string): Setup {
+  return { ...setup, slicer, bed: keepBed(model, slicer, presetFor(model, slicer, setup.nozzle)!, setup.bed) };
+}
+
+/** A saved printer from a setup; the id stays, and slicerAuto says it is the model's usual slicer. */
+export function printerFromSetup(id: string, model: ModelChoice, catalog: Catalog, setup: Setup): MyPrinter | undefined {
+  const printer = presetFor(model, setup.slicer, setup.nozzle);
+  if (!printer) return undefined;
+  return { id, slicer: setup.slicer, printer, slicerAuto: setup.slicer === pickSlicer(model, catalog, setup.nozzle),
+    ...(setup.bed ? { bedType: setup.bed } : {}) };
 }
 
 /** The model a saved preset belongs to (for its thumbnail in My printers). */

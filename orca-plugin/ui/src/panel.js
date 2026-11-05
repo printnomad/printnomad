@@ -155,8 +155,6 @@
     if (!state.dirty) {
       state.map = {};
       p.filaments.forEach(function (f) { state.map[f.index] = f.extruder || 1; });
-      // Sin asignación automática posible: la tabla es la asignación.
-      if (p.needs_map) state.dirty = true;
     }
     var rows = p.filaments.map(function (f) {
       var opts = '';

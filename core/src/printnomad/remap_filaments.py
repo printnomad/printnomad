@@ -22,7 +22,8 @@ class FilamentAssignment:
     per_plate: dict[str, list[int]] = field(default_factory=dict)
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    needs_map: bool = False  # hay placas con más filamentos que extrusores: asignación manual
+    # Plates with more colours than extruders: everything is kept and the slicer regroups them.
+    over_plates: list[str] = field(default_factory=list)
 
     def global_map(self, count: int) -> list[int]:
         if not self.per_plate:
@@ -113,11 +114,8 @@ def assign(
     for plate, used in plates.items():
         used_set = all_filaments if used is None else set(used)
         if len(used_set) > extruders:
-            detail = t("map.error.usage_unknown") if used is None else ""
-            result.errors.append(t("map.error.too_many", plate=plate, count=len(used_set),
-                                   filaments=sorted(used_set), extruders=extruders, detail=detail))
-            result.needs_map = True
-            continue
+            result.over_plates.append(plate)
+            result.warnings.append(t("map.warn.too_many", plate=plate, count=len(used_set), extruders=extruders))
         taken: dict[int, int] = {}
         pending = []
         for f in sorted(used_set):
@@ -127,81 +125,8 @@ def assign(
             else:
                 pending.append(f)
         for f in pending:
-            e = next(x for x in range(1, extruders + 1) if x not in taken.values())
+            e = next((x for x in range(1, extruders + 1) if x not in taken.values()), extruders)
             taken[f] = e
             preferred.setdefault(f, e)
         result.per_plate[plate] = [taken.get(f, preferred.get(f, 1)) for f in range(1, n + 1)]
     return result
-
-
-def _rgb(colour: str) -> tuple[int, int, int]:
-    hexa = colour.lstrip("#")[:6].ljust(6, "0")
-    try:
-        return int(hexa[0:2], 16), int(hexa[2:4], 16), int(hexa[4:6], 16)
-    except ValueError:
-        return 128, 128, 128
-
-
-def _lab(colour: str) -> tuple[float, float, float]:
-    """sRGB → CIELAB (D65)."""
-    def linear(c: int) -> float:
-        c /= 255
-        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
-    r, g, b = (linear(c) for c in _rgb(colour))
-    x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047
-    y = 0.2126 * r + 0.7152 * g + 0.0722 * b
-    z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883
-
-    def f(v: float) -> float:
-        return v ** (1 / 3) if v > 0.008856 else 7.787 * v + 16 / 116
-    fx, fy, fz = f(x), f(y), f(z)
-    return 116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)
-
-
-def colour_distance(a: str, b: str) -> float:
-    """How different two colours look: CIE76 ΔE in CIELAB (≈ 2.3 is just noticeable)."""
-    return sum((p - q) ** 2 for p, q in zip(_lab(a), _lab(b), strict=True)) ** 0.5
-
-
-def suggest_map(
-    filament_types: list[str],
-    colours: list[str],
-    plate_usage: dict[str, set[int] | None],
-    extruders: int,
-) -> dict[int, int] | None:
-    """A filament → extruder assignment for projects that need one, to start from.
-
-    Filaments are grouped until there are as many groups as extruders, always merging
-    the two groups of the same material whose colours look most alike; each group gets
-    one extruder (in order of the groups' first filament). Unused filaments go with the
-    used filament they look most like. None when the materials alone need more extruders.
-    """
-    n = len(filament_types)
-    used = sorted(set().union(*[u if u is not None else set(range(1, n + 1)) for u in plate_usage.values()])
-                  or {1})
-    material = {f: filament_types[f - 1].upper() for f in range(1, n + 1)}
-    colour = {f: colours[f - 1] if f - 1 < len(colours) else "#808080" for f in range(1, n + 1)}
-    groups = [[f] for f in used]
-
-    def distance(a: list[int], b: list[int]) -> float:
-        return max(colour_distance(colour[x], colour[y]) for x in a for y in b)  # complete linkage
-
-    while len(groups) > extruders:
-        pairs = [(distance(a, b), i, j) for i, a in enumerate(groups) for j, b in enumerate(groups)
-                 if i < j and material[a[0]] == material[b[0]]]
-        if not pairs:
-            return None
-        _, i, j = min(pairs)
-        groups[i] = sorted(groups[i] + groups.pop(j))
-    groups.sort(key=lambda g: g[0])
-    mapping = {f: e for e, group in enumerate(groups, start=1) for f in group}
-    for f in range(1, n + 1):
-        if f not in mapping:
-            same = [u for u in used if material[u] == material[f]] or used
-            mapping[f] = mapping[min(same, key=lambda u: colour_distance(colour[u], colour[f]))]
-    return mapping
-
-
-def format_map(mapping: dict[int, int]) -> str:
-    """{1: 1, 2: 2} → "1:1,2:2" (the --map syntax, see parse_map)."""
-    return ",".join(f"{f}:{e}" for f, e in sorted(mapping.items()))

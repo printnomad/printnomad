@@ -24,14 +24,15 @@ def test_more_than_four_packs_per_plate():
     assert r.per_plate["2"][0] != r.per_plate["2"][4]
 
 
-def test_more_than_four_on_one_plate_needs_map():
-    r = assign(["PLA"] * 5, {"1": {1, 2, 3, 4, 5}}, 4)
-    assert r.errors and r.needs_map
+def test_more_than_four_on_one_plate_is_kept_and_warned():
+    r = assign(["PLA"] * 5, {"1": {1, 2, 3, 4, 5}, "2": {1}}, 4)
+    assert not r.errors and r.over_plates == ["1"] and len(r.warnings) == 1
+    assert r.per_plate["1"] == [1, 2, 3, 4, 4]
 
 
 def test_unknown_usage_assumes_all():
     r = assign(["PLA"] * 5, {"1": None}, 4)
-    assert r.errors and "pintura" in r.errors[0]
+    assert not r.errors and r.over_plates == ["1"] and r.per_plate["1"] == [1, 2, 3, 4, 4]
 
 
 def test_user_map_validation():
@@ -54,5 +55,5 @@ def test_user_map_shared_extruder_warns():
 def test_shared_nozzle_accepts_any_number_of_filaments():
     """AMS / IFS / ACE: una boquilla, cambio automático; ni errores ni avisos."""
     r = assign(["PLA"] * 6, {"1": None, "2": {1, 6}}, 1, shared_nozzle=True)
-    assert not r.errors and not r.warnings and not r.needs_map
+    assert not r.errors and not r.warnings and not r.over_plates
     assert r.per_plate == {"1": [1] * 6, "2": [1] * 6}
