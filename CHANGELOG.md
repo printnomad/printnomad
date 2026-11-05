@@ -12,6 +12,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **Store package:** `npm run package` makes a checked release zip, with profiles from pinned public slicer tags (`tools/build_release_catalog.sh`). Privacy policy (`docs/privacy.md`) and third-party notices.
 
 ### Fixed
+- **Windows and Linux lost slicer-specific rules:** the extension converted without them, because the slicer registry left out slicers with no verified local paths on that system.
 - **Support materials are no longer picked as a project's plain filament:** a Snapmaker U1 project in PLA could get "Breakaway Support For PLA".
 - **Bed temperature on printers with a fixed plate** (Prusa, Neptune, Kobra 3…): they kept the project's plate, so a Bambu project on a Cool Plate printed PLA at 35 °C. They now use the plate the slicer would pick. A default plate given as a number (Elegoo Centauri Carbon) is understood; it also printed at 35 °C.
 - **Printers whose profiles use conditions** (`compatible_printers_condition`: Prusa MK4S, CORE One…) are now offered: the expressions are evaluated (`conditions.py`). Filaments of the common library back up printers that have none of a material (Voron, Sovol SV06).
