@@ -80,18 +80,18 @@ def is_printer_process_key(key: str) -> bool:
 
 
 # Ajustes de filamento del diseñador que se conservan sobre el perfil de filamento
-# destino: decisiones sobre el material (temperaturas, densidad). Lo que depende del
-# hardware o de la calibración de cada máquina NO se conserva: caudal volumétrico
-# (hotend; un proyecto traía 50 mm³/s frente a 18 de la C5P), flow ratio, pressure
-# advance y todo el enfriamiento.
+# destino: decisiones sobre el material (temperaturas, densidad, flow ratio). Solo llegan
+# aquí los que el diseñador cambió: un flow ratio que solo viene de su preset no se conserva.
+# Lo que depende del hardware de cada máquina NO se conserva: caudal volumétrico (hotend;
+# un proyecto traía 50 mm³/s frente a 18 de la C5P), pressure advance y todo el enfriamiento.
 DESIGNER_FILAMENT_KEEP = re.compile(r"^(nozzle_temperature(_initial_layer|_range_low|_range_high)?|"
-                                    r"[a-z_]*plate_temp(_initial_layer)?|filament_density)$")
+                                    r"[a-z_]*plate_temp(_initial_layer)?|filament_density|filament_flow_ratio)$")
 
 
 def keep_designer_filament_key(key: str, filament: bool = True, cooling: bool = False) -> bool:
     """Whether the designer's value of a filament setting is kept on the target profile.
 
-    `filament`: material choices (temperatures, density); `cooling`: fan settings, off
+    `filament`: material choices (temperatures, density, flow ratio); `cooling`: fan settings, off
     by default because fans differ between printers (see option keep_designer_cooling).
     """
     if is_cooling_key(key):

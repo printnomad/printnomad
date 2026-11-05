@@ -276,10 +276,10 @@
     "message": "↓ menor"
   },
   "pref_temps": {
-    "message": "Temperaturas de filamento"
+    "message": "Ajustes de filamento"
   },
   "pref_temps_desc": {
-    "message": "Temperaturas de boquilla y cama y densidad que puso el diseñador, sobre tu perfil de filamento."
+    "message": "Temperaturas de boquilla y cama, densidad y flow ratio que puso el diseñador, sobre tu perfil de filamento."
   },
   "pref_cooling": {
     "message": "Enfriamiento"
