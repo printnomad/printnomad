@@ -63,14 +63,15 @@ def _expand(path: str, app: Path | None) -> Path:
 
 
 def registry(data_file: Path = DATA_FILE, platform: str | None = None) -> dict[str, Slicer]:
-    """Laminadores con rutas para la plataforma (los demás se omiten)."""
+    """Every known slicer. Its name, quirks and profile repository hold on any system; the local
+    paths only where verified (`platform` key in slicers.json), else it counts as not installed."""
     platform = platform or platform_key()
     data = json.loads(Path(data_file).read_text(encoding="utf-8"))
     out: dict[str, Slicer] = {}
     for key, spec in data.items():
-        if key.startswith("_") or platform not in spec:
+        if key.startswith("_"):
             continue
-        paths = spec[platform]
+        paths = spec.get(platform, {})
         app = Path(paths["app"]).expanduser() if paths.get("app") else None
         out[key] = Slicer(
             key=key,

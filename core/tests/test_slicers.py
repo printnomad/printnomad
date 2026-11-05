@@ -48,9 +48,10 @@ def fake_slicer(tmp_path, monkeypatch):
     return data
 
 
-def test_registry_expands_paths_and_skips_other_platforms(fake_slicer, tmp_path):
+def test_registry_expands_paths_and_keeps_slicers_of_other_platforms(fake_slicer, tmp_path):
     reg = slicers.registry(fake_slicer, platform="macos")
-    assert list(reg) == ["fake"]
+    assert list(reg) == ["fake", "other"]
+    assert not reg["other"].installed and reg["other"].system_roots == []
     s = reg["fake"]
     assert s.installed and s.quirk("manual_map_max_extruder") == 2 and s.quirk("missing", 9) == 9
     assert s.system_roots == [tmp_path / "Apps/Fake.app/profiles"]
@@ -88,7 +89,11 @@ def test_missing_profiles_raise(tmp_path):
 
 
 def test_bundled_registry_is_valid():
-    """El registro real se carga para todas las plataformas declaradas."""
+    """The real registry loads on every system, and quirks do not depend on the local paths."""
     for platform in ("macos", "windows", "linux"):
-        for s in slicers.registry(platform=platform).values():
-            assert s.name and s.system_roots
+        reg = slicers.registry(platform=platform)
+        assert all(s.name for s in reg.values())
+        assert reg["orcaslicer"].quirk("manual_map_max_extruder") is not None
+        assert reg["bambustudio"].quirk("bed_types_missing")
+    assert slicers.registry(platform="macos")["orcaslicer"].system_roots
+    assert not slicers.registry(platform="windows")["orcaslicer"].installed

@@ -25,7 +25,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: orca-plugin/ui/package-lock.json
-      - run: pip install -e core pytest ruff
+      - run: pip install -e core pytest ruff pillow
       - run: npm ci
         working-directory: orca-plugin/ui
       - run: ruff check .
@@ -53,7 +53,7 @@ jobs:
       # Chrome for Testing: branded Chrome no longer loads unpacked extensions from the command line.
       - name: Install Chrome for Testing
         run: echo "CHROME_PATH=$(npx --yes @puppeteer/browsers install chrome@stable --format '{{path}}')" >> "$GITHUB_ENV"
-      - run: pip install pytest  # the e2e test builds its fixtures with conftest.py
+      - run: pip install pytest pillow  # the e2e test builds its fixtures with conftest.py
       - run: npm run test:e2e
         env:
           PYTHON: python
