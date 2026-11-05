@@ -180,7 +180,7 @@
     "message": "Ya está lista para esta impresora"
   },
   "result_stats": {
-    "message": "$1 del modelo · $2 de tu impresora · $3 avisos"
+    "message": "$1 del modelo · $2 de tu impresora · avisos: $3"
   },
   "mw_download_for": {
     "message": "Descargar para $1"

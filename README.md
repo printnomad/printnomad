@@ -14,7 +14,11 @@ PrintNomad is a free Chrome extension. Many models on MakerWorld are made for Ba
 2. **Open a model on MakerWorld** and pick your printer next to the Bambu ones.
 3. **Download it and open the file in your slicer.** It is already set up for your printer.
 
-You can also convert a `.3mf` file you already have from the extension's page.
+![Your printers in the extension, each with its nozzle, build plate and slicer](docs/images/printers.png)
+
+You can also convert a `.3mf` file you already have from the extension's page:
+
+![A converted file saved for the Creator 5 Pro](docs/images/convert.png)
 
 ## Supported printers
 
@@ -27,6 +31,8 @@ You can also convert a `.3mf` file you already have from the extension's page.
 | Anycubic | Kobra 3, Kobra S1 | OrcaSlicer |
 | Flashforge | Creator 5 Pro, AD5X, Adventurer 5M | Flash Studio |
 | Snapmaker | U1 | OrcaSlicer |
+
+![Choosing a printer from the list of supported models](docs/images/add-printer.png)
 
 Your printer isn't listed? Ask for it from the extension's "add a printer" screen.
 
@@ -42,7 +48,12 @@ The original file is never modified, and the conversion report lists every chang
 
 - **This is a beta.** Check the preview in your slicer before printing.
 - **More colours than extruders?** Every colour is kept, and you choose how to print them in your slicer.
-- **A project won't convert or slice?** Send a report from the extension with one click, or [open an issue](https://github.com/printnomad/printnomad/issues).
+
+  ![The file is saved with a notice to choose the extruders in the slicer](docs/images/more-colours.png)
+
+- **A project won't convert or slice?** The extension says why and what to try. Send a report with one click, or [open an issue](https://github.com/printnomad/printnomad/issues). You can read the report first, and your 3MF file is never sent.
+
+  ![An error with its code, a suggestion and the report ready to send](docs/images/report.png)
 
 ## Privacy
 
