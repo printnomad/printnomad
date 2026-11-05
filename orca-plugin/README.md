@@ -2,6 +2,8 @@
 
 Converts the project open in OrcaSlicer (2.5+, plugin API in beta) to another printer using the PrintNomad core.
 
+> **Experimental, not part of the beta.** For most people, the [browser extension](../README.md) is the way to use PrintNomad.
+
 ## Install
 
 ```sh
