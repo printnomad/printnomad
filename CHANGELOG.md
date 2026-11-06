@@ -8,6 +8,9 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - **More colours than extruders no longer stops the conversion**: every colour is kept, the project stays in automatic assignment and a warning says to choose the extruders in the slicer. The assignment screen, the `needs_map` report flag and error PN303 are gone; `--map` remains in the CLI.
 - **Renamed from BetterBridge to PrintNomad** (the old name was taken on GitHub). Python packages are now `printnomad` and `printnomad_orca`; environment variables `PRINTNOMAD_PROFILES` and `PRINTNOMAD_LANG` replace `BETTERBRIDGE_*`.
 
+### Changed
+- **The designer's flow ratio is kept** when they changed it on purpose, like temperatures and density. A value that only comes from their filament preset still gives way to your printer's profile.
+
 ### Added
 - **Store package:** `npm run package` makes a checked release zip, with profiles from pinned public slicer tags (`tools/build_release_catalog.sh`). Privacy policy (`docs/privacy.md`) and third-party notices.
 

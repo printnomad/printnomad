@@ -286,10 +286,10 @@
     "message": "↓ lower"
   },
   "pref_temps": {
-    "message": "Filament temperatures"
+    "message": "Filament settings"
   },
   "pref_temps_desc": {
-    "message": "Nozzle and bed temperatures and density set by the designer, on top of your filament profile."
+    "message": "Nozzle and bed temperatures, density and flow ratio set by the designer, on top of your filament profile."
   },
   "pref_cooling": {
     "message": "Cooling"

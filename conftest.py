@@ -211,7 +211,7 @@ def build_profiles_tree(tmp_path: Path) -> Path:
         })
     _write(root / "OrcaFilamentLibrary/filament/base_pla.json", {
         "type": "filament", "name": "Generic PLA @System", "instantiation": "false",
-        "filament_type": ["PLA"], "filament_max_volumetric_speed": ["15"], "nozzle_temperature": ["210"],
+        "filament_type": ["PLA"], "filament_flow_ratio": ["1"], "filament_max_volumetric_speed": ["15"], "nozzle_temperature": ["210"],
     })
     _write(root / "OrcaFilamentLibrary/filament/base_petg.json", {
         "type": "filament", "name": "Generic PETG @System", "instantiation": "false",

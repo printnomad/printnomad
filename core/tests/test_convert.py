@@ -559,7 +559,7 @@ def test_manual_extruder_map_kept_when_slicer_has_no_limit(lib, tmp_path):
 
 
 def test_designer_filament_temperatures_kept_hardware_settings_not(lib, tmp_path):
-    """Temperaturas y densidad del diseñador se conservan; caudal y enfriamiento, del destino."""
+    """Designer temperatures are kept; volumetric speed and cooling come from the target."""
     path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA], [["2"]], object_extruders={"2": 2}, paint=(1,), settings={
         "nozzle_temperature": ["200", "230"],
         "filament_max_volumetric_speed": ["21", "50"],
@@ -577,6 +577,20 @@ def test_designer_filament_temperatures_kept_hardware_settings_not(lib, tmp_path
 
     _, _, s = run(lib, path, keep_designer_filament=False)
     assert s["nozzle_temperature"] == ["210", "210"]
+
+
+def test_designer_flow_ratio_kept_only_when_changed(lib, tmp_path):
+    """Filament 2 was changed by the designer; filament 1 only carries its own preset's value."""
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA, PLA], [["2"]], object_extruders={"2": 2}, paint=(1,), settings={
+        "filament_flow_ratio": ["0.98", "0.95"],
+        "different_settings_to_system": ["", "", "filament_flow_ratio", ""],
+    })
+    _, _, s = run(lib, path)
+    assert s["filament_flow_ratio"][1] == "0.95"
+    assert s["filament_flow_ratio"][0] != "0.98"
+    assert s["different_settings_to_system"][1:3] == ["", "filament_flow_ratio"]
+    _, _, s = run(lib, path, keep_designer_filament=False)
+    assert s["filament_flow_ratio"][1] != "0.95"
 
 
 
