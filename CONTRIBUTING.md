@@ -9,17 +9,24 @@ python -m venv .venv
 .venv/bin/pip install -e core pytest ruff
 (cd orca-plugin/ui && npm ci)          # plugin panel: Tailwind build and DOM tests
 .venv/bin/ruff check . && .venv/bin/pytest
+
+cd extension && npm ci
+npm run build && npm run typecheck && npm test
+npm run test:e2e                       # real browser; see extension/README.md
 ```
+
+To try the extension, load `extension/dist` from `chrome://extensions` (Developer mode → Load unpacked).
 
 Everything must pass before you open a pull request. CI runs the same commands.
 
 ## Repository layout
 
-- `core/` — conversion engine (`printnomad` package). **Standard library only**: it also runs inside OrcaSlicer's embedded Python and, later, in the browser (Pyodide).
-- `orca-plugin/` — OrcaSlicer plugin; `tools/build.py` packages it as a wheel with a copy of `core/`.
+- `extension/` — the Chrome extension, what users install. It runs `core/` in the browser with Pyodide.
+- `core/` — conversion engine (`printnomad` package) and its [command line](core/README.md). **Standard library only**: it also runs inside OrcaSlicer's embedded Python.
+- `orca-plugin/` — experimental [OrcaSlicer plugin](orca-plugin/README.md), not part of the beta; `tools/build.py` packages it as a wheel with a copy of `core/`.
 - `tools/` — developer tools shared by components.
 - `conftest.py` — shared test fixtures (synthetic 3MF projects and a fake profile tree).
-- `docs/` — architecture and decisions.
+- `docs/` — [how a project is converted](docs/features.md), [architecture](docs/architecture.md), [translating](docs/translating.md) and the [privacy policy](docs/privacy.md).
 
 ## Workflow
 

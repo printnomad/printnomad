@@ -189,7 +189,7 @@
     "message": "Already set up for this printer"
   },
   "result_stats": {
-    "message": "$1 from the model · $2 from your printer · $3 warnings",
+    "message": "$1 from the model · $2 from your printer · warnings: $3",
     "description": "$1, $2, $3 = numbers of settings and warnings"
   },
   "mw_download_for": {
