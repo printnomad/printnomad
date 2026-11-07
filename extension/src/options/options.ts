@@ -219,7 +219,7 @@ function backToPrinters() {
   $("printers-section").scrollIntoView({ behavior: "instant" });
 }
 
-/** Added with the model's usual setup, and open to change it right there. */
+/** Added with the model's usual setup, ready to use; its card has Edit to change it. */
 async function addPrinter(model: ModelChoice) {
   const nozzle = allNozzles(model).preferred;
   const slicer = pickSlicer(model, catalog!, nozzle);
@@ -227,14 +227,12 @@ async function addPrinter(model: ModelChoice) {
   if (!printer) return;
   const existing = settings.printers.find((p) => p.printer === printer.printer && p.slicer === printer.slicer);
   const added = existing ?? printer;
-  editingId = added.id;
-  draft = { nozzle, slicer: added.slicer, bed: added.bedType };
   backToPrinters();
   if (existing) renderPrinters();
   else await updatePrinters([...settings.printers, printer]);
-  const card = document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(editingId)}"]`);
+  const card = document.querySelector<HTMLElement>(`[data-printer="${CSS.escape(added.id)}"]`);
   card?.scrollIntoView({ behavior: "instant", block: "center" });
-  card?.querySelector("select")?.focus();
+  card?.querySelector<HTMLElement>('[data-action="edit"]')?.focus();
 }
 
 /** Edit: in the card itself, each value becomes a select; nothing is stored until Save. */

@@ -4,7 +4,12 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Changed
+- **On MakerWorld, your printers come first**, followed by a divider and the model's other printers. They carry PrintNomad's mark and colours. Adding a printer saves it right away; Edit is there to change it. Bambu Lab printers keep MakerWorld's own button and are no longer converted there.
+
 ### Fixed
+- **No more errors in open MakerWorld tabs after the extension is reloaded or updated.** A chip of ours is also removed when MakerWorld lists that printer itself.
+- **MakerWorld downloads no longer time out after changing chip or model**: the button could still be set to "Open in Bambu Studio" and was pressed anyway. A click that starts nothing is retried after 8 seconds, and the sign-in message only appears when MakerWorld really refuses the download. While it works, the button shows the spinner and "Downloading…" or "Converting…" in a fixed place, on a layer of its own, so whatever MakerWorld writes on the button meanwhile is not seen. Closing the save dialog no longer shows "Not saved".
 - **MakerWorld's label no longer flashes on the button** while a project is being converted.
 
 ### Changed

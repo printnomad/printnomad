@@ -196,14 +196,10 @@
     "message": "Download for $1"
   },
   "mw_status_downloading": {
-    "message": "Getting the 3MF…"
+    "message": "Downloading…"
   },
   "mw_status_converting": {
-    "message": "Converting for $1…",
-    "description": "$1 = value"
-  },
-  "mw_status_cancelled": {
-    "message": "Not saved"
+    "message": "Converting…"
   },
   "mw_status_already": {
     "message": "Already set up for this printer"
@@ -215,8 +211,18 @@
     "message": "Error $1",
     "description": "$1 = error code"
   },
-  "mw_error_timeout": {
-    "message": "MakerWorld did not answer: are you signed in?"
+  "mw_error_no_answer": {
+    "message": "MakerWorld took too long to answer. Try again in a moment."
+  },
+  "mw_error_not_started": {
+    "message": "MakerWorld did not start the download. Reload the page and try again."
+  },
+  "mw_error_signin": {
+    "message": "MakerWorld refused the download ($1). Check that you are signed in, then reload the page.",
+    "description": "$1 = HTTP status"
+  },
+  "mw_error_network": {
+    "message": "The download from MakerWorld stopped. Check your connection and try again."
   },
   "mw_error_download": {
     "message": "Download failed ($1)"

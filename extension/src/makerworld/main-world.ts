@@ -67,6 +67,7 @@ window.fetch = function (input: RequestInfo | URL, init?: RequestInit) {
   const promise = nativeFetch.call(this, input, init);
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   if (armed && isF3mf(url)) {
+    post({ source: MAIN, type: "f3mf-started" });
     promise.then(async (res) => {
       if (!res.ok) {
         armed = false;
@@ -89,6 +90,7 @@ const nativeSend = XMLHttpRequest.prototype.send;
 XMLHttpRequest.prototype.send = function (this: XMLHttpRequest, body?: XMLHttpRequestBodyInit | null) {
   const url = xhrUrls.get(this) ?? "";
   if (armed && isF3mf(url)) {
+    post({ source: MAIN, type: "f3mf-started" });
     this.addEventListener("loadend", () => {
       if (this.status < 200 || this.status >= 300) {
         armed = false;
