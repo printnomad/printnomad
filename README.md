@@ -4,23 +4,13 @@
 
 PrintNomad is a free Chrome extension. Many models on MakerWorld are made for Bambu Lab printers. PrintNomad converts the 3MF project for the printer and slicer you use, and keeps the designer's settings.
 
-> **Beta:** coming soon to the Chrome Web Store.
-
-*Español:* PrintNomad es una extensión gratuita de Chrome que convierte los proyectos 3MF de MakerWorld para tu impresora y tu laminador, y conserva los ajustes del diseñador. Pronto estará en la Chrome Web Store.
-
 ## How it works
-
-![On a MakerWorld model page, choosing Creator 5 Pro next to the Bambu printers and downloading the converted file](docs/images/makerworld-demo.gif)
 
 1. **Add your printer** once in the extension.
 2. **Open a model on MakerWorld** and pick your printer next to the Bambu ones.
 3. **Download it and open the file in your slicer.** It's ready for your printer.
 
-![Your printers in the extension, each with its nozzle, build plate and slicer](docs/images/printers.png)
-
-You can also convert a `.3mf` file you already have from the extension's page:
-
-![A converted file saved for the Creator 5 Pro](docs/images/convert.png)
+![On a MakerWorld model page, choosing Creator 5 Pro next to the Bambu printers and downloading the converted file](docs/images/makerworld-demo.gif)
 
 ## What it keeps
 
@@ -29,6 +19,12 @@ The settings the designer changed come with the model. The original printer's de
 ![Animation: the designer's walls and infill move to your printer's project, while the old printer's acceleration, retraction and elephant foot stay behind and your printer's values are used](docs/images/how-settings-convert.gif)
 
 Painted colours, plates and objects are kept too, and your printer's nozzle, build plate and filament profiles are used. The original file is never modified, and the conversion report lists every change. [How a project is converted](docs/features.md) explains the details.
+
+
+You can also convert a `.3mf` file you already have from the extension's page:
+
+![A converted file saved for the Creator 5 Pro](docs/images/convert.png)
+
 
 ## Supported printers
 
