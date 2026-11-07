@@ -323,7 +323,7 @@ async function poll<T>(get: () => T | null, timeout: number): Promise<T | null> 
   for (;;) {
     const value = get();
     if (value || Date.now() - started >= timeout) return value;
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 25));
   }
 }
 
@@ -442,28 +442,11 @@ async function startNativeDownload(section: Section, viaMenu = false) {
   } catch {
     // storage blocked: nothing to restore
   }
-  try {
-    if (stored === ACTION_3MF && !viaMenu) {
-      nativeClick(section.button);
-      return;
-    }
-    hideMenus(true);
-    if (!openMenu(section) && section.arrow) nativeClick(section.arrow);
-    const entry = await poll(() => {
-      const menu = openMenu(section);
-      return menu && find3mf(menu);
-    }, MENU_TIMEOUT_MS);
-    if (!entry) {
-      // The menu may leave out the action the button already does.
-      if (threeMfChosenAt !== location.href) throw new Error(t("mw_error_menu"));
-      await closeMenu();
-      nativeClick(section.button);
-      return;
-    }
-    nativeClick(entry.leaf);
-    threeMfChosenAt = location.href;
-    await closeMenu();
-  } finally {
+  if (stored === ACTION_3MF && !viaMenu) {
+    nativeClick(section.button);
+    return;
+  }
+  const restore = () => {
     hideMenus(false);
     try {
       if (stored === null) localStorage.removeItem(ACTION_KEY);
@@ -471,7 +454,28 @@ async function startNativeDownload(section: Section, viaMenu = false) {
     } catch {
       // storage blocked
     }
+  };
+  try {
+    hideMenus(true);
+    if (!openMenu(section) && section.arrow) nativeClick(section.arrow);
+    const entry = await poll(() => {
+      const menu = openMenu(section);
+      return menu && find3mf(menu);
+    }, MENU_TIMEOUT_MS);
+    if (entry) {
+      nativeClick(entry.leaf);
+      threeMfChosenAt = location.href;
+    } else {
+      // The menu may leave out the action the button already does.
+      if (threeMfChosenAt !== location.href) throw new Error(t("mw_error_menu"));
+      nativeClick(section.button);
+    }
+  } catch (e) {
+    restore();
+    throw e;
   }
+  // The download has started: closing the menu must not hold it back.
+  void closeMenu().finally(restore);
 }
 
 async function download() {
