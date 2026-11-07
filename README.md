@@ -12,7 +12,7 @@ PrintNomad is a free Chrome extension. Many models on MakerWorld are made for Ba
 
 1. **Add your printer** once in the extension.
 2. **Open a model on MakerWorld** and pick your printer next to the Bambu ones.
-3. **Download it and open the file in your slicer.** It is already set up for your printer.
+3. **Download it and open the file in your slicer.** It's ready for your printer: it keeps the settings the designer changed, and replaces the original printer's defaults, which could ruin your print, with your printer's own.
 
 ![Your printers in the extension, each with its nozzle, build plate and slicer](docs/images/printers.png)
 
