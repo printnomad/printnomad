@@ -14,15 +14,21 @@ PrintNomad is a free Chrome extension. Many models on MakerWorld are made for Ba
 
 1. **Add your printer** once in the extension.
 2. **Open a model on MakerWorld** and pick your printer next to the Bambu ones.
-3. **Download it and open the file in your slicer.** It's ready for your printer: it keeps the settings the designer changed, and replaces the original printer's defaults, which could ruin your print, with your printer's own.
-
-![Animation: the designer's walls and infill move to your printer's project, while the old printer's acceleration, retraction and elephant foot stay behind and your printer's values are used](docs/images/how-settings-convert.gif)
+3. **Download it and open the file in your slicer.** It's ready for your printer.
 
 ![Your printers in the extension, each with its nozzle, build plate and slicer](docs/images/printers.png)
 
 You can also convert a `.3mf` file you already have from the extension's page:
 
 ![A converted file saved for the Creator 5 Pro](docs/images/convert.png)
+
+## What it keeps
+
+The settings the designer changed come with the model. The original printer's defaults, which could ruin your print, are replaced with your printer's own.
+
+![Animation: the designer's walls and infill move to your printer's project, while the old printer's acceleration, retraction and elephant foot stay behind and your printer's values are used](docs/images/how-settings-convert.gif)
+
+Painted colours, plates and objects are kept too, and your printer's nozzle, build plate and filament profiles are used. The original file is never modified, and the conversion report lists every change. [How a project is converted](docs/features.md) explains the details.
 
 ## Supported printers
 
@@ -39,14 +45,6 @@ You can also convert a `.3mf` file you already have from the extension's page:
 ![Choosing a printer from the list of supported models](docs/images/add-printer.png)
 
 Your printer isn't listed? Ask for it from the extension's "add a printer" screen.
-
-## What it keeps
-
-- Painted colours, plates and objects.
-- The settings the designer changed, on top of your printer's own profiles.
-- Your printer's nozzle, build plate and filament profiles.
-
-The original file is never modified, and the conversion report lists every change. [How a project is converted](docs/features.md) explains the details.
 
 ## Good to know
 
