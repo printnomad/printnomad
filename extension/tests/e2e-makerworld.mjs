@@ -98,6 +98,14 @@ try {
     await mw.click(".section:not(.mobile-box) .primaryButton");
     // A spinner while it works.
     await mw.waitForSelector(".section:not(.mobile-box) .primaryButton [data-pn-loading]", { timeout: 10_000 });
+    // MakerWorld rewrites the label meanwhile: ours is back before the browser can paint it.
+    const flashed = await mw.evaluate(async () => {
+      const span = document.querySelector(".section:not(.mobile-box) .primaryButton span");
+      span.textContent = "Download 3MF";
+      await Promise.resolve();
+      return span.textContent;
+    });
+    if (flashed === "Download 3MF") throw new Error("MakerWorld's label would flash on the button");
     await mw.waitForFunction(() => /Saved|Could not|Not saved|failed|answer|found/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
       { timeout: 120_000 });
     const status = await label();
