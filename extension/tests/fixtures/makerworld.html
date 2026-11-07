@@ -74,7 +74,8 @@
       document.querySelectorAll(".swiper-slide .chip").forEach((chip) => chip.addEventListener("click", () => {
         window.chipClicks++;
         const text = chip.textContent;
-        document.querySelectorAll(".swiper-slide .chip").forEach((c) => c.classList.toggle("selected", c.textContent === text));
+        // Later than the click, like React's commit.
+        setTimeout(() => document.querySelectorAll(".swiper-slide .chip").forEach((c) => c.classList.toggle("selected", c.textContent === text)), 15);
       }));
       document.querySelector(".section:not(.mobile-box) .primaryButton").addEventListener("click", () => {
         if (action === "download_3mf") download();

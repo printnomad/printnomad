@@ -26,6 +26,7 @@ const MENU_KNOWN_TIMEOUT_MS = 300;
 const RESULT_VISIBLE_MS = 5_000;
 /** Next to the core's codes (issues.py): MakerWorld's download could not be captured or fetched. */
 const MAKERWORLD_ERROR = "PN903";
+const DIVIDER_GAP_PX = 10;
 
 const t = (key: string, ...subs: (string | number)[]) => chrome.i18n.getMessage(key, subs.map(String)) || key;
 /** False once the extension is reloaded or updated: this script stays in open tabs, without chrome.* APIs. */
@@ -122,6 +123,30 @@ function newChip(printer: PagePrinter, template: HTMLElement): HTMLElement {
 }
 
 /**
+ * The same visible gap on both sides of the line, measured between the chips themselves:
+ * their slides have margins and paddings of MakerWorld's. Padding, because Swiper sets the
+ * slides' margins. Whether it changed anything: then Swiper has to measure again.
+ */
+function centerDivider(divider: HTMLElement): boolean {
+  const before = divider.previousElementSibling as HTMLElement | null;
+  const after = divider.nextElementSibling as HTMLElement | null;
+  if (!before || !after) return false;
+  const left = (chipOf(before) ?? before).getBoundingClientRect();
+  const right = (chipOf(after) ?? after).getBoundingClientRect();
+  const box = divider.getBoundingClientRect();
+  if (!box.width || !left.width || !right.width) return false; // the copy of the section not shown
+  const style = getComputedStyle(divider);
+  const paddingLeft = parseFloat(style.paddingLeft);
+  const paddingRight = parseFloat(style.paddingRight);
+  const wantedLeft = Math.max(0, paddingLeft + DIVIDER_GAP_PX - (box.left + paddingLeft - left.right));
+  const wantedRight = Math.max(0, paddingRight + DIVIDER_GAP_PX - (right.left - (box.right - paddingRight)));
+  if (Math.abs(wantedLeft - paddingLeft) < 0.5 && Math.abs(wantedRight - paddingRight) < 0.5) return false;
+  divider.style.paddingLeft = `${wantedLeft}px`;
+  divider.style.paddingRight = `${wantedRight}px`;
+  return true;
+}
+
+/**
  * The order in the carousel: MakerWorld's "All", my printers (its chips first, then ours),
  * a divider, and the rest of its chips. Slides stay in their parent, so React keeps them.
  */
@@ -166,11 +191,7 @@ function injectChips(section: Section) {
     }
     after = slide;
   }
-  // The same gap on both sides: the chip before it has its margin, the divider takes the same.
-  if (divider?.previousElementSibling) {
-    const gap = getComputedStyle(divider.previousElementSibling).marginRight;
-    if (divider.style.marginRight !== gap) divider.style.setProperty("margin-right", gap, "important");
-  }
+  if (divider && centerDivider(divider)) changed = true;
   for (const slide of natives) {
     const chip = chipOf(slide);
     const isMine = mine.includes(slide);
@@ -184,15 +205,25 @@ function injectChips(section: Section) {
 }
 
 function paintSelection(section: Section) {
-  section.button.toggleAttribute("data-pn-active", !!active);
-  section.arrow?.toggleAttribute("data-pn-active", !!active);
   for (const slide of slides(section.wrapper)) {
     const chip = chipOf(slide);
     if (!chip) continue;
     const ours = slide.dataset.pnPrinter;
-    if (ours) chip.classList.toggle("selected", ours === active?.id);
-    else if (active) chip.classList.remove("selected"); // React keeps "All" selected underneath
+    const selected = chip.classList.contains("selected");
+    // Only real changes: writing the class, even with the same value, wakes watchSelection again.
+    if (ours && selected !== (ours === active?.id)) chip.classList.toggle("selected");
+    else if (!ours && active && selected) chip.classList.remove("selected"); // React keeps "All" selected underneath
   }
+}
+
+/** React marks its chips by class: take "All" back before the browser paints it. */
+const watchedWrappers = new WeakSet<HTMLElement>();
+function watchSelection(section: Section) {
+  if (watchedWrappers.has(section.wrapper)) return;
+  watchedWrappers.add(section.wrapper);
+  new MutationObserver(() => {
+    if (alive() && active) paintSelection(section);
+  }).observe(section.wrapper, { attributes: true, attributeFilter: ["class"], subtree: true });
 }
 
 function activate(printer: PagePrinter) {
@@ -200,12 +231,13 @@ function activate(printer: PagePrinter) {
   // in the visible copy of the section (desktop and mobile copies share MakerWorld's
   // state; clicking both starts two route changes and Next.js cancels the first one).
   // Switching between our chips: MakerWorld is already on "All".
-  if (!active) {
+  const first = !active;
+  active = printer; // before the click: "All" must not show as selected, not even for a moment
+  if (first) {
     const section = visibleSection();
     const all = section && chipOf(nativeSlides(section.wrapper)[0]);
     if (all && !all.classList.contains("selected")) nativeClick(all);
   }
-  active = printer;
   reconcile();
 }
 
@@ -365,9 +397,10 @@ const hideMenus = (() => {
   const style = document.createElement("style");
   style.textContent = `html[data-pn-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
     [data-pn-divider] {
-      width: 1px !important; height: 18px !important; flex: none; align-self: center; margin-left: 0 !important;
-      background: #d5d8dc; pointer-events: none;
+      width: auto !important; height: auto !important; flex: none; align-self: center;
+      display: flex; align-items: center; pointer-events: none;
     }
+    [data-pn-divider]::before { content: ""; width: 1px; height: 16px; background: #d5d8dc; }
     /* My printers, in PrintNomad's colours and with its mark (drawn here: no image to load). */
     [data-pn-mine] {
       display: inline-flex !important; align-items: center; gap: 6px;
@@ -382,9 +415,6 @@ const hideMenus = (() => {
         linear-gradient(#3D8BFD, #3D8BFD) center 9px / 13px 3px no-repeat;
     }
     [data-pn-mine].selected { background-color: #2E7466 !important; color: #fff !important; }
-    /* The button of a printer PrintNomad converts for. */
-    [data-pn-active] { background-color: #2E7466 !important; color: #fff !important; }
-    [data-pn-active]:hover { background-color: #245E53 !important; }
     [data-pn-busy] { position: relative !important; box-sizing: border-box; }
     [data-pn-busy] > :not([data-pn-loading]) { visibility: hidden; }
     [data-pn-loading] {
@@ -696,6 +726,7 @@ function showError(issue: Pick<Issue, "code" | "message" | "suggestion"> | undef
 function reconcile() {
   if (!alive()) return;
   for (const section of sections()) {
+    watchSelection(section);
     injectChips(section);
     paintSelection(section);
     paintButton(section, statusText ?? undefined, statusLoading);

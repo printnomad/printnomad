@@ -73,24 +73,40 @@ try {
   await mw.waitForSelector('[data-pn-printer="c5p"]', { timeout: 30_000 });
   const chips = await mw.$$eval(".section:not(.mobile-box) .swiper-slide", (s) => s.map((x) => x.textContent.trim()));
   if (chips.join(",") !== "All,Creator 5 Pro,,A1 mini,P1S") throw new Error(`unexpected chips: ${chips}`);
-  // The divider has the same gap on both sides, and my printers are marked.
-  const gaps = await mw.$eval(".section:not(.mobile-box) [data-pn-divider]", (d) => {
+  // The line has the same gap to the chips on both sides, and my printers are marked.
+  await mw.waitForFunction(() => {
+    const d = document.querySelector(".section:not(.mobile-box) [data-pn-divider]");
     const box = d.getBoundingClientRect();
-    return [box.left - d.previousElementSibling.getBoundingClientRect().right, d.nextElementSibling.getBoundingClientRect().left - box.right];
-  });
-  if (Math.abs(gaps[0] - gaps[1]) > 0.5) throw new Error(`divider gaps: ${gaps}`);
+    const style = getComputedStyle(d);
+    const line = box.left + parseFloat(style.paddingLeft);
+    const left = line - d.previousElementSibling.querySelector(".chip").getBoundingClientRect().right;
+    const right = d.nextElementSibling.querySelector(".chip").getBoundingClientRect().left - (line + 1);
+    return Math.abs(left - 10) < 1 && Math.abs(right - 10) < 1;
+  }, { timeout: 5_000 });
   const background = (selector) => mw.$eval(selector, (e) => getComputedStyle(e).backgroundColor);
   const myChip = '.section:not(.mobile-box) [data-pn-printer="c5p"] .chip';
   if (await background(myChip) !== "rgb(228, 241, 238)") throw new Error(`my chip: ${await background(myChip)}`);
 
   // 2. Selecting it shows every profile and turns the button into ours.
+  // MakerWorld's "All" is selected underneath to show every profile: never on screen.
+  await mw.evaluate(() => {
+    window.allPainted = false;
+    const all = document.querySelector(".section:not(.mobile-box) .swiper-slide .chip");
+    const check = () => {
+      if (all.classList.contains("selected")) window.allPainted = true;
+      window.allWatch = requestAnimationFrame(check);
+    };
+    check();
+  });
   await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro");
-  // The chip and the button in PrintNomad's colours while it is selected.
+  await new Promise((r) => setTimeout(r, 300));
+  if (await mw.evaluate(() => { cancelAnimationFrame(window.allWatch); return window.allPainted; })) throw new Error("\"All\" was seen selected");
+  // The chip in PrintNomad's colours while it is selected.
   await mw.waitForFunction(() => document.querySelector('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip').classList.contains("selected"));
-  for (const selector of [myChip, ".section:not(.mobile-box) .primaryButton"]) {
-    if (await background(selector) !== "rgb(46, 116, 102)") throw new Error(`${selector}: ${await background(selector)}`);
-  }
+  if (await background(myChip) !== "rgb(46, 116, 102)") throw new Error(`selected chip: ${await background(myChip)}`);
+  // MakerWorld's button keeps its colour.
+  if (await background(".section:not(.mobile-box) .primaryButton") === "rgb(46, 116, 102)") throw new Error("the button changed colour");
   const selected = await mw.$$eval(".section:not(.mobile-box) .chip.selected", (c) => c.map((x) => x.textContent));
   if (selected.join() !== "Creator 5 Pro") throw new Error(`selected chips: ${selected}`);
   // "All" was clicked once (one route change), not once per copy of the section.
@@ -187,7 +203,6 @@ try {
   // 5. A native chip gives MakerWorld its button back.
   await mw.click(".section:not(.mobile-box) .swiper-slide:last-child .chip");
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Open in Bambu Studio", { timeout: 10_000 });
-  if (await mw.$(".section:not(.mobile-box) .primaryButton[data-pn-active]")) throw new Error("MakerWorld's button kept our colour");
   // 6. A project with more colours on a plate than extruders: converted without asking.
   projectBytes = readFileSync(painted);
   await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
