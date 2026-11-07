@@ -212,9 +212,15 @@ function paintSelection(section: Section) {
     const selected = chip.classList.contains("selected");
     // Only real changes: writing the class, even with the same value, wakes watchSelection again.
     if (ours && selected !== (ours === active?.id)) chip.classList.toggle("selected");
-    else if (!ours && active && selected) chip.classList.remove("selected"); // React keeps "All" selected underneath
+    else if (!ours && active && selected) {
+      chip.classList.remove("selected"); // React keeps "All" selected underneath
+      hiddenSelection.add(chip);
+    }
   }
 }
+
+/** Chips React believes selected, with the class taken off while a printer of ours is active. */
+const hiddenSelection = new Set<HTMLElement>();
 
 /** React marks its chips by class: take "All" back before the browser paints it. */
 const watchedWrappers = new WeakSet<HTMLElement>();
@@ -241,9 +247,18 @@ function activate(printer: PagePrinter) {
   reconcile();
 }
 
-function deactivate() {
+/**
+ * Back to MakerWorld's own chips. Clicking one React already has selected writes nothing to
+ * the page, so that class is ours to give back (`clicked`: the text of the chip clicked; any
+ * other click moves the selection itself). Without a click, all of them.
+ */
+function deactivate(clicked?: string) {
   if (!active) return;
   active = null;
+  for (const chip of hiddenSelection) {
+    if (clicked === undefined || normalize(chip.textContent) === normalize(clicked)) chip.classList.add("selected");
+  }
+  hiddenSelection.clear();
   reconcile();
 }
 
@@ -739,7 +754,7 @@ document.addEventListener("click", (e) => {
   if (!alive() || !target || triggering || target.closest("[data-pn-item]")) return;
   const slide = target.closest<HTMLElement>(".swiper-slide");
   if (slide && !slide.dataset.pnPrinter && sections().some((s) => s.wrapper.contains(slide))) {
-    deactivate();
+    deactivate(slide.textContent ?? "");
     return;
   }
   if (active && target.closest("span.primaryButton") && !target.closest(".icon-box")) {

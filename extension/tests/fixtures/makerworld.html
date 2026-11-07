@@ -71,9 +71,13 @@
       window.ignoredClicks = 0;
       // A chip click is a route change in MakerWorld (Next.js); count them.
       window.chipClicks = 0;
+      window.selectedChip = "A1 mini";
       document.querySelectorAll(".swiper-slide .chip").forEach((chip) => chip.addEventListener("click", () => {
         window.chipClicks++;
         const text = chip.textContent;
+        // Like React: selecting what its state already has selected writes nothing to the page.
+        if (text === window.selectedChip) return;
+        window.selectedChip = text;
         // Later than the click, like React's commit.
         setTimeout(() => document.querySelectorAll(".swiper-slide .chip").forEach((c) => c.classList.toggle("selected", c.textContent === text)), 15);
       }));

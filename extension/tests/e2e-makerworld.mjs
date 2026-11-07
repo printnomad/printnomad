@@ -200,6 +200,14 @@ try {
     throw new Error("MakerWorld's stored download preference was changed");
   }
 
+  // "All" can be chosen again, and looks selected, though it was selected underneath all along.
+  await mw.click(".section:not(.mobile-box) .swiper-slide:first-child .chip");
+  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Open in Bambu Studio", { timeout: 10_000 });
+  await new Promise((r) => setTimeout(r, 100));
+  const afterAll = await mw.$$eval(".section:not(.mobile-box) .chip.selected", (c) => c.map((x) => x.textContent));
+  if (afterAll.join() !== "All") throw new Error(`selected after clicking All: ${afterAll}`);
+  await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
+  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 10_000 });
   // 5. A native chip gives MakerWorld its button back.
   await mw.click(".section:not(.mobile-box) .swiper-slide:last-child .chip");
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Open in Bambu Studio", { timeout: 10_000 });
