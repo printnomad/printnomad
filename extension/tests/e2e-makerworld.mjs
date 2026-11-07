@@ -72,11 +72,25 @@ try {
   // 1. Our chip, next to "All", looking like MakerWorld's.
   await mw.waitForSelector('[data-pn-printer="c5p"]', { timeout: 30_000 });
   const chips = await mw.$$eval(".section:not(.mobile-box) .swiper-slide", (s) => s.map((x) => x.textContent.trim()));
-  if (chips.join(",") !== "All,Creator 5 Pro,|,A1 mini,P1S") throw new Error(`unexpected chips: ${chips}`);
+  if (chips.join(",") !== "All,Creator 5 Pro,,A1 mini,P1S") throw new Error(`unexpected chips: ${chips}`);
+  // The divider has the same gap on both sides, and my printers are marked.
+  const gaps = await mw.$eval(".section:not(.mobile-box) [data-pn-divider]", (d) => {
+    const box = d.getBoundingClientRect();
+    return [box.left - d.previousElementSibling.getBoundingClientRect().right, d.nextElementSibling.getBoundingClientRect().left - box.right];
+  });
+  if (Math.abs(gaps[0] - gaps[1]) > 0.5) throw new Error(`divider gaps: ${gaps}`);
+  const background = (selector) => mw.$eval(selector, (e) => getComputedStyle(e).backgroundColor);
+  const myChip = '.section:not(.mobile-box) [data-pn-printer="c5p"] .chip';
+  if (await background(myChip) !== "rgb(228, 241, 238)") throw new Error(`my chip: ${await background(myChip)}`);
 
   // 2. Selecting it shows every profile and turns the button into ours.
   await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro");
+  // The chip and the button in PrintNomad's colours while it is selected.
+  await mw.waitForFunction(() => document.querySelector('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip').classList.contains("selected"));
+  for (const selector of [myChip, ".section:not(.mobile-box) .primaryButton"]) {
+    if (await background(selector) !== "rgb(46, 116, 102)") throw new Error(`${selector}: ${await background(selector)}`);
+  }
   const selected = await mw.$$eval(".section:not(.mobile-box) .chip.selected", (c) => c.map((x) => x.textContent));
   if (selected.join() !== "Creator 5 Pro") throw new Error(`selected chips: ${selected}`);
   // "All" was clicked once (one route change), not once per copy of the section.
@@ -173,6 +187,7 @@ try {
   // 5. A native chip gives MakerWorld its button back.
   await mw.click(".section:not(.mobile-box) .swiper-slide:last-child .chip");
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Open in Bambu Studio", { timeout: 10_000 });
+  if (await mw.$(".section:not(.mobile-box) .primaryButton[data-pn-active]")) throw new Error("MakerWorld's button kept our colour");
   // 6. A project with more colours on a plate than extruders: converted without asking.
   projectBytes = readFileSync(painted);
   await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
@@ -234,7 +249,7 @@ try {
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 30_000 });
   await setPrinters([c5p, { id: "p1s", slicer: "flashstudio", printer: "P1S", slicerAuto: true }]);
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .swiper-slide:nth-child(2)").textContent.trim() === "P1S", { timeout: 10_000 });
-  if (await carousel() !== "All,P1S,Creator 5 Pro,|,A1 mini") throw new Error(`order: ${await carousel()}`);
+  if (await carousel() !== "All,P1S,Creator 5 Pro,,A1 mini") throw new Error(`order: ${await carousel()}`);
   await mw.click(".section:not(.mobile-box) .swiper-slide:nth-child(2) .chip");
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent !== "Download for Creator 5 Pro", { timeout: 10_000 });
   await mw.click(".section:not(.mobile-box) .primaryButton");

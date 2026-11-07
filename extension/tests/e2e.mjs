@@ -94,10 +94,14 @@ try {
     await page.waitForSelector('#add-view:not([hidden]) [data-model="Flashforge Creator 5 Pro"]', { visible: true });
     await page.click('#add-view [data-model="Flashforge Creator 5 Pro"]');
     await page.waitForSelector("#home:not([hidden])");
-    await page.waitForSelector('[data-action="cancel"]', { visible: true });
     const count = await page.evaluate(async () => (await chrome.storage.sync.get("printers")).printers.length);
     if (count !== 1) throw new Error(`${count} printers after adding one already there`);
-    await page.click('[data-action="cancel"]');
+    // Adding does not open the editor: Edit is there if it is needed.
+    await page.waitForSelector('[data-action="edit"]', { visible: true });
+    if (await page.$('[data-action="cancel"]:not([hidden])')) {
+      const open = await page.$eval('[data-action="cancel"]', (b) => b.checkVisibility());
+      if (open) throw new Error("adding a printer opened its editor");
+    }
     console.log("OK: edit in the card, add on its own screen");
   }
 

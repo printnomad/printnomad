@@ -5,7 +5,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 ## [Unreleased]
 
 ### Changed
-- **On MakerWorld, your printers come first**, followed by a divider and the model's other printers. Bambu Lab printers keep MakerWorld's own button and are no longer converted there.
+- **On MakerWorld, your printers come first**, followed by a divider and the model's other printers. They carry PrintNomad's mark and colours, and so does the download button when one is selected. Adding a printer saves it right away; Edit is there to change it. Bambu Lab printers keep MakerWorld's own button and are no longer converted there.
 
 ### Fixed
 - **No more errors in open MakerWorld tabs after the extension is reloaded or updated.** A chip of ours is also removed when MakerWorld lists that printer itself.

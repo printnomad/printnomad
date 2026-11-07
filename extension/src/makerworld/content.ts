@@ -109,6 +109,7 @@ function newChip(printer: PagePrinter, template: HTMLElement): HTMLElement {
   const chip = chipOf(slide);
   if (chip) {
     chip.classList.remove("selected");
+    chip.dataset.pnMine = "1";
     chip.textContent = printer.label;
     chip.title = t("mw_chip_title", printer.label);
   }
@@ -151,7 +152,6 @@ function injectChips(section: Section) {
     divider.className = "swiper-slide";
     divider.dataset.pnDivider = "1";
     divider.setAttribute("aria-hidden", "true");
-    divider.textContent = "|";
   } else if (!showDivider && divider) {
     divider.remove();
     divider = null;
@@ -166,10 +166,26 @@ function injectChips(section: Section) {
     }
     after = slide;
   }
+  // The same gap on both sides: the chip before it has its margin, the divider takes the same.
+  if (divider?.previousElementSibling) {
+    const gap = getComputedStyle(divider.previousElementSibling).marginRight;
+    if (divider.style.marginRight !== gap) divider.style.setProperty("margin-right", gap, "important");
+  }
+  for (const slide of natives) {
+    const chip = chipOf(slide);
+    const isMine = mine.includes(slide);
+    if (chip && "pnMine" in chip.dataset !== isMine) {
+      if (isMine) chip.dataset.pnMine = "1";
+      else delete chip.dataset.pnMine;
+      changed = true;
+    }
+  }
   if (changed) window.postMessage({ source: CONTENT, type: "swiper-update" }, location.origin);
 }
 
 function paintSelection(section: Section) {
+  section.button.toggleAttribute("data-pn-active", !!active);
+  section.arrow?.toggleAttribute("data-pn-active", !!active);
   for (const slide of slides(section.wrapper)) {
     const chip = chipOf(slide);
     if (!chip) continue;
@@ -349,9 +365,26 @@ const hideMenus = (() => {
   const style = document.createElement("style");
   style.textContent = `html[data-pn-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
     [data-pn-divider] {
-      width: auto !important; flex: none; align-self: center; padding: 0 2px;
-      color: #b8bcc2; font-weight: 400; user-select: none; pointer-events: none;
+      width: 1px !important; height: 18px !important; flex: none; align-self: center; margin-left: 0 !important;
+      background: #d5d8dc; pointer-events: none;
     }
+    /* My printers, in PrintNomad's colours and with its mark (drawn here: no image to load). */
+    [data-pn-mine] {
+      display: inline-flex !important; align-items: center; gap: 6px;
+      background-color: #E4F1EE !important; color: #245E53 !important;
+    }
+    [data-pn-mine]::before {
+      content: ""; flex: none; width: 13px; height: 12px;
+      background:
+        linear-gradient(currentColor, currentColor) center 0 / 5px 2px no-repeat,
+        linear-gradient(#00AE42, #00AE42) center 3px / 9px 2px no-repeat,
+        linear-gradient(#FA6831, #FA6831) center 6px / 11px 2px no-repeat,
+        linear-gradient(#3D8BFD, #3D8BFD) center 9px / 13px 3px no-repeat;
+    }
+    [data-pn-mine].selected { background-color: #2E7466 !important; color: #fff !important; }
+    /* The button of a printer PrintNomad converts for. */
+    [data-pn-active] { background-color: #2E7466 !important; color: #fff !important; }
+    [data-pn-active]:hover { background-color: #245E53 !important; }
     [data-pn-busy] { position: relative !important; box-sizing: border-box; }
     [data-pn-busy] > :not([data-pn-loading]) { visibility: hidden; }
     [data-pn-loading] {
