@@ -17,6 +17,8 @@ export type ToMain =
 /** Main world → content script: MakerWorld's own 3MF download request was captured. */
 export type FromMain =
   | { source: typeof MAIN; type: "armed" }
+  /** MakerWorld has asked for the 3MF: its answer can take a moment. */
+  | { source: typeof MAIN; type: "f3mf-started" }
   | { source: typeof MAIN; type: "f3mf"; url: string; name: string | null }
   /** The /f3mf answer was the 3MF file itself (not JSON with a CDN URL). */
   | { source: typeof MAIN; type: "f3mf-file"; data: ArrayBuffer; name: string | null }

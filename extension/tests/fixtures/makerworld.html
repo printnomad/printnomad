@@ -51,10 +51,11 @@
           const xhr = new XMLHttpRequest();
           xhr.open("GET", "/api/v1/design-service/instance/1/f3mf?type=download");
           xhr.responseType = "arraybuffer";
-          xhr.onload = () => resolve(JSON.parse(new TextDecoder().decode(xhr.response)));
+          xhr.onload = () => resolve(xhr.status === 200 ? JSON.parse(new TextDecoder().decode(xhr.response)) : null);
           xhr.onerror = reject;
           xhr.send();
         });
+        if (!json) return;
         const a = document.createElement("a");
         a.href = json.url;
         a.download = json.name;
@@ -62,6 +63,10 @@
         a.click();
         window.nativeDownloadAttempted = true;
       };
+      // After a route change MakerWorld reads the action from localStorage again.
+      window.routeChange = () => { action = localStorage.getItem("model_operate_last_key") || "open_in_studio"; };
+      // Clicks that start no download, like one MakerWorld ignores while it is busy.
+      window.ignoredClicks = 0;
       // A chip click is a route change in MakerWorld (Next.js); count them.
       window.chipClicks = 0;
       document.querySelectorAll(".swiper-slide .chip").forEach((chip) => chip.addEventListener("click", () => {
@@ -91,7 +96,8 @@
           localStorage.setItem("model_operate_last_key", action);
           label.textContent = "Download 3MF";
           root.remove();
-          download();
+          if (window.ignoredClicks > 0) window.ignoredClicks--;
+          else download();
         });
         document.body.append(root);
       });

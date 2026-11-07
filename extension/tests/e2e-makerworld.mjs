@@ -22,6 +22,8 @@ buildExtension({ PN_PROFILES_DIR: catalog, PN_TEST_ORIGINS: ORIGIN, PN_REPORT_UR
 
 const page = readFileSync(join(ext, "tests/fixtures/makerworld.html"));
 let projectBytes = readFileSync(project);
+let f3mfStatus = 200;
+let slowFile = false;
 const reports = [];
 const server = createServer((req, res) => {
   if (req.url === "/report") {
@@ -38,8 +40,15 @@ const server = createServer((req, res) => {
   }
   if (req.url === "/") return res.writeHead(200, { "content-type": "text/html" }).end(page);
   if (req.url.startsWith("/api/v1/design-service/instance/1/f3mf")) {
+    if (f3mfStatus !== 200) return res.writeHead(f3mfStatus).end();
     return res.writeHead(200, { "content-type": "application/json" })
       .end(JSON.stringify({ name: "boat.3mf", url: `${ORIGIN}/cdn/boat.3mf` }));
+  }
+  if (req.url === "/cdn/boat.3mf" && slowFile) {
+    res.writeHead(200, { "content-type": "application/octet-stream", "content-length": projectBytes.length });
+    res.write(projectBytes.subarray(0, projectBytes.length >> 1));
+    setTimeout(() => res.end(projectBytes.subarray(projectBytes.length >> 1)), 2_000);
+    return;
   }
   if (req.url === "/cdn/boat.3mf") return res.writeHead(200, { "content-type": "application/octet-stream" }).end(projectBytes);
   res.writeHead(404).end();
@@ -106,7 +115,7 @@ try {
       return span.textContent;
     });
     if (flashed === "Download 3MF") throw new Error("MakerWorld's label would flash on the button");
-    await mw.waitForFunction(() => /Saved|Could not|Not saved|failed|answer|found/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
+    await mw.waitForFunction(() => /Saved|Could not|Not saved|Error/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
       { timeout: 120_000 });
     const status = await label();
     if (status !== "Saved ✓") throw new Error(`status: ${status}`);
@@ -123,6 +132,21 @@ try {
   };
   await convertOnce(1);
   await convertOnce(2);
+  // After a route change the button is "Open in Bambu Studio" again: it must not be pressed.
+  await mw.evaluate(() => window.routeChange());
+  await convertOnce(3);
+  // A click that starts nothing is retried, without waiting for a long timeout.
+  await mw.evaluate(() => { window.ignoredClicks = 1; });
+  await convertOnce(4);
+  // A slow file shows how far it got.
+  slowFile = true;
+  await mw.click(".section:not(.mobile-box) .primaryButton");
+  await mw.waitForSelector(".section:not(.mobile-box) .primaryButton [data-pn-progress]", { timeout: 15_000 });
+  const progress = await mw.$eval(".section:not(.mobile-box) .primaryButton [data-pn-progress]", (e) => e.dataset.pnProgress);
+  if (!/^\d+%$/.test(progress)) throw new Error(`progress: ${progress}`);
+  await mw.waitForFunction(() => /Saved/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent), { timeout: 120_000 });
+  slowFile = false;
+  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 10_000 });
   if (await mw.evaluate(() => window.openedInStudio)) throw new Error("MakerWorld's own action ran");
   if (await mw.evaluate(() => localStorage.getItem("model_operate_last_key")) !== null) {
     throw new Error("MakerWorld's stored download preference was changed");
@@ -140,7 +164,7 @@ try {
   if (await label() !== "Saved ✓ · check colours") throw new Error(`too many colours: ${await label()}`);
   if (await mw.evaluate(() => document.querySelector("[data-pn-modal]"))) throw new Error("a modal opened");
   const all = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
-  if (all.length !== 3) throw new Error(`${all.length} downloads after the last conversion`);
+  if (all.length !== 6) throw new Error(`${all.length} downloads after the last conversion`);
   console.log("OK: chip, button, menu, capture, conversion, restore and too many colours");
 
   // 7. A damaged project: the code on the button, the panel, and the report sent in one click.
@@ -166,6 +190,24 @@ try {
   }
   await mw.evaluate(`${inModal("close")}.click()`);
   console.log("OK: damaged project shows its code and the report is sent with one click");
+
+  // 8. The message says what happened: sign-in only when MakerWorld refuses the download.
+  const failure = async (prepare) => {
+    await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 30_000 });
+    await prepare();
+    await mw.click(".section:not(.mobile-box) .primaryButton");
+    await mw.waitForFunction(inModal("close"), { timeout: 60_000 });
+    const text = await mw.evaluate(() => document.querySelector("[data-pn-modal]").shadowRoot.textContent);
+    await mw.evaluate(`${inModal("close")}.click()`);
+    return text;
+  };
+  f3mfStatus = 401;
+  const refused = await failure(async () => {});
+  f3mfStatus = 200;
+  if (!refused.includes("signed in")) throw new Error(`refused download: ${refused}`);
+  const ignored = await failure(() => mw.evaluate(() => { window.ignoredClicks = 2; }));
+  if (!ignored.includes("did not start") || ignored.includes("signed in")) throw new Error(`download not started: ${ignored}`);
+  console.log("OK: a refused download asks to sign in, one that never started does not");
 } finally {
   await browser.close();
   server.close();

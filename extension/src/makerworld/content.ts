@@ -13,7 +13,12 @@ import { clipboardReport } from "../lib/report-copy.ts";
 import { reportPanel } from "../lib/report-panel.ts";
 import { BRIDGE, CONTENT, type BridgeMessage, type ConvertOutcome, type FromMain, type PagePrinter } from "./protocol.ts";
 
-const CAPTURE_TIMEOUT_MS = 30_000;
+/** MakerWorld normally asks for the 3MF right after the click: if not, the click did not start it. */
+const START_TIMEOUT_MS = 8_000;
+/** From MakerWorld's request for the 3MF to its answer. */
+const ANSWER_TIMEOUT_MS = 30_000;
+/** Downloading the file: no new data for this long and it has stopped. */
+const STALL_TIMEOUT_MS = 30_000;
 const MENU_TIMEOUT_MS = 4_000;
 const RESULT_VISIBLE_MS = 5_000;
 /** Next to the core's codes (issues.py): MakerWorld's download could not be captured or fetched. */
@@ -182,6 +187,7 @@ function paintButton(section: Section, text?: string, loading = false) {
   }
   if (label.dataset.pnLoading) {
     delete label.dataset.pnLoading;
+    delete label.dataset.pnProgress;
     label.removeAttribute("aria-label");
     label.removeAttribute("title");
   }
@@ -288,6 +294,7 @@ function decorateMenu() {
 const hideMenus = (() => {
   const style = document.createElement("style");
   style.textContent = `html[data-pn-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
+    [data-pn-progress]::before { content: attr(data-pn-progress); margin-right: 0.5em; }
     [data-pn-loading]::after {
       content: ""; display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.2em;
       border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%;
@@ -332,14 +339,21 @@ const visibleSection = () => sections().find((s) => isVisible(s.button)) ?? sect
 // --- download for the active printer ---------------------------------------------
 function captureF3mf() {
   let markArmed: () => void;
+  let markStarted: () => void;
+  let stop: (message: string) => void;
   const armed = new Promise<void>((resolve) => (markArmed = resolve));
+  const started = new Promise<void>((resolve) => (markStarted = resolve));
   const file = new Promise<{ url?: string; data?: ArrayBuffer; name: string | null }>((resolve, reject) => {
-    const timer = setTimeout(() => finish(new Error(t("mw_error_timeout"))), CAPTURE_TIMEOUT_MS);
+    let timer: ReturnType<typeof setTimeout> | undefined;
     function onMessage(e: MessageEvent<FromMain>) {
       if (e.source !== window || e.data?.source !== "printnomad:main") return;
       if (e.data.type === "armed") markArmed();
-      else if (e.data.type === "f3mf" || e.data.type === "f3mf-file") finish(null, e.data);
-      else finish(new Error(t("mw_error_download", e.data.status)));
+      else if (e.data.type === "f3mf-started") {
+        markStarted();
+        clearTimeout(timer);
+        timer = setTimeout(() => finish(new Error(t("mw_error_no_answer"))), ANSWER_TIMEOUT_MS);
+      } else if (e.data.type === "f3mf" || e.data.type === "f3mf-file") finish(null, e.data);
+      else finish(new Error(downloadError(e.data.status)));
     }
     function finish(error: Error | null, value?: { url?: string; data?: ArrayBuffer; name: string | null }) {
       clearTimeout(timer);
@@ -348,20 +362,80 @@ function captureF3mf() {
       if (error) reject(error);
       else resolve(value!);
     }
+    stop = (message) => finish(new Error(message));
     window.addEventListener("message", onMessage);
     window.postMessage({ source: CONTENT, type: "arm" }, location.origin);
   });
-  return { armed, file };
+  /** Whether MakerWorld asked for the 3MF (or already answered) within START_TIMEOUT_MS. */
+  const startedInTime = () => Promise.race([
+    started.then(() => true),
+    file.then(() => true, () => true),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(false), START_TIMEOUT_MS)),
+  ]);
+  return { armed, file, startedInTime, stop: (message: string) => stop(message) };
 }
 
-let threeMfSelectedThisPage = false;
+/** Only MakerWorld refusing the request says anything about the session. */
+const downloadError = (status: number) =>
+  status === 401 || status === 403 ? t("mw_error_signin", status) : t("mw_error_download", status);
+
+function setProgress(percent: number | null) {
+  for (const section of sections()) {
+    const label = buttonLabel(section);
+    if (!label) continue;
+    if (percent === null) delete label.dataset.pnProgress;
+    else label.dataset.pnProgress = `${percent}%`;
+  }
+}
+
+/** The file itself, from MakerWorld's CDN, showing how far it got when the size is known. */
+async function fetchFile(url: string): Promise<ArrayBuffer> {
+  const abort = new AbortController();
+  let stall = setTimeout(() => abort.abort(), STALL_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: abort.signal });
+    if (!res.ok) throw new Error(t("mw_error_download", res.status));
+    // With compression the length is not the size of what is read.
+    const total = res.headers.get("content-encoding") ? 0 : Number(res.headers.get("content-length")) || 0;
+    const reader = res.body!.getReader();
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      clearTimeout(stall);
+      stall = setTimeout(() => abort.abort(), STALL_TIMEOUT_MS);
+      chunks.push(value);
+      received += value.length;
+      if (total) setProgress(Math.min(99, Math.floor((received / total) * 100)));
+    }
+    const data = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) {
+      data.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return data.buffer;
+  } catch (e) {
+    // Stalled, or the connection dropped (fetch reports both without a status).
+    if (abort.signal.aborted || e instanceof TypeError) throw new Error(t("mw_error_network"));
+    throw e;
+  } finally {
+    clearTimeout(stall);
+    setProgress(null);
+  }
+}
+
+/** Where the menu's 3MF entry was last chosen: there, 3MF is the button's action. */
+let threeMfChosenAt: string | null = null;
 
 /**
- * Start MakerWorld's own 3MF download: its button when 3MF is already its action, else
- * the menu's 3MF entry. Choosing that entry also makes 3MF the button's remembered
- * action: the user's stored preference is put back afterwards.
+ * Start MakerWorld's own 3MF download: its button when 3MF is the stored action, else the
+ * menu's 3MF entry. Choosing that entry also makes 3MF the button's remembered action: the
+ * user's stored preference is put back afterwards, so after a route change (another model,
+ * or just a chip) the button does what that preference says again. It is not safe to press.
  */
-async function startNativeDownload(section: Section) {
+async function startNativeDownload(section: Section, viaMenu = false) {
   let stored: string | null = null;
   try {
     stored = localStorage.getItem(ACTION_KEY);
@@ -369,7 +443,7 @@ async function startNativeDownload(section: Section) {
     // storage blocked: nothing to restore
   }
   try {
-    if (stored === ACTION_3MF || threeMfSelectedThisPage) {
+    if (stored === ACTION_3MF && !viaMenu) {
       nativeClick(section.button);
       return;
     }
@@ -379,9 +453,15 @@ async function startNativeDownload(section: Section) {
       const menu = openMenu(section);
       return menu && find3mf(menu);
     }, MENU_TIMEOUT_MS);
-    if (!entry) throw new Error(t("mw_error_menu"));
+    if (!entry) {
+      // The menu may leave out the action the button already does.
+      if (threeMfChosenAt !== location.href) throw new Error(t("mw_error_menu"));
+      await closeMenu();
+      nativeClick(section.button);
+      return;
+    }
     nativeClick(entry.leaf);
-    threeMfSelectedThisPage = true;
+    threeMfChosenAt = location.href;
     await closeMenu();
   } finally {
     hideMenus(false);
@@ -405,19 +485,21 @@ async function download() {
     const capture = captureF3mf();
     await Promise.race([capture.armed, capture.file]);
     await startNativeDownload(section);
-    const captured = await capture.file;
-    let data = captured.data;
-    if (!data) {
-      const res = await fetch(captured.url!);
-      if (!res.ok) throw new Error(t("mw_error_download", res.status));
-      data = await res.arrayBuffer();
+    if (!await capture.startedInTime()) {
+      // The click did not start it: once more through the menu, which always downloads.
+      await startNativeDownload(section, true);
+      if (!await capture.startedInTime()) capture.stop(t("mw_error_not_started"));
     }
+    const captured = await capture.file;
+    const answerMs = Math.round(performance.now() - started);
+    const data = captured.data ?? await fetchFile(captured.url!);
     const downloadMs = Math.round(performance.now() - started);
+    const megabytes = (data.byteLength / 1e6).toFixed(1);
     // MakerWorld's own name for the file (what its download would save).
     const name = captured.name ?? "model.3mf";
     setStatus(t("mw_status_converting", printer.label));
     const outcome = await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, name, data }, [data]);
-    console.info(`[PrintNomad] 3MF from MakerWorld ${downloadMs} ms · total ${Math.round(performance.now() - started)} ms`
+    console.info(`[PrintNomad] MakerWorld answered in ${answerMs} ms · ${megabytes} MB file in ${downloadMs - answerMs} ms · total ${Math.round(performance.now() - started)} ms`
       + (outcome.status === "saved" ? ` · conversion ${outcome.convertMs} ms` : ""));
     showOutcome(outcome);
   } catch (e) {

@@ -205,8 +205,18 @@
     "message": "Error $1",
     "description": "$1 = error code"
   },
-  "mw_error_timeout": {
-    "message": "MakerWorld no respondió: ¿iniciaste sesión?"
+  "mw_error_no_answer": {
+    "message": "MakerWorld tardó demasiado en responder. Inténtalo de nuevo en un momento."
+  },
+  "mw_error_not_started": {
+    "message": "MakerWorld no inició la descarga. Recarga la página e inténtalo de nuevo."
+  },
+  "mw_error_signin": {
+    "message": "MakerWorld rechazó la descarga ($1). Comprueba que has iniciado sesión y recarga la página.",
+    "description": "$1 = estado HTTP"
+  },
+  "mw_error_network": {
+    "message": "La descarga desde MakerWorld se detuvo. Revisa tu conexión e inténtalo de nuevo."
   },
   "mw_error_download": {
     "message": "Falló la descarga ($1)"

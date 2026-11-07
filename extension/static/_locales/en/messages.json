@@ -215,8 +215,18 @@
     "message": "Error $1",
     "description": "$1 = error code"
   },
-  "mw_error_timeout": {
-    "message": "MakerWorld did not answer: are you signed in?"
+  "mw_error_no_answer": {
+    "message": "MakerWorld took too long to answer. Try again in a moment."
+  },
+  "mw_error_not_started": {
+    "message": "MakerWorld did not start the download. Reload the page and try again."
+  },
+  "mw_error_signin": {
+    "message": "MakerWorld refused the download ($1). Check that you are signed in, then reload the page.",
+    "description": "$1 = HTTP status"
+  },
+  "mw_error_network": {
+    "message": "The download from MakerWorld stopped. Check your connection and try again."
   },
   "mw_error_download": {
     "message": "Download failed ($1)"
