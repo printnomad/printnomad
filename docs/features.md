@@ -6,7 +6,7 @@ intended **on your printer**, and every change is written in the conversion repo
 
 | Kind | Examples | Comes from |
 |---|---|---|
-| **The printer** | bed, start/end G-code, extruders, limits, accelerations, calibration (elephant foot, XY compensation), cooling | your printer's profile |
+| **The printer** | bed, start/end G-code, extruders, limits, accelerations, retraction, calibration (elephant foot, XY compensation), cooling | your printer's profile |
 | **The model** | supports, infill, walls, layer height, seam, ironing, fuzzy skin, speeds, purge tower — whatever the designer changed | the project |
 | **Slicer factory defaults** | everything else (hundreds of settings) | your slicer's own defaults |
 
@@ -34,9 +34,9 @@ process, unless the designer changed it.
 
 ## You see what the designer changed, and from what
 
-When the source slicer's profiles are available (PrintNomad downloads Bambu Studio's
-public profiles, or uses an installed Bambu Studio), the report shows each change with
-the original value of the preset the designer started from:
+When the source slicer's profiles are available (the extension includes Bambu Studio's
+public profiles; the command line uses an installed Bambu Studio), the report shows each
+change with the original value of the preset the designer started from:
 
 ```
 bridge_speed: 50 → 10 (target profile: 35)
@@ -76,6 +76,15 @@ is the reference, and you decide when the model's values should win.
 The conversion preferences can keep the model's cooling or printer settings anyway; each option
 explains its risk.
 
+## Filament settings
+
+The designer's temperatures, filament density and flow ratio are kept on top of your
+printer's filament profile, but only when the designer changed them on purpose: a value that
+merely comes from their preset is not kept. Flow ratio is usually calibrated per printer and
+filament, so the designer's value may not be ideal on your machine; check it in the slicer, or
+turn off the *Filament settings* preference. Maximum volumetric speed and pressure advance
+depend on the hardware and always come from your printer's profile.
+
 ## Your build plate
 
 Each printer in *My printers* can have its own build plate, when its slicer lets you choose
@@ -90,16 +99,18 @@ Plate, for example), the report says so.
 Many MakerWorld projects define more colours than a printer has extruders but paint only
 a few of them on each plate. PrintNomad decodes the colour painting of every triangle
 (the same format OrcaSlicer and Bambu Studio use) to know which filaments each plate
-really needs, and assigns extruders plate by plate. A manual assignment is only needed
-when one plate truly uses more filaments than the printer has extruders.
+really needs, and assigns extruders plate by plate. If one plate truly uses more filaments
+than the printer has extruders, every colour is kept, the project stays in the slicer's
+automatic mode, and a warning tells you to choose how to print them in your slicer. The
+command line and the OrcaSlicer plugin also accept a manual assignment.
 
 ## The filaments it really prints
 
 The converted project lists only the filaments it uses: colours the project defines but
-never uses are removed, and when you send several colours to one extruder (a plate with
-more colours than extruders) they become one filament. A 12-colour project for a
-4-extruder printer opens with 4 filaments, not 12 — and the slicer does not keep 12
-filament slots after you close it. Every place that names a filament is renumbered:
+never uses are removed. A project that defines 12 colours and uses 4 opens with 4 filaments,
+not 12 — and the slicer does not keep 12 filament slots after you close it. With a manual
+assignment, several colours sent to one extruder become one filament. Every place that names
+a filament is renumbered:
 filament settings, the purge table, objects and parts, plates, per-layer colour changes,
 height ranges, the filaments chosen for walls, infill, support or the purge tower, and the
 colour painting of each triangle (the meshes themselves are untouched; each
@@ -124,7 +135,8 @@ be needed again after picking it).
 Filament-to-extruder assignment uses the slicer's *automatic* mode by default, so the
 project slices in every Orca-based slicer (OrcaSlicer rejects a manual assignment on
 extruders 3–4). The planned assignment is kept as the suggestion. The conversion preferences offer
-*Exact* (manual) for Flash Studio, and an assignment you choose by hand is always kept.
+*Exact* (manual) for Flash Studio, and an assignment you choose by hand is always kept. A plate
+with more colours than extruders stays automatic unless you assign it by hand.
 
 ## The right slicer for each printer
 
@@ -141,13 +153,14 @@ up or with Edit. Other converters made for one
 brand do the same implicitly (ForgeBridge targets Flash Studio; the Snapmaker U1
 converter targets Snapmaker Orca, with an OrcaSlicer compatibility switch).
 
-## Current printer profiles
+## Printer profiles
 
-Profiles come from the slicers' official releases, and the report names the source and
-version (for example *Flash Studio 1.7.20*). When a slicer's public repository lags behind
-its app — Flashforge's repository was at 1.7.15 while Flash Studio shipped 1.7.20 —
-PrintNomad uses the profiles of the released app. Copies of old profiles are what make
-slicers show "old vs new" values after a conversion.
+The extension includes its printer profiles, so it needs no connection to get them. They come
+from tagged releases of each slicer's public repository, and the report names the source and
+version. A public repository can lag behind its app: the extension uses Flashforge's 1.7.15,
+while Flash Studio has shipped 1.7.20. When your slicer's profiles are newer than the ones used
+for the conversion, it can show some "old vs new" values. The command line reads the profiles of
+your installed slicer instead.
 
 ## Right on MakerWorld
 
@@ -161,4 +174,4 @@ converted file.
 
 Every replaced, kept, removed or warned value is in the report (text and JSON), including
 per-object overrides one by one. The original file is never modified, and the meshes stay
-byte-identical; colour painting is only renumbered when filaments are (see below).
+byte-identical; colour painting is only renumbered when filaments are (see above).
