@@ -544,6 +544,9 @@ document.addEventListener("click", (e) => {
 // Batched with a timer, not requestAnimationFrame: frames pause in background tabs.
 let scheduled = false;
 new MutationObserver(() => {
+  // MakerWorld rewrites the button's label while downloading: put ours back before the browser
+  // paints (observers run first), or its text flashes on the button.
+  if (active || statusText) for (const section of sections()) paintButton(section, statusText ?? undefined, statusLoading);
   if (scheduled) return;
   scheduled = true;
   setTimeout(() => {
