@@ -6,8 +6,7 @@ compatibility_date = "2026-11-01"
 # Private repository that receives the reports, as owner/name.
 REPORTS_REPO = "printnomad/reports"
 # Comma-separated extension ids allowed to send; empty: any chrome-extension:// origin.
-# Set it once the Chrome Web Store id exists.
-ALLOWED_EXTENSION_IDS = ""
+ALLOWED_EXTENSION_IDS = "lbjhbhgndeokkonamkjoniahegcinbpf"
 
 # At most 5 reports per minute from one address.
 [[ratelimits]]

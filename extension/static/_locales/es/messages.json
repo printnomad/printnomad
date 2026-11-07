@@ -3,7 +3,7 @@
     "message": "PrintNomad"
   },
   "ext_description": {
-    "message": "Convierte proyectos 3MF de MakerWorld y otros sitios para tu impresora y tu laminador."
+    "message": "Convierte proyectos 3MF de MakerWorld, o cualquier archivo que elijas, para tu impresora y tu laminador."
   },
   "printers_title": {
     "message": "Mis impresoras"

@@ -4,7 +4,7 @@
     "description": "Extension name"
   },
   "ext_description": {
-    "message": "Converts 3MF projects from MakerWorld and other sites for your printer and slicer.",
+    "message": "Converts 3MF projects from MakerWorld, or any file you choose, for your printer and slicer.",
     "description": "Store description"
   },
   "printers_title": {
