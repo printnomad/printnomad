@@ -20,6 +20,8 @@ const ANSWER_TIMEOUT_MS = 30_000;
 /** Downloading the file: no new data for this long and it has stopped. */
 const STALL_TIMEOUT_MS = 30_000;
 const MENU_TIMEOUT_MS = 4_000;
+/** Where 3MF is already the button's action, the menu may not offer it: do not wait long for it. */
+const MENU_KNOWN_TIMEOUT_MS = 300;
 const RESULT_VISIBLE_MS = 5_000;
 /** Next to the core's codes (issues.py): MakerWorld's download could not be captured or fetched. */
 const MAKERWORLD_ERROR = "PN903";
@@ -172,24 +174,45 @@ function buttonLabel(section: Section): HTMLElement | null {
   return section.button.querySelector<HTMLElement>("span") ?? section.button;
 }
 
+/**
+ * While working, spinner and status are drawn on a layer of ours over the button, with
+ * MakerWorld's own content hidden: whatever it writes there meanwhile is never seen.
+ */
+function paintBusy(section: Section, label: HTMLElement, text: string) {
+  if (!section.button.dataset.pnBusy) {
+    // Its size must not follow what MakerWorld writes underneath.
+    const { width } = section.button.getBoundingClientRect();
+    if (width) section.button.style.width = `${width}px`;
+    section.button.dataset.pnBusy = "1";
+  }
+  let layer = section.button.querySelector<HTMLElement>(":scope > [data-pn-loading]");
+  if (!layer) {
+    const style = getComputedStyle(label);
+    layer = document.createElement("div");
+    layer.dataset.pnLoading = "1";
+    layer.style.color = style.color;
+    layer.style.font = style.font;
+    section.button.append(layer);
+  }
+  if (layer.dataset.pnStatus !== text) {
+    layer.dataset.pnStatus = text;
+    layer.setAttribute("aria-label", text);
+  }
+}
+
 function paintButton(section: Section, text?: string, loading = false) {
   const label = buttonLabel(section);
   if (!label) return;
-  // Work in progress: spinner and status in a box of fixed width (see hideMenus), so neither
-  // moves when the status changes. The status is an attribute: MakerWorld does not rewrite it.
   if (loading) {
     if (!originalButtonText.has(label) && !label.dataset.pnText) originalButtonText.set(label, label.textContent ?? "");
-    if (label.textContent) label.textContent = "";
     label.dataset.pnText = "1";
-    label.dataset.pnLoading = "1";
-    label.dataset.pnStatus = text ?? "";
-    label.setAttribute("aria-label", text ?? "");
+    paintBusy(section, label, text ?? "");
     return;
   }
-  if (label.dataset.pnLoading) {
-    delete label.dataset.pnLoading;
-    delete label.dataset.pnStatus;
-    label.removeAttribute("aria-label");
+  section.button.querySelector(":scope > [data-pn-loading]")?.remove();
+  if (section.button.dataset.pnBusy) {
+    delete section.button.dataset.pnBusy;
+    section.button.style.removeProperty("width");
   }
   if (!originalButtonText.has(label) && !label.dataset.pnText) originalButtonText.set(label, label.textContent ?? "");
   const wanted = text ?? (active ? t("mw_download_for", active.label) : null);
@@ -294,7 +317,12 @@ function decorateMenu() {
 const hideMenus = (() => {
   const style = document.createElement("style");
   style.textContent = `html[data-pn-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
-    [data-pn-loading] { display: inline-flex; align-items: center; justify-content: flex-start; gap: 0.55em; width: 8.5em; }
+    [data-pn-busy] { position: relative !important; box-sizing: border-box; }
+    [data-pn-busy] > :not([data-pn-loading]) { visibility: hidden; }
+    [data-pn-loading] {
+      position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; gap: 0.55em;
+      padding-left: calc(50% - 4.25em); box-sizing: border-box; /* the same place for every status */
+    }
     [data-pn-loading]::before {
       content: ""; flex: none; width: 1.15em; height: 1.15em; border-radius: 50%;
       background: conic-gradient(from 0deg, transparent 10%, currentColor);
@@ -451,7 +479,7 @@ async function startNativeDownload(section: Section, viaMenu = false) {
     const entry = await poll(() => {
       const menu = openMenu(section);
       return menu && find3mf(menu);
-    }, MENU_TIMEOUT_MS);
+    }, threeMfChosenAt === location.href ? MENU_KNOWN_TIMEOUT_MS : MENU_TIMEOUT_MS);
     if (entry) {
       nativeClick(entry.leaf);
       threeMfChosenAt = location.href;

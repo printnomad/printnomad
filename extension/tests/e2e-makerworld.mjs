@@ -107,14 +107,13 @@ try {
     await mw.click(".section:not(.mobile-box) .primaryButton");
     // A spinner while it works.
     await mw.waitForSelector(".section:not(.mobile-box) .primaryButton [data-pn-loading]", { timeout: 10_000 });
-    // MakerWorld rewrites the label meanwhile: ours is back before the browser can paint it.
-    const flashed = await mw.evaluate(async () => {
+    // MakerWorld rewrites the label meanwhile: it must not be visible.
+    const flashed = await mw.evaluate(() => {
       const span = document.querySelector(".section:not(.mobile-box) .primaryButton span");
       span.textContent = "Download 3MF";
-      await Promise.resolve();
-      return span.textContent;
+      return getComputedStyle(span).visibility;
     });
-    if (flashed === "Download 3MF") throw new Error("MakerWorld's label would flash on the button");
+    if (flashed !== "hidden") throw new Error("MakerWorld's label would flash on the button");
     await mw.waitForFunction(() => /Saved|Could not|Error/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
       { timeout: 120_000 });
     const status = await label();
@@ -138,16 +137,23 @@ try {
   // A click that starts nothing is retried, without waiting for a long timeout.
   await mw.evaluate(() => { window.ignoredClicks = 1; });
   await convertOnce(4);
+  // A menu that leaves out the action the button already does costs no long wait.
+  await mw.evaluate(() => { window.menuOmits3mf = true; });
+  const omitted = Date.now();
+  await convertOnce(5);
+  // 5 s of that is "Saved" staying on the button; waiting for the whole menu timeout adds 4 more.
+  if (Date.now() - omitted > 7_000) throw new Error(`menu without 3MF took ${Date.now() - omitted} ms`);
+  await mw.evaluate(() => { window.menuOmits3mf = false; });
   // Status and spinner stay in the same place while the status changes.
   slowFile = true;
   await mw.evaluate(() => {
     window.statusLog = [];
     const button = document.querySelector(".section:not(.mobile-box) .primaryButton");
     const note = () => {
-      const label = button.querySelector("[data-pn-loading]");
-      if (!label) return;
-      const box = label.getBoundingClientRect();
-      window.statusLog.push({ status: label.dataset.pnStatus, place: `${box.left},${box.top},${box.width}` });
+      const layer = button.querySelector("[data-pn-loading]");
+      if (!layer) return;
+      const box = layer.getBoundingClientRect();
+      window.statusLog.push({ status: layer.dataset.pnStatus, place: `${box.left},${box.top},${box.width},${getComputedStyle(layer).paddingLeft}` });
     };
     new MutationObserver(note).observe(button, { attributes: true, subtree: true, attributeFilter: ["data-pn-status"] });
   });
@@ -176,7 +182,7 @@ try {
   if (await label() !== "Saved ✓ · check colours") throw new Error(`too many colours: ${await label()}`);
   if (await mw.evaluate(() => document.querySelector("[data-pn-modal]"))) throw new Error("a modal opened");
   const all = (await options.evaluate(() => chrome.downloads.search({}))).filter((d) => d.state === "complete");
-  if (all.length !== 6) throw new Error(`${all.length} downloads after the last conversion`);
+  if (all.length !== 7) throw new Error(`${all.length} downloads after the last conversion`);
   console.log("OK: chip, button, menu, capture, conversion, restore and too many colours");
 
   // 7. A damaged project: the code on the button, the panel, and the report sent in one click.

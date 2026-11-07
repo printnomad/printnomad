@@ -65,6 +65,8 @@
       };
       // After a route change MakerWorld reads the action from localStorage again.
       window.routeChange = () => { action = localStorage.getItem("model_operate_last_key") || "open_in_studio"; };
+      // Whether the menu leaves out the action the button already does (not known for MakerWorld).
+      window.menuOmits3mf = false;
       // Clicks that start no download, like one MakerWorld ignores while it is busy.
       window.ignoredClicks = 0;
       // A chip click is a route change in MakerWorld (Next.js); count them.
@@ -89,9 +91,9 @@
         Object.assign(root.style, { position: "absolute", left: `${control.left + scrollX}px`,
           top: `${control.bottom + scrollY}px`, width: `${control.width}px` });
         // Several wrapper levels, the handler on the row (not on the text), like MakerWorld.
-        root.innerHTML = '<div class="paper"><div class="list"><div class="item"><div><div>Download 3MF</div></div></div>'
+        root.innerHTML = '<div class="paper"><div class="list">' + (window.menuOmits3mf && action === "download_3mf" ? "" : '<div class="item3"><div><div>Download 3MF</div></div></div>')
           + '<div class="item"><div><div>Download STL/CAD Files <i>i</i></div></div></div></div></div>';
-        root.querySelector(".item").addEventListener("click", () => {
+        root.querySelector(".item3")?.addEventListener("click", () => {
           action = "download_3mf";
           localStorage.setItem("model_operate_last_key", action);
           label.textContent = "Download 3MF";
