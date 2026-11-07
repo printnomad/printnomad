@@ -5,7 +5,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 ## [Unreleased]
 
 ### Fixed
-- **MakerWorld downloads no longer time out after changing chip or model**: the button could still be set to "Open in Bambu Studio" and was pressed anyway. A click that starts nothing is retried after 8 seconds, and the sign-in message only appears when MakerWorld really refuses the download. Long downloads show their progress.
+- **MakerWorld downloads no longer time out after changing chip or model**: the button could still be set to "Open in Bambu Studio" and was pressed anyway. A click that starts nothing is retried after 8 seconds, and the sign-in message only appears when MakerWorld really refuses the download. While it works, the button shows the spinner and "Downloading…" or "Converting…" in a fixed place. Closing the save dialog no longer shows "Not saved".
 - **MakerWorld's label no longer flashes on the button** while a project is being converted.
 
 ### Changed

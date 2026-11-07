@@ -186,14 +186,10 @@
     "message": "Descargar para $1"
   },
   "mw_status_downloading": {
-    "message": "Obteniendo el 3MF…"
+    "message": "Descargando…"
   },
   "mw_status_converting": {
-    "message": "Convirtiendo para $1…",
-    "description": "$1 = value"
-  },
-  "mw_status_cancelled": {
-    "message": "No se guardó"
+    "message": "Convirtiendo…"
   },
   "mw_status_already": {
     "message": "Ya está listo para esta impresora"

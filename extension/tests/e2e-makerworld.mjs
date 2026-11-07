@@ -115,7 +115,7 @@ try {
       return span.textContent;
     });
     if (flashed === "Download 3MF") throw new Error("MakerWorld's label would flash on the button");
-    await mw.waitForFunction(() => /Saved|Could not|Not saved|Error/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
+    await mw.waitForFunction(() => /Saved|Could not|Error/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
       { timeout: 120_000 });
     const status = await label();
     if (status !== "Saved ✓") throw new Error(`status: ${status}`);
@@ -138,13 +138,25 @@ try {
   // A click that starts nothing is retried, without waiting for a long timeout.
   await mw.evaluate(() => { window.ignoredClicks = 1; });
   await convertOnce(4);
-  // A slow file shows how far it got.
+  // Status and spinner stay in the same place while the status changes.
   slowFile = true;
+  await mw.evaluate(() => {
+    window.statusLog = [];
+    const button = document.querySelector(".section:not(.mobile-box) .primaryButton");
+    const note = () => {
+      const label = button.querySelector("[data-pn-loading]");
+      if (!label) return;
+      const box = label.getBoundingClientRect();
+      window.statusLog.push({ status: label.dataset.pnStatus, place: `${box.left},${box.top},${box.width}` });
+    };
+    new MutationObserver(note).observe(button, { attributes: true, subtree: true, attributeFilter: ["data-pn-status"] });
+  });
   await mw.click(".section:not(.mobile-box) .primaryButton");
-  await mw.waitForSelector(".section:not(.mobile-box) .primaryButton [data-pn-progress]", { timeout: 15_000 });
-  const progress = await mw.$eval(".section:not(.mobile-box) .primaryButton [data-pn-progress]", (e) => e.dataset.pnProgress);
-  if (!/^\d+%$/.test(progress)) throw new Error(`progress: ${progress}`);
   await mw.waitForFunction(() => /Saved/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent), { timeout: 120_000 });
+  const statusLog = await mw.evaluate(() => window.statusLog);
+  const statuses = [...new Set(statusLog.map((e) => e.status))].join("|");
+  if (statuses !== "Downloading…|Converting…") throw new Error(`statuses: ${statuses}`);
+  if (new Set(statusLog.map((e) => e.place)).size !== 1) throw new Error(`the status moved: ${JSON.stringify(statusLog)}`);
   slowFile = false;
   await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 10_000 });
   if (await mw.evaluate(() => window.openedInStudio)) throw new Error("MakerWorld's own action ran");
@@ -159,7 +171,7 @@ try {
   projectBytes = readFileSync(painted);
   await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
   await mw.click(".section:not(.mobile-box) .primaryButton");
-  await mw.waitForFunction(() => /Saved|Could not|Not saved/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
+  await mw.waitForFunction(() => /Saved|Could not/.test(document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent),
     { timeout: 120_000 });
   if (await label() !== "Saved ✓ · check colours") throw new Error(`too many colours: ${await label()}`);
   if (await mw.evaluate(() => document.querySelector("[data-pn-modal]"))) throw new Error("a modal opened");

@@ -175,21 +175,21 @@ function buttonLabel(section: Section): HTMLElement | null {
 function paintButton(section: Section, text?: string, loading = false) {
   const label = buttonLabel(section);
   if (!label) return;
-  // Work in progress: a spinner instead of the text (kept for screen readers and as tooltip).
+  // Work in progress: spinner and status in a box of fixed width (see hideMenus), so neither
+  // moves when the status changes. The status is an attribute: MakerWorld does not rewrite it.
   if (loading) {
     if (!originalButtonText.has(label) && !label.dataset.pnText) originalButtonText.set(label, label.textContent ?? "");
     if (label.textContent) label.textContent = "";
     label.dataset.pnText = "1";
     label.dataset.pnLoading = "1";
+    label.dataset.pnStatus = text ?? "";
     label.setAttribute("aria-label", text ?? "");
-    label.title = text ?? "";
     return;
   }
   if (label.dataset.pnLoading) {
     delete label.dataset.pnLoading;
-    delete label.dataset.pnProgress;
+    delete label.dataset.pnStatus;
     label.removeAttribute("aria-label");
-    label.removeAttribute("title");
   }
   if (!originalButtonText.has(label) && !label.dataset.pnText) originalButtonText.set(label, label.textContent ?? "");
   const wanted = text ?? (active ? t("mw_download_for", active.label) : null);
@@ -294,12 +294,15 @@ function decorateMenu() {
 const hideMenus = (() => {
   const style = document.createElement("style");
   style.textContent = `html[data-pn-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
-    [data-pn-progress]::before { content: attr(data-pn-progress); margin-right: 0.5em; }
-    [data-pn-loading]::after {
-      content: ""; display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.2em;
-      border: 2.5px solid currentColor; border-right-color: transparent; border-radius: 50%;
-      animation: pn-spin 0.7s linear infinite;
+    [data-pn-loading] { display: inline-flex; align-items: center; justify-content: flex-start; gap: 0.55em; width: 8.5em; }
+    [data-pn-loading]::before {
+      content: ""; flex: none; width: 1.15em; height: 1.15em; border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 10%, currentColor);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.6px), #000 calc(100% - 2px));
+      mask: radial-gradient(farthest-side, transparent calc(100% - 2.6px), #000 calc(100% - 2px));
+      animation: pn-spin 0.8s linear infinite;
     }
+    [data-pn-loading]::after { content: attr(data-pn-status); white-space: nowrap; }
     @keyframes pn-spin { to { transform: rotate(360deg); } }`;
   document.documentElement.append(style);
   return (on: boolean) => {
@@ -379,24 +382,13 @@ function captureF3mf() {
 const downloadError = (status: number) =>
   status === 401 || status === 403 ? t("mw_error_signin", status) : t("mw_error_download", status);
 
-function setProgress(percent: number | null) {
-  for (const section of sections()) {
-    const label = buttonLabel(section);
-    if (!label) continue;
-    if (percent === null) delete label.dataset.pnProgress;
-    else label.dataset.pnProgress = `${percent}%`;
-  }
-}
-
-/** The file itself, from MakerWorld's CDN, showing how far it got when the size is known. */
+/** The file itself, from MakerWorld's CDN; a download with no new data for a while has stopped. */
 async function fetchFile(url: string): Promise<ArrayBuffer> {
   const abort = new AbortController();
   let stall = setTimeout(() => abort.abort(), STALL_TIMEOUT_MS);
   try {
     const res = await fetch(url, { signal: abort.signal });
     if (!res.ok) throw new Error(t("mw_error_download", res.status));
-    // With compression the length is not the size of what is read.
-    const total = res.headers.get("content-encoding") ? 0 : Number(res.headers.get("content-length")) || 0;
     const reader = res.body!.getReader();
     const chunks: Uint8Array[] = [];
     let received = 0;
@@ -407,7 +399,6 @@ async function fetchFile(url: string): Promise<ArrayBuffer> {
       stall = setTimeout(() => abort.abort(), STALL_TIMEOUT_MS);
       chunks.push(value);
       received += value.length;
-      if (total) setProgress(Math.min(99, Math.floor((received / total) * 100)));
     }
     const data = new Uint8Array(received);
     let offset = 0;
@@ -422,7 +413,6 @@ async function fetchFile(url: string): Promise<ArrayBuffer> {
     throw e;
   } finally {
     clearTimeout(stall);
-    setProgress(null);
   }
 }
 
@@ -501,7 +491,7 @@ async function download() {
     const megabytes = (data.byteLength / 1e6).toFixed(1);
     // MakerWorld's own name for the file (what its download would save).
     const name = captured.name ?? "model.3mf";
-    setStatus(t("mw_status_converting", printer.label));
+    setStatus(t("mw_status_converting"));
     const outcome = await bridge.call<ConvertOutcome>({ type: "convert", printerId: printer.id, name, data }, [data]);
     console.info(`[PrintNomad] MakerWorld answered in ${answerMs} ms · ${megabytes} MB file in ${downloadMs - answerMs} ms · total ${Math.round(performance.now() - started)} ms`
       + (outcome.status === "saved" ? ` · conversion ${outcome.convertMs} ms` : ""));
@@ -524,14 +514,18 @@ async function download() {
   }
 }
 
-const outcomeText = (outcome: ConvertOutcome) => ({
+const outcomeText = (outcome: Exclude<ConvertOutcome, { status: "cancelled" }>) => ({
   saved: outcome.status === "saved" && outcome.checkColours ? t("mw_status_saved_check_colours") : t("mw_status_saved"),
-  cancelled: t("mw_status_cancelled"),
   already: t("mw_status_already"),
   error: t("mw_status_error"),
 })[outcome.status];
 
 function showOutcome(outcome: ConvertOutcome) {
+  // The user closed the save dialog: nothing to say.
+  if (outcome.status === "cancelled") {
+    setStatus(null);
+    return;
+  }
   // The status replaces the button's label: an error shows its code, and the details in a panel.
   const code = outcome.status === "error" ? outcome.issue?.code : undefined;
   setStatus(code ? t("mw_status_error_code", code) : outcomeText(outcome), RESULT_VISIBLE_MS);
