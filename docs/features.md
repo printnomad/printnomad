@@ -165,7 +165,9 @@ your installed slicer instead.
 ## Right on MakerWorld
 
 Your printers appear in MakerWorld's *Print Files* as if MakerWorld supported them: a
-Creator 5 Pro chip next to A1, P1S… (printers MakerWorld already lists are left alone).
+Creator 5 Pro chip next to A1, P1S…, with your printers first and a divider before the rest.
+Printers MakerWorld already lists, and Bambu Lab printers in general, keep MakerWorld's own
+button and are not converted there.
 Pick it and the green button becomes *Download for Creator 5 Pro*: the project is
 downloaded through MakerWorld as usual, converted in the browser and saved — only the
 converted file.

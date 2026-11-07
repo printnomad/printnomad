@@ -11,6 +11,7 @@ import { CONFIG } from "../config.ts";
 import type { Issue } from "../engine/protocol.ts";
 import { clipboardReport } from "../lib/report-copy.ts";
 import { reportPanel } from "../lib/report-panel.ts";
+import { normalize, planChips } from "./chips.ts";
 import { BRIDGE, CONTENT, type BridgeMessage, type ConvertOutcome, type FromMain, type PagePrinter } from "./protocol.ts";
 
 /** MakerWorld normally asks for the 3MF right after the click: if not, the click did not start it. */
@@ -27,7 +28,8 @@ const RESULT_VISIBLE_MS = 5_000;
 const MAKERWORLD_ERROR = "PN903";
 
 const t = (key: string, ...subs: (string | number)[]) => chrome.i18n.getMessage(key, subs.map(String)) || key;
-const normalize = (text: string | null | undefined) => (text ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+/** False once the extension is reloaded or updated: this script stays in open tabs, without chrome.* APIs. */
+const alive = () => !!chrome.runtime?.id;
 
 interface Section {
   root: HTMLElement;
@@ -94,42 +96,70 @@ function sections(): Section[] {
 
 const slides = (wrapper: HTMLElement) =>
   [...wrapper.children].filter((c): c is HTMLElement => c.classList.contains("swiper-slide"));
-const nativeSlides = (wrapper: HTMLElement) => slides(wrapper).filter((s) => !s.dataset.pnPrinter);
+const nativeSlides = (wrapper: HTMLElement) => slides(wrapper).filter((s) => !s.dataset.pnPrinter && !s.dataset.pnDivider);
 const chipOf = (slide: HTMLElement) => slide.querySelector<HTMLElement>(":scope > div > div");
 
-/** My printers that MakerWorld has no chip for (it already lists its own printers). */
-function missingPrinters(wrapper: HTMLElement): PagePrinter[] {
-  const listed = new Set(nativeSlides(wrapper).map((s) => normalize(s.textContent)));
-  return printers.filter((p) => !listed.has(normalize(p.label)));
+// --- chips ----------------------------------------------------------------------
+/** A chip of ours for a printer MakerWorld does not list. */
+function newChip(printer: PagePrinter, template: HTMLElement): HTMLElement {
+  const slide = template.cloneNode(true) as HTMLElement;
+  slide.className = "swiper-slide";
+  slide.dataset.pnPrinter = printer.id;
+  slide.firstElementChild?.classList.remove("first");
+  const chip = chipOf(slide);
+  if (chip) {
+    chip.classList.remove("selected");
+    chip.textContent = printer.label;
+    chip.title = t("mw_chip_title", printer.label);
+  }
+  slide.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    activate(printer);
+  });
+  return slide;
 }
 
-// --- chips ----------------------------------------------------------------------
+/**
+ * The order in the carousel: MakerWorld's "All", my printers (its chips first, then ours),
+ * a divider, and the rest of its chips. Slides stay in their parent, so React keeps them.
+ */
 function injectChips(section: Section) {
   const natives = nativeSlides(section.wrapper);
   const template = natives[1] ?? natives[0];
   if (!template) return;
+  const others = natives.slice(1);
+  const plan = planChips(others.map((s) => s.textContent ?? ""), printers);
+  const mine = plan.mine.map((i) => others[i]);
   let changed = false;
-  let after: Element = natives[0];
-  for (const printer of missingPrinters(section.wrapper)) {
-    let slide = section.wrapper.querySelector<HTMLElement>(`:scope > [data-pn-printer="${CSS.escape(printer.id)}"]`);
-    if (!slide) {
-      slide = template.cloneNode(true) as HTMLElement;
-      slide.className = "swiper-slide";
-      slide.dataset.pnPrinter = printer.id;
-      slide.firstElementChild?.classList.remove("first");
-      const chip = chipOf(slide);
-      if (chip) {
-        chip.classList.remove("selected");
-        chip.textContent = printer.label;
-        chip.title = t("mw_chip_title", printer.label);
-      }
-      slide.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        activate(printer);
-      });
+
+  const wanted = new Set(plan.inject.map((p) => p.id));
+  for (const slide of slides(section.wrapper)) {
+    if (slide.dataset.pnPrinter && !wanted.has(slide.dataset.pnPrinter)) {
+      if (slide.querySelector(".selected")) deactivate();
+      slide.remove();
       changed = true;
     }
+  }
+  const ours = plan.inject.map((printer) =>
+    section.wrapper.querySelector<HTMLElement>(`:scope > [data-pn-printer="${CSS.escape(printer.id)}"]`) ?? newChip(printer, template));
+
+  let divider = section.wrapper.querySelector<HTMLElement>(":scope > [data-pn-divider]");
+  const showDivider = mine.length + ours.length > 0 && others.length > mine.length;
+  if (showDivider && !divider) {
+    divider = document.createElement("div");
+    divider.className = "swiper-slide";
+    divider.dataset.pnDivider = "1";
+    divider.setAttribute("aria-hidden", "true");
+    divider.textContent = "|";
+  } else if (!showDivider && divider) {
+    divider.remove();
+    divider = null;
+    changed = true;
+  }
+
+  let after: Element = natives[0];
+  for (const slide of [...mine, ...ours, ...(divider ? [divider] : [])]) {
     if (after.nextElementSibling !== slide) {
       after.after(slide);
       changed = true;
@@ -232,6 +262,7 @@ let statusLoading = false;
 
 /** Show `text` on the button; texts ending in "…" (work in progress) show a spinner. */
 function setStatus(text: string | null, clearAfter = 0) {
+  if (!alive()) return;
   statusText = text;
   statusLoading = !!text?.endsWith("…");
   for (const s of sections()) paintButton(s, text ?? undefined, statusLoading);
@@ -317,6 +348,10 @@ function decorateMenu() {
 const hideMenus = (() => {
   const style = document.createElement("style");
   style.textContent = `html[data-pn-hiding] :is(${POPUPS}) { clip-path: inset(100%) !important; }
+    [data-pn-divider] {
+      width: auto !important; flex: none; align-self: center; padding: 0 2px;
+      color: #b8bcc2; font-weight: 400; user-select: none; pointer-events: none;
+    }
     [data-pn-busy] { position: relative !important; box-sizing: border-box; }
     [data-pn-busy] > :not([data-pn-loading]) { visibility: hidden; }
     [data-pn-loading] {
@@ -626,6 +661,7 @@ function showError(issue: Pick<Issue, "code" | "message" | "suggestion"> | undef
 
 // --- wiring -------------------------------------------------------------------------
 function reconcile() {
+  if (!alive()) return;
   for (const section of sections()) {
     injectChips(section);
     paintSelection(section);
@@ -636,7 +672,7 @@ function reconcile() {
 // Our button replaces MakerWorld's action; native chips switch our mode off.
 document.addEventListener("click", (e) => {
   const target = e.target as Element | null;
-  if (!target || triggering || target.closest("[data-pn-item]")) return;
+  if (!alive() || !target || triggering || target.closest("[data-pn-item]")) return;
   const slide = target.closest<HTMLElement>(".swiper-slide");
   if (slide && !slide.dataset.pnPrinter && sections().some((s) => s.wrapper.contains(slide))) {
     deactivate();
@@ -651,7 +687,11 @@ document.addEventListener("click", (e) => {
 
 // Batched with a timer, not requestAnimationFrame: frames pause in background tabs.
 let scheduled = false;
-new MutationObserver(() => {
+const observer = new MutationObserver(() => {
+  if (!alive()) {
+    observer.disconnect();
+    return;
+  }
   // MakerWorld rewrites the button's label while downloading: put ours back before the browser
   // paints (observers run first), or its text flashes on the button.
   if (active || statusText) for (const section of sections()) paintButton(section, statusText ?? undefined, statusLoading);
@@ -659,10 +699,12 @@ new MutationObserver(() => {
   scheduled = true;
   setTimeout(() => {
     scheduled = false;
+    if (!alive()) return;
     reconcile();
     if (!triggering) decorateMenu();
   }, 30);
-}).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+});
+observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
 
 let prepared = false;
 

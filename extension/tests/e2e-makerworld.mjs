@@ -72,7 +72,7 @@ try {
   // 1. Our chip, next to "All", looking like MakerWorld's.
   await mw.waitForSelector('[data-pn-printer="c5p"]', { timeout: 30_000 });
   const chips = await mw.$$eval(".section:not(.mobile-box) .swiper-slide", (s) => s.map((x) => x.textContent.trim()));
-  if (chips.join("|") !== "All|Creator 5 Pro|A1 mini|P1S") throw new Error(`unexpected chips: ${chips}`);
+  if (chips.join(",") !== "All,Creator 5 Pro,|,A1 mini,P1S") throw new Error(`unexpected chips: ${chips}`);
 
   // 2. Selecting it shows every profile and turns the button into ours.
   await mw.click('.section:not(.mobile-box) [data-pn-printer="c5p"] .chip');
@@ -226,6 +226,24 @@ try {
   const ignored = await failure(() => mw.evaluate(() => { window.ignoredClicks = 2; }));
   if (!ignored.includes("did not start") || ignored.includes("signed in")) throw new Error(`download not started: ${ignored}`);
   console.log("OK: a refused download asks to sign in, one that never started does not");
+
+  // 9. A printer MakerWorld lists goes first, keeps MakerWorld's own button and is not converted.
+  const carousel = () => mw.$$eval(".section:not(.mobile-box) .swiper-slide", (s) => s.map((x) => x.textContent.trim()).join(","));
+  const setPrinters = (list) => options.evaluate((printers) => chrome.storage.sync.set({ printers }), list);
+  const c5p = { id: "c5p", slicer: "flashstudio", printer: "Flashforge Creator 5 Pro 0.4 nozzle", slicerAuto: true };
+  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent === "Download for Creator 5 Pro", { timeout: 30_000 });
+  await setPrinters([c5p, { id: "p1s", slicer: "flashstudio", printer: "P1S", slicerAuto: true }]);
+  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .swiper-slide:nth-child(2)").textContent.trim() === "P1S", { timeout: 10_000 });
+  if (await carousel() !== "All,P1S,Creator 5 Pro,|,A1 mini") throw new Error(`order: ${await carousel()}`);
+  await mw.click(".section:not(.mobile-box) .swiper-slide:nth-child(2) .chip");
+  await mw.waitForFunction(() => document.querySelector(".section:not(.mobile-box) .primaryButton span").textContent !== "Download for Creator 5 Pro", { timeout: 10_000 });
+  await mw.click(".section:not(.mobile-box) .primaryButton");
+  await new Promise((r) => setTimeout(r, 500));
+  if (await mw.$(".section:not(.mobile-box) .primaryButton [data-pn-loading]")) throw new Error("a printer MakerWorld lists was converted");
+  // A printer removed from My printers takes its chip and the divider with it.
+  await setPrinters([]);
+  await mw.waitForFunction(() => !document.querySelector("[data-pn-divider], [data-pn-printer]"), { timeout: 10_000 });
+  console.log("OK: printers MakerWorld lists go first and keep its button; divider and chips follow My printers");
 } finally {
   await browser.close();
   server.close();
