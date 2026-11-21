@@ -43,6 +43,7 @@
   "convert.warn.bed_refuses_filament": "{bed}: el laminador rechazará los filamentos {filaments} en esta placa (su perfil no tiene temperatura para ella); elige otra placa",
   "cli.help.bed_type": "placa de impresión (por defecto, la de la impresora)",
   "reason.bambu_hardware": "específico de hardware Bambu",
+  "reason.skip_flush": "vaciado al saltar objeto de Bambu; OrcaSlicer solo prepara esos ids en impresoras Bambu, así que el perfil de esta impresora lo deja apagado",
   "reason.invalid_in_orca": "valor no válido en OrcaSlicer; se usa el de Orca",
   "reason.orca_equivalent": "valor equivalente válido en OrcaSlicer",
   "reason.line_width_mm": "convertido a mm para la boquilla de {nozzle} mm: Bambu Studio y QIDI Studio leen el % como mm",

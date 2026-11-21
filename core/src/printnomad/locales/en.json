@@ -43,6 +43,7 @@
   "convert.warn.bed_refuses_filament": "{bed}: the slicer will refuse filaments {filaments} on this build plate (their profile has no temperature for it); choose another plate",
   "cli.help.bed_type": "build plate (default: the printer's)",
   "reason.bambu_hardware": "Bambu hardware specific",
+  "reason.skip_flush": "Bambu object-skip flush; OrcaSlicer only prepares those object ids for Bambu printers, so this printer's profile leaves it off",
   "reason.invalid_in_orca": "value not valid in OrcaSlicer; OrcaSlicer's default applies",
   "reason.orca_equivalent": "equivalent value valid in OrcaSlicer",
   "reason.line_width_mm": "converted to mm for the {nozzle} mm nozzle: Bambu Studio and QIDI Studio read a % as mm",

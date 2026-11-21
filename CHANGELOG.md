@@ -4,6 +4,12 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+### Added
+- **Elegoo Neptune 4 Plus** (OrcaSlicer), with the nozzles shipped in that profile.
+
+### Fixed
+- **Bambu object-skip flush is not kept on other printers.** `support_object_skip_flush` is on for the A2L, H2S and P2S and off in the common machine profile (Neptune 4 Pro and Plus do not set it). Leaving it on together with the target's `exclude_object` made OrcaSlicer stop slicing with "Unknown label object id!".
+
 ### Changed
 - **Names follow the new [glossary](GLOSSARY.md).** The filament assignment option is now `assignment_mode` (`--assignment-mode` in the CLI) and its "depends on the slicer" choice is `by_slicer`; saved extension settings are updated automatically, and `--map-mode` and `slicer` are still accepted. In the JSON report, `issues` is now `failures`. The core modules `issues` and `repair` are now `error_codes` and `review`.
 - **On MakerWorld, your printers come first**, followed by a divider and the model's other printers. They carry PrintNomad's mark and colours. Adding a printer saves it right away; Edit is there to change it. Bambu Lab printers keep MakerWorld's own button and are no longer converted there.

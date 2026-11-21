@@ -50,6 +50,26 @@ def test_printer_fields_replaced(lib, tmp_path):
     assert {"printer_model", "gcode_flavor", "machine_start_gcode"} <= changed
 
 
+def test_bambu_skip_flush_dropped_unless_the_target_sets_it(lib, tmp_path):
+    # A2L writes support_object_skip_flush=1 into the project. Neptune 4 Pro does not
+    # set it (fdm_machine_common is 0). Keeping the 1 with exclude_object makes
+    # OrcaSlicer throw "Unknown label object id!" on a non-Bambu printer.
+    path = make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]], settings={
+        "support_object_skip_flush": "1",
+        "different_settings_to_system": ["", "", "support_object_skip_flush"],
+    })
+    _, result, s = run(lib, path)
+    assert "support_object_skip_flush" not in s
+    dropped = next(d for d in result.report.dropped if d.key == "support_object_skip_flush")
+    assert dropped.original == "1"
+
+    lib.raw[("machine", MACHINE)]["support_object_skip_flush"] = "0"
+    lib._cache.clear()
+    _, result, s = run(lib, path)
+    assert s["support_object_skip_flush"] == "0"
+    assert not any(d.key == "support_object_skip_flush" for d in result.report.dropped)
+
+
 def test_bambu_specifics_removed_and_reported(lib, tmp_path):
     _, result, s = run(lib, make_bambu_3mf(tmp_path / "a.3mf", [PLA], [["2"]]))
     assert "head_wrap_detect_zone" not in s   # el perfil destino de prueba no la define

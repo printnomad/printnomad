@@ -33,7 +33,7 @@ You can also convert a `.3mf` file you already have from the extension's page:
 | Bambu Lab | A1, A1 mini, P1S, P2S, X1 Carbon | Bambu Studio |
 | Prusa | MK4S, MK4, CORE One, MK3S, MINI, XL | OrcaSlicer |
 | Creality | K1C, K2 Plus, Ender-3 V3 SE | OrcaSlicer |
-| Elegoo | Centauri Carbon, Centauri Carbon 2, Neptune 4 Pro | OrcaSlicer |
+| Elegoo | Centauri Carbon, Centauri Carbon 2, Neptune 4 Pro, Neptune 4 Plus | OrcaSlicer |
 | Anycubic | Kobra 3, Kobra S1 | OrcaSlicer |
 | Flashforge | Creator 5 Pro, AD5X, Adventurer 5M | Flash Studio |
 | Snapmaker | U1 | OrcaSlicer |

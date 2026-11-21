@@ -478,6 +478,15 @@ def _convert(
     # Solo si el perfil destino no la define (la C5P sí define p. ej. nozzle_volume).
     for k in sorted(k for k in rules.BAMBU_ONLY_KEYS & set(out) if k not in reasons):
         report.dropped.append(FieldChange(k, out.pop(k), None, t("reason.bambu_hardware")))
+    # support_object_skip_flush is 0 in fdm_machine_common and 1 only on a few Bambu
+    # machines (A2L, H2S, P2S). OrcaSlicer fills the exclude-object label-id table
+    # only for Bambu printers (GCode.cpp, is_bbl_printers) and still encodes it for
+    # every printer when this flag is on with exclude_object, then throws
+    # "Unknown label object id!". Neptune 4 Pro and Plus do not set the flag, so a
+    # value carried from the source printer is removed and the slicer default applies.
+    if "support_object_skip_flush" in out and "support_object_skip_flush" not in reasons:
+        report.dropped.append(FieldChange("support_object_skip_flush", out.pop("support_object_skip_flush"), None,
+                                          t("reason.skip_flush")))
     # Enfriamiento del origen que el perfil C5P no define: fuera, Orca usa su valor por defecto.
     kept_keys = {c.key for c in (*report.kept_author, *report.kept_project)}.union(*kept_filament.values())
     for k in sorted(k for k in out if k not in reasons and k not in kept_keys and rules.is_cooling_key(k)):
